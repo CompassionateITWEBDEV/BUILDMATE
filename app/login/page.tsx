@@ -1,42 +1,39 @@
-"use client"
+// app/login/page.tsx
+"use client";
 
-import type React from "react"
+import type React from "react";
+import { useState } from "react";
+import { useRouter } from "next/navigation";
+import Link from "next/link";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Cpu, Eye, EyeOff, Loader2 } from "lucide-react";
+import { useAuth } from "@/contexts/auth-context";
 
-import { useState } from "react"
-import { useRouter } from "next/navigation"
-import Link from "next/link"
-import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
-import { Alert, AlertDescription } from "@/components/ui/alert"
-import { Cpu, Eye, EyeOff, Loader2 } from "lucide-react"
-import { useAuth } from "@/contexts/auth-context"
-
-export default function LoginPage() {
-  const [email, setEmail] = useState("")
-  const [password, setPassword] = useState("")
-  const [showPassword, setShowPassword] = useState(false)
-  const [error, setError] = useState("")
-  const { login, isLoading } = useAuth()
-  const router = useRouter()
+export default function LoginPage(): JSX.Element {
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
+  const [error, setError] = useState("");
+  const { login, isLoading } = useAuth();
+  const router = useRouter();
 
   const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
-    setError("")
+    e.preventDefault();
+    setError("");
 
     if (!email || !password) {
-      setError("Please fill in all fields")
-      return
+      setError("Please fill in all fields");
+      return;
     }
 
-    const success = await login(email, password)
-    if (success) {
-      router.push("/dashboard")
-    } else {
-      setError("Invalid email or password")
-    }
-  }
+    const success = await login(email, password);
+    if (success) router.push("/dashboard");
+    else setError("Invalid email or password");
+  };
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 dark:from-slate-900 dark:to-slate-800 flex items-center justify-center p-4">
@@ -94,14 +91,10 @@ export default function LoginPage() {
                     variant="ghost"
                     size="sm"
                     className="absolute right-0 top-0 h-full px-3 py-2 hover:bg-transparent"
-                    onClick={() => setShowPassword(!showPassword)}
+                    onClick={() => setShowPassword((s) => !s)}
                     disabled={isLoading}
                   >
-                    {showPassword ? (
-                      <EyeOff className="h-4 w-4 text-slate-500" />
-                    ) : (
-                      <Eye className="h-4 w-4 text-slate-500" />
-                    )}
+                    {showPassword ? <EyeOff className="h-4 w-4 text-slate-500" /> : <Eye className="h-4 w-4 text-slate-500" />}
                   </Button>
                 </div>
               </div>
@@ -120,14 +113,22 @@ export default function LoginPage() {
 
             <div className="mt-6 text-center">
               <p className="text-sm text-slate-600 dark:text-slate-400">
-                Don't have an account?{" "}
+                Don&apos;t have an account?{" "}
                 <Link href="/register" className="text-blue-600 hover:text-blue-700 font-medium">
                   Sign up
                 </Link>
               </p>
             </div>
 
-          
+            {/* Demo credentials */}
+            <div className="mt-4 p-3 bg-slate-50 dark:bg-slate-800 rounded-lg">
+              <p className="text-xs text-slate-600 dark:text-slate-400 mb-1">Demo credentials:</p>
+              <p className="text-xs text-slate-700 dark:text-slate-300">
+                Email: pcmaster@example.com | Password: password
+              </p>
+            </div>
+          </CardContent>
+        </Card>
 
         <div className="text-center mt-6">
           <Link
@@ -139,5 +140,5 @@ export default function LoginPage() {
         </div>
       </div>
     </div>
-  )
+  );
 }
