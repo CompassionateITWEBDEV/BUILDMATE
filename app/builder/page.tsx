@@ -1,5 +1,6 @@
 "use client"
 
+import * as React from "react"
 import { useState } from "react"
 import { useRouter } from "next/navigation"
 import Link from "next/link"
@@ -9,6 +10,7 @@ import { Badge } from "@/components/ui/badge"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import {
   Dialog,
   DialogContent,
@@ -36,8 +38,9 @@ import {
   Lightbulb,
 } from "lucide-react"
 import { useAuth } from "@/contexts/auth-context"
-import { mockComponents, type Component, type ComponentCategory } from "@/lib/mock-data"
+import { mockComponents, type Component, type ComponentCategory, type PerformanceCategory, performanceCategories } from "@/lib/mock-data"
 import { CompatibilityChecker, type CompatibilityResult } from "@/lib/compatibility-checker"
+import { filterComponentsByPerformance } from "@/lib/performance-filter"
 
 const categoryIcons = {
   cpu: Cpu,
@@ -78,16 +81,23 @@ export default function BuilderPage() {
   const [searchTerm, setSearchTerm] = useState("")
   const [buildName, setBuildName] = useState("My Custom Build")
   const [isSaveDialogOpen, setIsSaveDialogOpen] = useState(false)
+  const [performanceCategory, setPerformanceCategory] = useState<PerformanceCategory>("all")
 
-  // Filter components by category and search term
+  // Filter components by category, search term, and performance category
   const getFilteredComponents = (category: ComponentCategory) => {
-    return mockComponents
-      .filter((component) => component.category === category)
-      .filter(
-        (component) =>
-          component.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-          component.brand.toLowerCase().includes(searchTerm.toLowerCase()),
-      )
+    const categoryFiltered = mockComponents.filter((component) => component.category === category)
+    
+    const performanceFiltered = filterComponentsByPerformance(
+      categoryFiltered,
+      performanceCategory,
+      performanceCategories[performanceCategory].requirements
+    )
+    
+    return performanceFiltered.filter(
+      (component) =>
+        component.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        component.brand.toLowerCase().includes(searchTerm.toLowerCase()),
+    )
   }
 
   // Calculate total price
@@ -194,16 +204,45 @@ export default function BuilderPage() {
           <div className="lg:col-span-2">
             <Card className="border-slate-200 dark:border-slate-700">
               <CardHeader>
-                <div className="flex items-center justify-between">
-                  <CardTitle>Select Components</CardTitle>
-                  <div className="flex items-center gap-2">
-                    <Search className="h-4 w-4 text-slate-400" />
-                    <Input
-                      placeholder="Search components..."
-                      value={searchTerm}
-                      onChange={(e) => setSearchTerm(e.target.value)}
-                      className="w-64"
-                    />
+                <div className="space-y-4">
+                  <div className="flex items-center justify-between">
+                    <CardTitle>Select Components</CardTitle>
+                    <div className="flex items-center gap-2">
+                      <Search className="h-4 w-4 text-slate-400" />
+                      <Input
+                        placeholder="Search components..."
+                        value={searchTerm}
+                        onChange={(e) => setSearchTerm(e.target.value)}
+                        className="w-64"
+                      />
+                    </div>
+                  </div>
+                  
+                  {/* Performance Category Selector */}
+                  <div className="flex items-center gap-4">
+                    <Label htmlFor="performance-category" className="text-sm font-medium">
+                      Performance Category:
+                    </Label>
+                    <Select value={performanceCategory} onValueChange={(value) => setPerformanceCategory(value as PerformanceCategory)}>
+                      <SelectTrigger className="w-64">
+                        <SelectValue placeholder="Select performance category" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {Object.entries(performanceCategories).map(([key, category]) => (
+                          <SelectItem key={key} value={key}>
+                            <div className="flex flex-col">
+                              <span className="font-medium">{category.name}</span>
+                              <span className="text-xs text-slate-500">{category.description}</span>
+                            </div>
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    {performanceCategory !== "all" && (
+                      <Badge variant="secondary" className="ml-2">
+                        {performanceCategories[performanceCategory].name}
+                      </Badge>
+                    )}
                   </div>
                 </div>
               </CardHeader>
@@ -218,10 +257,28 @@ export default function BuilderPage() {
                     ))}
                   </TabsList>
 
-                  {Object.keys(categoryIcons).map((category) => (
-                    <TabsContent key={category} value={category} className="space-y-4">
-                      <div className="grid gap-4">
-                        {getFilteredComponents(category as ComponentCategory).map((component) => (
+                  {Object.keys(categoryIcons).map((category) => {
+                    const filteredComponents = getFilteredComponents(category as ComponentCategory)
+                    return (
+                      <TabsContent key={category} value={category} className="space-y-4">
+                        {filteredComponents.length === 0 ? (
+                          <div className="text-center py-8 text-slate-500 dark:text-slate-400">
+                            <div className="flex flex-col items-center gap-2">
+                              <Search className="h-8 w-8 text-slate-300" />
+                              <p className="text-sm">
+                                No {categoryNames[category as ComponentCategory].toLowerCase()} components found
+                              </p>
+                              <p className="text-xs">
+                                {performanceCategory !== "all" 
+                                  ? `for ${performanceCategories[performanceCategory].name} performance category`
+                                  : "matching your search criteria"
+                                }
+                              </p>
+                            </div>
+                          </div>
+                        ) : (
+                          <div className="grid gap-4">
+                            {filteredComponents.map((component) => (
                           <Card
                             key={component.id}
                             className={`border-slate-200 dark:border-slate-700 cursor-pointer transition-all hover:shadow-md ${
@@ -285,10 +342,12 @@ export default function BuilderPage() {
                               </div>
                             </CardContent>
                           </Card>
-                        ))}
-                      </div>
-                    </TabsContent>
-                  ))}
+                            ))}
+                          </div>
+                        )}
+                      </TabsContent>
+                    )
+                  })}
                 </Tabs>
               </CardContent>
             </Card>
@@ -372,6 +431,31 @@ export default function BuilderPage() {
                         <p className="text-sm text-slate-600 dark:text-slate-400">{recommendation}</p>
                       </div>
                     ))}
+                  </div>
+                </CardContent>
+              </Card>
+            )}
+
+            {/* Performance Category Info */}
+            {performanceCategory !== "all" && (
+              <Card className="border-slate-200 dark:border-slate-700">
+                <CardHeader className="pb-3">
+                  <CardTitle className="text-lg flex items-center gap-2">
+                    <Lightbulb className="h-5 w-5 text-blue-500" />
+                    Performance Category
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-2">
+                    <div className="flex items-center gap-2">
+                      <Badge variant="secondary">{performanceCategories[performanceCategory].name}</Badge>
+                    </div>
+                    <p className="text-sm text-slate-600 dark:text-slate-400">
+                      {performanceCategories[performanceCategory].description}
+                    </p>
+                    <div className="text-xs text-slate-500">
+                      Components are filtered to match your selected performance requirements
+                    </div>
                   </div>
                 </CardContent>
               </Card>
