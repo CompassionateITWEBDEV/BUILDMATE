@@ -42,6 +42,8 @@ import {
 import { mockComponents, type Component, type ComponentCategory, type PerformanceCategory, performanceCategories } from "@/lib/mock-data"
 import { CompatibilityChecker, type CompatibilityResult } from "@/lib/compatibility-checker"
 import { filterComponentsByPerformance } from "@/lib/performance-filter"
+import { DuplicateDetector, type BuildComparison } from "@/lib/duplicate-detector"
+import { DuplicateCheckDialog } from "@/components/duplicate-warning"
 
 const categoryIcons = {
   cpu: Cpu,
@@ -86,6 +88,9 @@ export default function BuilderPage() {
   const [performanceCategory, setPerformanceCategory] = useState<PerformanceCategory>("all")
   const [budget, setBudget] = useState<number>(0)
   const [budgetEnabled, setBudgetEnabled] = useState(false)
+  const [duplicateComparisons, setDuplicateComparisons] = useState<BuildComparison[]>([])
+  const [showDuplicateDialog, setShowDuplicateDialog] = useState(false)
+  const [isCheckingDuplicates, setIsCheckingDuplicates] = useState(false)
 
   // Filter components by category, search term, performance category, and budget
   const getFilteredComponents = (category: ComponentCategory) => {
@@ -153,16 +158,95 @@ export default function BuilderPage() {
     }))
   }
 
-  const handleSaveBuild = () => {
+  const checkForDuplicates = async () => {
+    if (!user) return
+
+    setIsCheckingDuplicates(true)
+    
+    try {
+      // Generate fingerprint for current build
+      const currentBuildFingerprint = DuplicateDetector.generateFingerprint(selectedComponents)
+      
+      // In a real app, this would fetch existing builds from the database
+      // For now, we'll simulate with mock data
+      const mockExistingBuilds = [
+        {
+          components: { cpu: "cpu-1", motherboard: "mobo-1", memory: "ram-1", storage: "ssd-1", gpu: "gpu-1", psu: "psu-1", case: "case-1", cooling: "cooling-1" },
+          totalPrice: 1200,
+          componentCount: 8,
+          priceRange: 'mid' as const,
+          performanceCategory: 'gaming'
+        },
+        {
+          components: { cpu: "cpu-2", motherboard: "mobo-2", memory: "ram-2", storage: "ssd-2", gpu: "gpu-2", psu: "psu-2", case: "case-2", cooling: "cooling-2" },
+          totalPrice: 800,
+          componentCount: 6,
+          priceRange: 'budget' as const,
+          performanceCategory: 'office'
+        }
+      ]
+
+      // Check for duplicates
+      const comparisons = DuplicateDetector.checkForDuplicates(currentBuildFingerprint, mockExistingBuilds)
+      
+      if (comparisons.length > 0) {
+        setDuplicateComparisons(comparisons)
+        setShowDuplicateDialog(true)
+        return false // Don't proceed with save
+      }
+      
+      return true // No duplicates found, proceed with save
+    } catch (error) {
+      console.error("Error checking for duplicates:", error)
+      return true // Proceed anyway if there's an error
+    } finally {
+      setIsCheckingDuplicates(false)
+    }
+  }
+
+  const handleSaveBuild = async () => {
     if (!user) {
       router.push("/login")
       return
+    }
+
+    // Check for duplicates first
+    const canProceed = await checkForDuplicates()
+    if (!canProceed) {
+      return // Duplicate dialog will be shown
     }
 
     // In a real app, this would save to the backend
     console.log("Saving build:", { name: buildName, components: selectedComponents, totalPrice })
     setIsSaveDialogOpen(false)
     // Show success message or redirect
+  }
+
+  const handleProceedAnyway = () => {
+    // In a real app, this would save to the backend
+    console.log("Saving build despite duplicates:", { name: buildName, components: selectedComponents, totalPrice })
+    setIsSaveDialogOpen(false)
+    setShowDuplicateDialog(false)
+    // Show success message or redirect
+  }
+
+  const handleModifyBuild = () => {
+    // Reset some components to make the build more unique
+    setSelectedComponents(prev => ({
+      ...prev,
+      cooling: null // Remove cooling to make it different
+    }))
+    setShowDuplicateDialog(false)
+  }
+
+  const handleViewSimilar = (buildId: string) => {
+    // Navigate to similar build
+    console.log("Viewing similar build:", buildId)
+  }
+
+  const handleEditSimilar = (buildId: string) => {
+    // Navigate to edit similar build
+    console.log("Editing similar build:", buildId)
   }
 
   const compatibilityResult = getCompatibilityResult()
@@ -639,9 +723,13 @@ export default function BuilderPage() {
                 </div>
 
                 <div className="space-y-2">
-                  <Button className="w-full bg-blue-600 hover:bg-blue-700" onClick={() => setIsSaveDialogOpen(true)}>
+                  <Button 
+                    className="w-full bg-blue-600 hover:bg-blue-700" 
+                    onClick={() => setIsSaveDialogOpen(true)}
+                    disabled={isCheckingDuplicates}
+                  >
                     <Save className="h-4 w-4 mr-2" />
-                    Save Build
+                    {isCheckingDuplicates ? "Checking..." : "Save Build"}
                   </Button>
                   <Button variant="outline" className="w-full bg-transparent">
                     <Share className="h-4 w-4 mr-2" />
@@ -679,6 +767,17 @@ export default function BuilderPage() {
           </div>
         </div>
       </div>
+
+      {/* Duplicate Check Dialog */}
+      <DuplicateCheckDialog
+        open={showDuplicateDialog}
+        onOpenChange={setShowDuplicateDialog}
+        comparisons={duplicateComparisons}
+        onViewSimilar={handleViewSimilar}
+        onEditSimilar={handleEditSimilar}
+        onProceedAnyway={handleProceedAnyway}
+        onModifyBuild={handleModifyBuild}
+      />
     </div>
   )
 }

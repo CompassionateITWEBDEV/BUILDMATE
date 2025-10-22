@@ -172,6 +172,62 @@ export const buildService = {
     return data
   },
 
+  async createWithDuplicateCheck(
+    build: Database['public']['Tables']['builds']['Insert'],
+    components: Record<string, any>
+  ) {
+    // First check for duplicates
+    const existingBuilds = await this.getByUserId(build.user_id)
+    
+    // Convert existing builds to fingerprints for comparison
+    const existingFingerprints = existingBuilds.map(existingBuild => ({
+      build_id: existingBuild.build_id,
+      build_name: existingBuild.build_name,
+      components: components, // This would need to be fetched from build_components
+      totalPrice: 0, // This would need to be calculated
+      componentCount: 0, // This would need to be calculated
+      priceRange: 'budget' as const,
+      performanceCategory: 'budget'
+    }))
+
+    // For now, we'll implement basic duplicate checking
+    const duplicateCheck = await this.checkForDuplicateBuild(build, existingFingerprints)
+    
+    if (duplicateCheck.isDuplicate) {
+      throw new Error(`Duplicate build detected: ${duplicateCheck.reason}`)
+    }
+
+    // Create the build if no duplicates found
+    return this.create(build)
+  },
+
+  async checkForDuplicateBuild(
+    newBuild: Database['public']['Tables']['builds']['Insert'],
+    existingBuilds: any[]
+  ) {
+    // Check for exact name duplicates
+    const nameDuplicate = existingBuilds.find(
+      build => build.build_name.toLowerCase() === newBuild.build_name.toLowerCase()
+    )
+
+    if (nameDuplicate) {
+      return {
+        isDuplicate: true,
+        reason: `Build name "${newBuild.build_name}" already exists`,
+        duplicateBuildId: nameDuplicate.build_id
+      }
+    }
+
+    // Additional duplicate checks can be added here
+    // For example, checking component combinations, price ranges, etc.
+
+    return {
+      isDuplicate: false,
+      reason: null,
+      duplicateBuildId: null
+    }
+  },
+
   async getByUserId(userId: number) {
     const { data, error } = await supabase
       .from('builds')

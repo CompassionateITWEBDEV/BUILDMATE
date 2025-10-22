@@ -10,6 +10,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Cpu, Heart, MessageCircle, Share, Search, Monitor, Users, Eye, BarChart3 } from "lucide-react"
 import { mockBuilds, mockUsers, type Build } from "@/lib/mock-data"
+import { DuplicateDetector } from "@/lib/duplicate-detector"
+import { BuildMergeSuggestions } from "@/components/build-merge-suggestions"
 // Removed authentication - using mock user data
 
 export default function BuildsPage() {
@@ -19,6 +21,8 @@ export default function BuildsPage() {
   const [sortBy, setSortBy] = useState("popular")
   const [priceFilter, setPriceFilter] = useState("all")
   const [likedBuilds, setLikedBuilds] = useState<string[]>([])
+  const [showDuplicateWarnings, setShowDuplicateWarnings] = useState(false)
+  const [duplicateComparisons, setDuplicateComparisons] = useState<any[]>([])
 
   const getFilteredBuilds = (): Build[] => {
     let filtered = mockBuilds.filter(
@@ -63,6 +67,74 @@ export default function BuildsPage() {
     setLikedBuilds((prev) => (prev.includes(buildId) ? prev.filter((id) => id !== buildId) : [...prev, buildId]))
   }
 
+  const checkForDuplicates = () => {
+    // Check for duplicate builds in the current list
+    const builds = getFilteredBuilds()
+    const duplicates: any[] = []
+
+    for (let i = 0; i < builds.length; i++) {
+      for (let j = i + 1; j < builds.length; j++) {
+        const build1 = builds[i]
+        const build2 = builds[j]
+        
+        // Simple duplicate check based on name similarity
+        const nameSimilarity = calculateStringSimilarity(build1.name, build2.name)
+        
+        if (nameSimilarity > 0.8) {
+          duplicates.push({
+            build1: build1,
+            build2: build2,
+            similarity: nameSimilarity,
+            reason: 'Similar build names'
+          })
+        }
+      }
+    }
+
+    if (duplicates.length > 0) {
+      setDuplicateComparisons(duplicates)
+      setShowDuplicateWarnings(true)
+    }
+  }
+
+  const calculateStringSimilarity = (str1: string, str2: string): number => {
+    const longer = str1.length > str2.length ? str1 : str2
+    const shorter = str1.length > str2.length ? str2 : str1
+    
+    if (longer.length === 0) return 1.0
+    
+    const editDistance = levenshteinDistance(longer, shorter)
+    return (longer.length - editDistance) / longer.length
+  }
+
+  const levenshteinDistance = (str1: string, str2: string): number => {
+    const matrix = []
+    
+    for (let i = 0; i <= str2.length; i++) {
+      matrix[i] = [i]
+    }
+    
+    for (let j = 0; j <= str1.length; j++) {
+      matrix[0][j] = j
+    }
+    
+    for (let i = 1; i <= str2.length; i++) {
+      for (let j = 1; j <= str1.length; j++) {
+        if (str2.charAt(i - 1) === str1.charAt(j - 1)) {
+          matrix[i][j] = matrix[i - 1][j - 1]
+        } else {
+          matrix[i][j] = Math.min(
+            matrix[i - 1][j - 1] + 1,
+            matrix[i][j - 1] + 1,
+            matrix[i - 1][j] + 1
+          )
+        }
+      }
+    }
+    
+    return matrix[str2.length][str1.length]
+  }
+
   const filteredBuilds = getFilteredBuilds()
 
   return (
@@ -92,9 +164,14 @@ export default function BuildsPage() {
                 Build Guides
               </Link>
             </nav>
-            <Button asChild>
-              <Link href="/builder">Create Build</Link>
-            </Button>
+            <div className="flex gap-2">
+              <Button variant="outline" onClick={checkForDuplicates}>
+                Check Duplicates
+              </Button>
+              <Button asChild>
+                <Link href="/builder">Create Build</Link>
+              </Button>
+            </div>
           </div>
         </div>
       </header>
@@ -287,6 +364,67 @@ export default function BuildsPage() {
             <Button variant="outline" size="lg">
               Load More Builds
             </Button>
+          </div>
+        )}
+
+        {/* Duplicate Warnings */}
+        {showDuplicateWarnings && duplicateComparisons.length > 0 && (
+          <div className="mt-8">
+            <Card className="border-yellow-200 bg-yellow-50 dark:border-yellow-800 dark:bg-yellow-950">
+              <CardHeader>
+                <CardTitle className="text-yellow-800 dark:text-yellow-200 flex items-center gap-2">
+                  <AlertTriangle className="h-5 w-5" />
+                  Duplicate Builds Detected
+                </CardTitle>
+                <CardDescription className="text-yellow-700 dark:text-yellow-300">
+                  We found {duplicateComparisons.length} potential duplicate build(s) in your collection.
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-3">
+                  {duplicateComparisons.slice(0, 3).map((duplicate, index) => (
+                    <div key={index} className="flex items-center justify-between p-3 bg-white dark:bg-slate-800 rounded-lg">
+                      <div className="flex items-center gap-3">
+                        <div className="w-2 h-2 bg-yellow-500 rounded-full" />
+                        <div>
+                          <p className="text-sm font-medium">{duplicate.build1.name}</p>
+                          <p className="text-xs text-slate-500">vs {duplicate.build2.name}</p>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <Badge variant="secondary">
+                          {Math.round(duplicate.similarity * 100)}% similar
+                        </Badge>
+                        <Button size="sm" variant="outline" className="text-xs">
+                          Merge
+                        </Button>
+                        <Button size="sm" variant="outline" className="text-xs">
+                          Delete
+                        </Button>
+                      </div>
+                    </div>
+                  ))}
+                  {duplicateComparisons.length > 3 && (
+                    <p className="text-xs text-slate-500 text-center">
+                      +{duplicateComparisons.length - 3} more duplicates
+                    </p>
+                  )}
+                </div>
+                <div className="flex gap-2 mt-4">
+                  <Button 
+                    size="sm" 
+                    variant="outline" 
+                    onClick={() => setShowDuplicateWarnings(false)}
+                    className="flex-1"
+                  >
+                    Dismiss
+                  </Button>
+                  <Button size="sm" className="flex-1">
+                    Manage All
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
           </div>
         )}
       </div>
