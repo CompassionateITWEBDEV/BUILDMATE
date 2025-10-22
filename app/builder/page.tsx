@@ -36,8 +36,9 @@ import {
   AlertCircle,
   Info,
   Lightbulb,
+  MessageSquare,
 } from "lucide-react"
-import { useAuth } from "@/contexts/auth-context"
+// Removed authentication - using mock user data
 import { mockComponents, type Component, type ComponentCategory, type PerformanceCategory, performanceCategories } from "@/lib/mock-data"
 import { CompatibilityChecker, type CompatibilityResult } from "@/lib/compatibility-checker"
 import { filterComponentsByPerformance } from "@/lib/performance-filter"
@@ -65,7 +66,8 @@ const categoryNames = {
 }
 
 export default function BuilderPage() {
-  const { user } = useAuth()
+  // Mock user data instead of authentication
+  const user = { id: "1", username: "PC Builder", email: "builder@example.com" }
   const router = useRouter()
   const [selectedComponents, setSelectedComponents] = useState<Record<ComponentCategory, Component | null>>({
     cpu: null,
@@ -82,8 +84,10 @@ export default function BuilderPage() {
   const [buildName, setBuildName] = useState("My Custom Build")
   const [isSaveDialogOpen, setIsSaveDialogOpen] = useState(false)
   const [performanceCategory, setPerformanceCategory] = useState<PerformanceCategory>("all")
+  const [budget, setBudget] = useState<number>(0)
+  const [budgetEnabled, setBudgetEnabled] = useState(false)
 
-  // Filter components by category, search term, and performance category
+  // Filter components by category, search term, performance category, and budget
   const getFilteredComponents = (category: ComponentCategory) => {
     const categoryFiltered = mockComponents.filter((component) => component.category === category)
     
@@ -93,17 +97,42 @@ export default function BuilderPage() {
       performanceCategories[performanceCategory].requirements
     )
     
-    return performanceFiltered.filter(
+    const searchFiltered = performanceFiltered.filter(
       (component) =>
         component.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
         component.brand.toLowerCase().includes(searchTerm.toLowerCase()),
     )
+
+    // Apply budget filtering if enabled
+    if (budgetEnabled && budget > 0) {
+      const currentSpent = Object.values(selectedComponents)
+        .filter(Boolean)
+        .reduce((sum, component) => sum + component!.price, 0)
+      
+      const remainingBudget = budget - currentSpent
+      
+      return searchFiltered.filter((component) => {
+        // If this component is already selected, always show it
+        if (selectedComponents[category]?.id === component.id) {
+          return true
+        }
+        // Otherwise, only show if it fits within remaining budget
+        return component.price <= remainingBudget
+      })
+    }
+    
+    return searchFiltered
   }
 
   // Calculate total price
   const totalPrice = Object.values(selectedComponents)
     .filter(Boolean)
     .reduce((sum, component) => sum + component!.price, 0)
+
+  // Calculate remaining budget
+  const remainingBudget = budgetEnabled ? budget - totalPrice : 0
+  const isOverBudget = budgetEnabled && totalPrice > budget
+  const budgetPercentage = budgetEnabled && budget > 0 ? (totalPrice / budget) * 100 : 0
 
   const getCompatibilityResult = (): CompatibilityResult => {
     const checker = new CompatibilityChecker(selectedComponents)
@@ -158,6 +187,12 @@ export default function BuilderPage() {
               </div>
             </div>
             <div className="flex items-center gap-2">
+              <Button variant="outline" size="sm" asChild>
+                <Link href="/support">
+                  <MessageSquare className="h-4 w-4 mr-2" />
+                  Get Help
+                </Link>
+              </Button>
               <Dialog open={isSaveDialogOpen} onOpenChange={setIsSaveDialogOpen}>
                 <DialogTrigger asChild>
                   <Button variant="outline" size="sm">
@@ -244,6 +279,57 @@ export default function BuilderPage() {
                       </Badge>
                     )}
                   </div>
+
+                  {/* Budget Controls */}
+                  <div className="flex items-center gap-4 p-4 bg-slate-50 dark:bg-slate-800 rounded-lg">
+                    <div className="flex items-center gap-2">
+                      <input
+                        type="checkbox"
+                        id="budget-enabled"
+                        checked={budgetEnabled}
+                        onChange={(e) => setBudgetEnabled(e.target.checked)}
+                        className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                      />
+                      <Label htmlFor="budget-enabled" className="text-sm font-medium">
+                        Set Budget:
+                      </Label>
+                    </div>
+                    {budgetEnabled && (
+                      <>
+                        <div className="flex items-center gap-2">
+                          <span className="text-sm text-slate-600 dark:text-slate-400">$</span>
+                          <Input
+                            type="number"
+                            value={budget}
+                            onChange={(e) => setBudget(Number(e.target.value))}
+                            placeholder="Enter budget"
+                            className="w-32"
+                            min="0"
+                            step="50"
+                          />
+                        </div>
+                        <div className="flex items-center gap-2 text-sm">
+                          <span className={`font-medium ${isOverBudget ? 'text-red-600' : 'text-slate-600 dark:text-slate-400'}`}>
+                            Spent: ${totalPrice.toLocaleString()}
+                          </span>
+                          <span className="text-slate-400">|</span>
+                          <span className={`font-medium ${isOverBudget ? 'text-red-600' : 'text-green-600'}`}>
+                            {isOverBudget ? `Over by $${Math.abs(remainingBudget).toLocaleString()}` : `Remaining: $${remainingBudget.toLocaleString()}`}
+                          </span>
+                        </div>
+                        <div className="flex-1">
+                          <div className="w-full bg-slate-200 dark:bg-slate-700 rounded-full h-2">
+                            <div
+                              className={`h-2 rounded-full transition-all duration-300 ${
+                                isOverBudget ? 'bg-red-500' : budgetPercentage > 80 ? 'bg-yellow-500' : 'bg-green-500'
+                              }`}
+                              style={{ width: `${Math.min(budgetPercentage, 100)}%` }}
+                            />
+                          </div>
+                        </div>
+                      </>
+                    )}
+                  </div>
                 </div>
               </CardHeader>
               <CardContent>
@@ -319,9 +405,20 @@ export default function BuilderPage() {
                                       </div>
                                     </div>
                                     <div className="text-right">
-                                      <p className="text-lg font-bold text-slate-900 dark:text-white">
-                                        ${component.price}
-                                      </p>
+                                      <div className="flex items-center gap-2">
+                                        <p className={`text-lg font-bold ${
+                                          budgetEnabled && budget > 0 && component.price > (budget - totalPrice + (selectedComponents[component.category]?.price || 0))
+                                            ? 'text-red-600'
+                                            : 'text-slate-900 dark:text-white'
+                                        }`}>
+                                          ${component.price}
+                                        </p>
+                                        {budgetEnabled && budget > 0 && component.price > (budget - totalPrice + (selectedComponents[component.category]?.price || 0)) && (
+                                          <Badge variant="destructive" className="text-xs">
+                                            Over Budget
+                                          </Badge>
+                                        )}
+                                      </div>
                                       {selectedComponents[component.category]?.id === component.id && (
                                         <Badge className="mt-1">Selected</Badge>
                                       )}
@@ -509,8 +606,36 @@ export default function BuilderPage() {
                 <div className="border-t pt-4">
                   <div className="flex items-center justify-between">
                     <p className="font-semibold text-slate-900 dark:text-white">Total Price</p>
-                    <p className="text-xl font-bold text-blue-600">${totalPrice.toLocaleString()}</p>
+                    <div className="text-right">
+                      <p className={`text-xl font-bold ${isOverBudget ? 'text-red-600' : 'text-blue-600'}`}>
+                        ${totalPrice.toLocaleString()}
+                      </p>
+                      {budgetEnabled && budget > 0 && (
+                        <p className={`text-sm ${isOverBudget ? 'text-red-500' : 'text-green-600'}`}>
+                          {isOverBudget 
+                            ? `Over budget by $${Math.abs(remainingBudget).toLocaleString()}`
+                            : `Within budget (${Math.round(100 - budgetPercentage)}% remaining)`
+                          }
+                        </p>
+                      )}
+                    </div>
                   </div>
+                  {budgetEnabled && budget > 0 && (
+                    <div className="mt-2">
+                      <div className="flex justify-between text-sm text-slate-600 dark:text-slate-400 mb-1">
+                        <span>Budget Progress</span>
+                        <span>{Math.round(budgetPercentage)}%</span>
+                      </div>
+                      <div className="w-full bg-slate-200 dark:bg-slate-700 rounded-full h-2">
+                        <div
+                          className={`h-2 rounded-full transition-all duration-300 ${
+                            isOverBudget ? 'bg-red-500' : budgetPercentage > 80 ? 'bg-yellow-500' : 'bg-green-500'
+                          }`}
+                          style={{ width: `${Math.min(budgetPercentage, 100)}%` }}
+                        />
+                      </div>
+                    </div>
+                  )}
                 </div>
 
                 <div className="space-y-2">

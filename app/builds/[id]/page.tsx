@@ -28,7 +28,7 @@ import {
   Send,
 } from "lucide-react"
 import { mockBuilds, mockUsers } from "@/lib/mock-data"
-import { useAuth } from "@/contexts/auth-context"
+// Removed authentication - using mock user data
 
 const categoryIcons = {
   cpu: Cpu,
@@ -44,7 +44,8 @@ const categoryIcons = {
 export default function BuildDetailPage() {
   const params = useParams()
   const router = useRouter()
-  const { user } = useAuth()
+  // Mock user data instead of authentication
+  const user = { id: "1", username: "PC Builder", email: "builder@example.com" }
   const [isLiked, setIsLiked] = useState(false)
   const [comment, setComment] = useState("")
   const [comments, setComments] = useState([

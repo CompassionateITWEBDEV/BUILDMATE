@@ -1,7 +1,6 @@
 "use client"
 
-import { useEffect, useState } from "react"
-import { useRouter } from "next/navigation"
+import { useState } from "react"
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
@@ -19,44 +18,27 @@ import {
   Star,
   Heart,
   MessageCircle,
+  MessageSquare,
+  BarChart3,
   Share,
   Edit,
   Eye,
   Calendar,
   Trophy,
 } from "lucide-react"
-import { useAuth } from "@/contexts/auth-context"
 import { mockBuilds } from "@/lib/mock-data"
 
 export default function DashboardPage() {
-  const { user, logout, isLoading } = useAuth()
-  const router = useRouter()
   const [activeTab, setActiveTab] = useState("overview")
 
-  useEffect(() => {
-    if (!isLoading && !user) {
-      router.push("/login")
-    }
-  }, [user, isLoading, router])
-
-  if (isLoading) {
-    return (
-      <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 dark:from-slate-900 dark:to-slate-800 flex items-center justify-center">
-        <div className="text-center">
-          <Cpu className="h-12 w-12 text-blue-600 mx-auto mb-4 animate-pulse" />
-          <p className="text-slate-600 dark:text-slate-400">Loading...</p>
-        </div>
-      </div>
-    )
-  }
-
-  if (!user) {
-    return null
-  }
-
-  const handleLogout = () => {
-    logout()
-    router.push("/")
+  // Mock user data
+  const user = {
+    id: "1",
+    username: "PC Builder",
+    email: "builder@example.com",
+    user_type: "user" as const,
+    avatar: "/placeholder-user.jpg",
+    likedBuilds: ["1", "2", "3"]
   }
 
   const userBuilds = mockBuilds.filter((build) => build.createdBy === user.id)
@@ -112,7 +94,7 @@ export default function DashboardPage() {
                 <Settings className="h-4 w-4 mr-2" />
                 Settings
               </Button>
-              <Button variant="outline" size="sm" onClick={handleLogout}>
+              <Button variant="outline" size="sm">
                 <LogOut className="h-4 w-4 mr-2" />
                 Logout
               </Button>
@@ -267,6 +249,34 @@ export default function DashboardPage() {
                           </div>
                         </CardContent>
                       </Card>
+
+                      <Link href="/support">
+                        <Card className="border-slate-200 dark:border-slate-700 hover:shadow-md transition-shadow cursor-pointer">
+                          <CardContent className="p-4">
+                            <div className="flex items-center gap-3">
+                              <MessageSquare className="h-8 w-8 text-purple-600" />
+                              <div>
+                                <h3 className="font-medium">Get Support</h3>
+                                <p className="text-sm text-slate-600 dark:text-slate-400">Help & troubleshooting</p>
+                              </div>
+                            </div>
+                          </CardContent>
+                        </Card>
+                      </Link>
+
+                      <Link href="/compare">
+                        <Card className="border-slate-200 dark:border-slate-700 hover:shadow-md transition-shadow cursor-pointer">
+                          <CardContent className="p-4">
+                            <div className="flex items-center gap-3">
+                              <BarChart3 className="h-8 w-8 text-orange-600" />
+                              <div>
+                                <h3 className="font-medium">Compare Builds</h3>
+                                <p className="text-sm text-slate-600 dark:text-slate-400">Analyze specs & performance</p>
+                              </div>
+                            </div>
+                          </CardContent>
+                        </Card>
+                      </Link>
                     </div>
                   </CardContent>
                 </Card>

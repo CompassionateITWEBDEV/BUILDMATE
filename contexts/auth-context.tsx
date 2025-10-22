@@ -28,19 +28,26 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const login = async (email: string, password: string): Promise<boolean> => {
     setIsLoading(true)
+    console.log("Login attempt:", { email, password })
+    console.log("Available mock users:", mockUsers.map(u => ({ email: u.email, username: u.username })))
 
     // Simulate API call
     await new Promise((resolve) => setTimeout(resolve, 1000))
 
     // Mock authentication - in real app, this would validate against backend
     const foundUser = mockUsers.find((u) => u.email === email)
+    console.log("Found user:", foundUser)
+    console.log("Password check:", password === "password")
+    
     if (foundUser && password === "password") {
+      console.log("Login successful!")
       setUser(foundUser)
       localStorage.setItem("buildmate-user", JSON.stringify(foundUser))
       setIsLoading(false)
       return true
     }
 
+    console.log("Login failed - user not found or wrong password")
     setIsLoading(false)
     return false
   }

@@ -11,10 +11,16 @@ import { Textarea } from "@/components/ui/textarea"
 import { Separator } from "@/components/ui/separator"
 import { Switch } from "@/components/ui/switch"
 import { ArrowLeft, Camera, Save, Calendar, MapPin, LinkIcon, Bell, Shield } from "lucide-react"
-import { useAuth } from "@/contexts/auth-context"
+// Removed authentication - using mock user data
 
 export default function ProfilePage() {
-  const { user } = useAuth()
+  // Mock user data instead of authentication
+  const user = { 
+    id: "1", 
+    username: "PC Builder", 
+    email: "builder@example.com",
+    createdAt: new Date("2024-01-15")
+  }
   const [isEditing, setIsEditing] = useState(false)
   const [profileData, setProfileData] = useState({
     username: user?.username || "",

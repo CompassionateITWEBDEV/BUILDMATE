@@ -8,12 +8,13 @@ import { Badge } from "@/components/ui/badge"
 import { Input } from "@/components/ui/input"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
-import { Cpu, Heart, MessageCircle, Share, Search, Monitor, Users, Eye } from "lucide-react"
+import { Cpu, Heart, MessageCircle, Share, Search, Monitor, Users, Eye, BarChart3 } from "lucide-react"
 import { mockBuilds, mockUsers, type Build } from "@/lib/mock-data"
-import { useAuth } from "@/contexts/auth-context"
+// Removed authentication - using mock user data
 
 export default function BuildsPage() {
-  const { user } = useAuth()
+  // Mock user data instead of authentication
+  const user = { id: "1", username: "PC Builder", email: "builder@example.com" }
   const [searchTerm, setSearchTerm] = useState("")
   const [sortBy, setSortBy] = useState("popular")
   const [priceFilter, setPriceFilter] = useState("all")
@@ -252,9 +253,17 @@ export default function BuildsPage() {
                         <Share className="h-4 w-4" />
                       </button>
                     </div>
-                    <Button size="sm" variant="outline" asChild className="text-xs bg-transparent">
-                      <Link href={`/builds/${build.id}`}>View Details</Link>
-                    </Button>
+                    <div className="flex items-center gap-2">
+                      <Button size="sm" variant="outline" asChild className="text-xs bg-transparent">
+                        <Link href={`/compare?add=${build.id}`}>
+                          <BarChart3 className="h-3 w-3 mr-1" />
+                          Compare
+                        </Link>
+                      </Button>
+                      <Button size="sm" variant="outline" asChild className="text-xs bg-transparent">
+                        <Link href={`/builds/${build.id}`}>View Details</Link>
+                      </Button>
+                    </div>
                   </div>
                 </CardContent>
               </Card>

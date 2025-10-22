@@ -1,7 +1,6 @@
 "use client"
 
 import type React from "react"
-
 import { useState } from "react"
 import { useRouter } from "next/navigation"
 import Link from "next/link"
@@ -12,7 +11,6 @@ import { Label } from "@/components/ui/label"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { Checkbox } from "@/components/ui/checkbox"
 import { Cpu, Eye, EyeOff, Loader2 } from "lucide-react"
-import { useAuth } from "@/contexts/auth-context"
 
 export default function RegisterPage() {
   const [username, setUsername] = useState("")
@@ -22,8 +20,8 @@ export default function RegisterPage() {
   const [showPassword, setShowPassword] = useState(false)
   const [showConfirmPassword, setShowConfirmPassword] = useState(false)
   const [acceptTerms, setAcceptTerms] = useState(false)
+  const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState("")
-  const { register, isLoading } = useAuth()
   const router = useRouter()
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -31,7 +29,7 @@ export default function RegisterPage() {
     setError("")
 
     if (!username || !email || !password || !confirmPassword) {
-      setError("Please fill in all fields")
+      setError("All fields are required")
       return
     }
 
@@ -50,31 +48,41 @@ export default function RegisterPage() {
       return
     }
 
-    const success = await register(username, email, password)
-    if (success) {
+    setIsLoading(true)
+
+    try {
+      // Simulate registration process
+      await new Promise(resolve => setTimeout(resolve, 1000))
+      
+      console.log("Registration successful, redirecting to dashboard...")
       router.push("/dashboard")
-    } else {
-      setError("Username or email already exists")
+    } catch (err) {
+      setError("Registration failed. Please try again.")
+    } finally {
+      setIsLoading(false)
     }
   }
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 dark:from-slate-900 dark:to-slate-800 flex items-center justify-center p-4">
       <div className="w-full max-w-md">
-        {/* Header */}
+        {/* Logo and Header */}
         <div className="text-center mb-8">
-          <Link href="/" className="inline-flex items-center gap-2 mb-4">
+          <Link href="/" className="inline-flex items-center gap-2 mb-6">
             <Cpu className="h-8 w-8 text-blue-600" />
             <span className="text-2xl font-bold text-slate-900 dark:text-white">BuildMate</span>
           </Link>
-          <h1 className="text-3xl font-bold text-slate-900 dark:text-white mb-2">Join BuildMate</h1>
-          <p className="text-slate-600 dark:text-slate-400">Create your account and start building amazing PCs</p>
+          <h1 className="text-3xl font-bold text-slate-900 dark:text-white mb-2">Create Account</h1>
+          <p className="text-slate-600 dark:text-slate-400">
+            Join the community and start building your dream PC
+          </p>
         </div>
 
+        {/* Registration Form */}
         <Card className="border-slate-200 dark:border-slate-700">
           <CardHeader>
-            <CardTitle>Create Account</CardTitle>
-            <CardDescription>Fill in your details to get started</CardDescription>
+            <CardTitle>Sign Up</CardTitle>
+            <CardDescription>Enter your details to create your account</CardDescription>
           </CardHeader>
           <CardContent>
             <form onSubmit={handleSubmit} className="space-y-4">
@@ -89,10 +97,9 @@ export default function RegisterPage() {
                 <Input
                   id="username"
                   type="text"
-                  placeholder="Choose a username"
+                  placeholder="Enter your username"
                   value={username}
                   onChange={(e) => setUsername(e.target.value)}
-                  disabled={isLoading}
                   required
                 />
               </div>
@@ -105,7 +112,6 @@ export default function RegisterPage() {
                   placeholder="Enter your email"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
-                  disabled={isLoading}
                   required
                 />
               </div>
@@ -119,7 +125,6 @@ export default function RegisterPage() {
                     placeholder="Create a password"
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
-                    disabled={isLoading}
                     required
                   />
                   <Button
@@ -128,12 +133,11 @@ export default function RegisterPage() {
                     size="sm"
                     className="absolute right-0 top-0 h-full px-3 py-2 hover:bg-transparent"
                     onClick={() => setShowPassword(!showPassword)}
-                    disabled={isLoading}
                   >
                     {showPassword ? (
-                      <EyeOff className="h-4 w-4 text-slate-500" />
+                      <EyeOff className="h-4 w-4" />
                     ) : (
-                      <Eye className="h-4 w-4 text-slate-500" />
+                      <Eye className="h-4 w-4" />
                     )}
                   </Button>
                 </div>
@@ -148,7 +152,6 @@ export default function RegisterPage() {
                     placeholder="Confirm your password"
                     value={confirmPassword}
                     onChange={(e) => setConfirmPassword(e.target.value)}
-                    disabled={isLoading}
                     required
                   />
                   <Button
@@ -157,12 +160,11 @@ export default function RegisterPage() {
                     size="sm"
                     className="absolute right-0 top-0 h-full px-3 py-2 hover:bg-transparent"
                     onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                    disabled={isLoading}
                   >
                     {showConfirmPassword ? (
-                      <EyeOff className="h-4 w-4 text-slate-500" />
+                      <EyeOff className="h-4 w-4" />
                     ) : (
-                      <Eye className="h-4 w-4 text-slate-500" />
+                      <Eye className="h-4 w-4" />
                     )}
                   </Button>
                 </div>
@@ -173,21 +175,20 @@ export default function RegisterPage() {
                   id="terms"
                   checked={acceptTerms}
                   onCheckedChange={(checked) => setAcceptTerms(checked as boolean)}
-                  disabled={isLoading}
                 />
-                <Label htmlFor="terms" className="text-sm text-slate-600 dark:text-slate-400">
+                <Label htmlFor="terms" className="text-sm">
                   I agree to the{" "}
-                  <Link href="/terms" className="text-blue-600 hover:text-blue-700">
+                  <Link href="/terms" className="text-blue-600 hover:underline">
                     Terms of Service
                   </Link>{" "}
                   and{" "}
-                  <Link href="/privacy" className="text-blue-600 hover:text-blue-700">
+                  <Link href="/privacy" className="text-blue-600 hover:underline">
                     Privacy Policy
                   </Link>
                 </Label>
               </div>
 
-              <Button type="submit" className="w-full bg-blue-600 hover:bg-blue-700" disabled={isLoading}>
+              <Button type="submit" className="w-full" disabled={isLoading}>
                 {isLoading ? (
                   <>
                     <Loader2 className="mr-2 h-4 w-4 animate-spin" />
@@ -202,7 +203,7 @@ export default function RegisterPage() {
             <div className="mt-6 text-center">
               <p className="text-sm text-slate-600 dark:text-slate-400">
                 Already have an account?{" "}
-                <Link href="/login" className="text-blue-600 hover:text-blue-700 font-medium">
+                <Link href="/login" className="text-blue-600 hover:underline font-medium">
                   Sign in
                 </Link>
               </p>
@@ -210,10 +211,10 @@ export default function RegisterPage() {
           </CardContent>
         </Card>
 
-        <div className="text-center mt-6">
+        <div className="mt-6 text-center">
           <Link
             href="/"
-            className="text-sm text-slate-600 hover:text-slate-900 dark:text-slate-400 dark:hover:text-white"
+            className="inline-flex items-center text-sm text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white"
           >
             ← Back to Home
           </Link>

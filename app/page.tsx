@@ -33,6 +33,18 @@ export default function HomePage() {
               >
                 Build Guides
               </Link>
+              <Link
+                href="/support"
+                className="text-slate-600 hover:text-slate-900 dark:text-slate-300 dark:hover:text-white"
+              >
+                Support
+              </Link>
+              <Link
+                href="/compare"
+                className="text-slate-600 hover:text-slate-900 dark:text-slate-300 dark:hover:text-white"
+              >
+                Compare
+              </Link>
             </nav>
             <div className="flex items-center gap-2">
               <Button variant="outline" asChild>
