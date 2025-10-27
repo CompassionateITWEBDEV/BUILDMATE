@@ -302,7 +302,7 @@ export default function BuilderPage() {
 
   useEffect(() => {
     const hasSelected = Object.values(selectedComponents).some(c => c !== null);
-    if (budget > 0 && hasSelected) {
+    if (budget >= 0 && hasSelected) {
       console.log("🧠 Running CSP Compatibility Algorithm...");
       runCSPAlgorithm();
       console.log("🔗 Running Graph Upgrade Algorithm...");
