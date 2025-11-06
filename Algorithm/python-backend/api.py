@@ -28,6 +28,16 @@ graph_db_spec.loader.exec_module(graph_db)
 app = Flask(__name__)
 CORS(app)
 
+@app.route('/health', methods=['GET'])
+def health_check():
+    """Health check endpoint"""
+    return jsonify({"status": "ok", "message": "Python backend is running"}), 200
+
+@app.route('/', methods=['GET'])
+def root():
+    """Root endpoint"""
+    return jsonify({"message": "Python Algorithm Backend", "endpoints": ["/api/csp", "/api/graph", "/health"]}), 200
+
 def transform_component_for_csp(comp):
     """Transform Supabase component to CSP format"""
     category_name = comp.get('component_categories', {}).get('category_name', '')

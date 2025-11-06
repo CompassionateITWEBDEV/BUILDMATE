@@ -36,11 +36,29 @@ def generate_upgrade_recommendations(current_build, all_components):
         comp_name = comp["component_name"]
         comp_price = comp["component_price"]
 
-        neighbors = [
-            (n, G.nodes[n]["name"], G.nodes[n]["price"])
-            for n in G.neighbors(comp_id)
-            if G.nodes[n]["price"] > comp_price
-        ]
+        # Check if component exists in the graph
+        if comp_id not in G.nodes:
+            recommendations.append({
+                "current_component": comp_name,
+                "recommended_upgrade": None,
+                "new_price": None
+            })
+            continue
+
+        # Get neighbors that are valid upgrades
+        neighbors = []
+        try:
+            for n in G.neighbors(comp_id):
+                if n in G.nodes and G.nodes[n].get("price", 0) > comp_price:
+                    neighbors.append((
+                        n, 
+                        G.nodes[n].get("name", "Unknown"),
+                        G.nodes[n].get("price", 0)
+                    ))
+        except (KeyError, AttributeError) as e:
+            # If there's an error accessing neighbors, skip this component
+            print(f"Warning: Could not get neighbors for component {comp_id}: {e}")
+            neighbors = []
 
         if neighbors:
             # Pick the cheapest valid upgrade
