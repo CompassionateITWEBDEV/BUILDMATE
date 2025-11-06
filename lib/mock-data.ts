@@ -135,7 +135,7 @@ export const mockComponents: Component[] = [
     name: "AMD Ryzen 7 7800X3D",
     category: "cpu",
     brand: "AMD",
-    price: 449,
+    price: 24700,
     image: "/amd-ryzen-cpu.jpg",
     specifications: {
       cores: 8,
@@ -159,7 +159,7 @@ export const mockComponents: Component[] = [
     name: "Intel Core i7-14700K",
     category: "cpu",
     brand: "Intel",
-    price: 409,
+    price: 22500,
     image: "/intel-core-i7-cpu.png",
     specifications: {
       cores: 20,
@@ -184,7 +184,7 @@ export const mockComponents: Component[] = [
     name: "NVIDIA RTX 4080 SUPER",
     category: "gpu",
     brand: "NVIDIA",
-    price: 999,
+    price: 55000,
     image: "/nvidia-rtx-4080-graphics-card.jpg",
     specifications: {
       memory: "16GB GDDR6X",
@@ -207,7 +207,7 @@ export const mockComponents: Component[] = [
     name: "ASUS ROG STRIX X670E-E",
     category: "motherboard",
     brand: "ASUS",
-    price: 499,
+    price: 27500,
     image: "/asus-motherboard.jpg",
     specifications: {
       chipset: "X670E",
@@ -233,7 +233,7 @@ export const mockComponents: Component[] = [
     name: "Corsair Vengeance DDR5-5600",
     category: "memory",
     brand: "Corsair",
-    price: 179,
+    price: 9850,
     image: "/corsair-ddr5-memory.jpg",
     specifications: {
       capacity: "32GB",
@@ -256,7 +256,7 @@ export const mockComponents: Component[] = [
     name: "Corsair RM850x",
     category: "psu",
     brand: "Corsair",
-    price: 149,
+    price: 8200,
     image: "/corsair-psu-850w.jpg",
     specifications: {
       wattage: "850W",
@@ -277,7 +277,7 @@ export const mockComponents: Component[] = [
     name: "Fractal Design Define 7",
     category: "case",
     brand: "Fractal Design",
-    price: 169,
+    price: 9300,
     image: "/fractal-design-case.jpg",
     specifications: {
       formFactor: "ATX",
@@ -300,7 +300,7 @@ export const mockComponents: Component[] = [
     name: "Noctua NH-D15",
     category: "cooling",
     brand: "Noctua",
-    price: 109,
+    price: 6000,
     image: "/noctua-cpu-cooler.jpg",
     specifications: {
       type: "Air Cooler",
@@ -323,7 +323,7 @@ export const mockComponents: Component[] = [
     name: "Samsung 980 PRO 1TB",
     category: "storage",
     brand: "Samsung",
-    price: 89,
+    price: 4900,
     image: "/samsung-nvme-ssd.jpg",
     specifications: {
       capacity: "1TB",
@@ -345,7 +345,7 @@ export const mockComponents: Component[] = [
     name: "AMD Ryzen 5 5600G",
     category: "cpu",
     brand: "AMD",
-    price: 159,
+    price: 8750,
     image: "/amd-ryzen-cpu.jpg",
     specifications: {
       cores: 6,
@@ -369,7 +369,7 @@ export const mockComponents: Component[] = [
     name: "Intel Core i5-13400",
     category: "cpu",
     brand: "Intel",
-    price: 199,
+    price: 10950,
     image: "/intel-core-i7-cpu.png",
     specifications: {
       cores: 10,
@@ -393,7 +393,7 @@ export const mockComponents: Component[] = [
     name: "NVIDIA GTX 1660 SUPER",
     category: "gpu",
     brand: "NVIDIA",
-    price: 249,
+    price: 13700,
     image: "/nvidia-rtx-4080-graphics-card.jpg",
     specifications: {
       memory: "6GB GDDR6",
@@ -415,7 +415,7 @@ export const mockComponents: Component[] = [
     name: "NVIDIA RTX 3060",
     category: "gpu",
     brand: "NVIDIA",
-    price: 329,
+    price: 18100,
     image: "/nvidia-rtx-4080-graphics-card.jpg",
     specifications: {
       memory: "12GB GDDR6",
@@ -437,7 +437,7 @@ export const mockComponents: Component[] = [
     name: "Corsair Vengeance LPX DDR4-3200",
     category: "memory",
     brand: "Corsair",
-    price: 89,
+    price: 4900,
     image: "/corsair-ddr5-memory.jpg",
     specifications: {
       capacity: "16GB",
@@ -459,7 +459,7 @@ export const mockComponents: Component[] = [
     name: "G.Skill Trident Z5 DDR5-6000",
     category: "memory",
     brand: "G.Skill",
-    price: 249,
+    price: 13700,
     image: "/corsair-ddr5-memory.jpg",
     specifications: {
       capacity: "64GB",
@@ -481,7 +481,7 @@ export const mockComponents: Component[] = [
     name: "EVGA 500W 80+ Bronze",
     category: "psu",
     brand: "EVGA",
-    price: 59,
+    price: 3250,
     image: "/corsair-psu-850w.jpg",
     specifications: {
       wattage: "500W",
@@ -501,7 +501,7 @@ export const mockComponents: Component[] = [
     name: "Seasonic Focus GX-750",
     category: "psu",
     brand: "Seasonic",
-    price: 119,
+    price: 6550,
     image: "/corsair-psu-850w.jpg",
     specifications: {
       wattage: "750W",
@@ -521,7 +521,7 @@ export const mockComponents: Component[] = [
     name: "Samsung 870 EVO 500GB",
     category: "storage",
     brand: "Samsung",
-    price: 49,
+    price: 2700,
     image: "/samsung-nvme-ssd.jpg",
     specifications: {
       capacity: "500GB",
@@ -542,7 +542,7 @@ export const mockComponents: Component[] = [
     name: "WD Black SN850X 2TB",
     category: "storage",
     brand: "Western Digital",
-    price: 199,
+    price: 10950,
     image: "/samsung-nvme-ssd.jpg",
     specifications: {
       capacity: "2TB",
@@ -564,7 +564,7 @@ export const mockComponents: Component[] = [
     name: "AMD Ryzen 9 7950X",
     category: "cpu",
     brand: "AMD",
-    price: 699,
+    price: 38500,
     image: "/amd-ryzen-cpu.jpg",
     specifications: {
       cores: 16,
@@ -588,7 +588,7 @@ export const mockComponents: Component[] = [
     name: "NVIDIA RTX 4090",
     category: "gpu",
     brand: "NVIDIA",
-    price: 1599,
+    price: 88000,
     image: "/nvidia-rtx-4080-graphics-card.jpg",
     specifications: {
       memory: "24GB GDDR6X",
@@ -610,7 +610,7 @@ export const mockComponents: Component[] = [
     name: "Corsair Dominator Platinum DDR5-6400",
     category: "memory",
     brand: "Corsair",
-    price: 399,
+    price: 22000,
     image: "/corsair-ddr5-memory.jpg",
     specifications: {
       capacity: "32GB",
@@ -632,7 +632,7 @@ export const mockComponents: Component[] = [
     name: "NZXT H510 Compact",
     category: "case",
     brand: "NZXT",
-    price: 79,
+    price: 4350,
     image: "/fractal-design-case.jpg",
     specifications: {
       formFactor: "ATX",
@@ -654,7 +654,7 @@ export const mockComponents: Component[] = [
     name: "Cooler Master Hyper 212",
     category: "cooling",
     brand: "Cooler Master",
-    price: 39,
+    price: 2150,
     image: "/noctua-cpu-cooler.jpg",
     specifications: {
       type: "Air Cooler",
@@ -688,7 +688,7 @@ export const mockBuilds: Build[] = [
       case: mockComponents[6], // Fractal Design Define 7
       cooling: mockComponents[8], // Noctua NH-D15
     },
-    totalPrice: 2463,
+    totalPrice: 135500,
     createdBy: "user-1",
     createdAt: new Date("2024-01-15"),
     likes: 156,
@@ -709,7 +709,7 @@ export const mockBuilds: Build[] = [
       case: null,
       cooling: null,
     },
-    totalPrice: 899,
+    totalPrice: 49500,
     createdBy: "user-2",
     createdAt: new Date("2024-01-20"),
     likes: 89,
@@ -730,7 +730,7 @@ export const mockBuilds: Build[] = [
       case: mockComponents[6],
       cooling: mockComponents[8],
     },
-    totalPrice: 3299,
+    totalPrice: 181500,
     createdBy: "user-3",
     createdAt: new Date("2024-01-18"),
     likes: 203,
@@ -751,7 +751,7 @@ export const mockBuilds: Build[] = [
       case: mockComponents[6],
       cooling: mockComponents[8],
     },
-    totalPrice: 1299,
+    totalPrice: 71500,
     createdBy: "user-1",
     createdAt: new Date("2024-01-22"),
     likes: 67,

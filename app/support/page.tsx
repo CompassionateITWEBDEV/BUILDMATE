@@ -11,6 +11,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Badge } from "@/components/ui/badge"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { Navigation } from "@/components/navigation"
 import {
   Cpu,
   ArrowLeft,
@@ -169,16 +170,13 @@ export default function SupportPage() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 dark:from-slate-900 dark:to-slate-800">
-      {/* Header */}
-      <header className="border-b bg-white/80 backdrop-blur-sm dark:bg-slate-900/80">
+      <Navigation />
+      
+      {/* Page Header */}
+      <div className="border-b bg-white/80 backdrop-blur-sm dark:bg-slate-900/80">
         <div className="container mx-auto px-4 py-4">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-4">
-              <Link href="/" className="flex items-center gap-2">
-                <Cpu className="h-8 w-8 text-blue-600" />
-                <h1 className="text-2xl font-bold text-slate-900 dark:text-white">BuildMate</h1>
-              </Link>
-              <div className="h-8 w-px bg-slate-300 dark:bg-slate-600" />
               <h2 className="text-xl font-semibold text-slate-700 dark:text-slate-300">Help & Support</h2>
             </div>
             <Link href="/dashboard">
@@ -189,7 +187,7 @@ export default function SupportPage() {
             </Link>
           </div>
         </div>
-      </header>
+      </div>
 
       <div className="container mx-auto px-4 py-8">
         <Tabs value={activeTab} onValueChange={setActiveTab}>
@@ -632,4 +630,5 @@ export default function SupportPage() {
     </div>
   )
 }
+
 

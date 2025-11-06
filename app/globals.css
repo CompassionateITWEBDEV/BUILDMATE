@@ -123,3 +123,54 @@
     @apply bg-background text-foreground;
   }
 }
+
+/* Browser compatibility fixes */
+@supports not (-webkit-text-size-adjust: none) {
+  html {
+    -webkit-text-size-adjust: 100%;
+  }
+}
+
+/* Fallback for field-sizing property */
+@supports not (field-sizing: content) {
+  input, textarea {
+    box-sizing: border-box;
+  }
+}
+
+/* Fallback for text-wrap property */
+@supports not (text-wrap: balance) {
+  .text-balance {
+    text-wrap: normal;
+  }
+}
+
+@supports not (text-wrap: pretty) {
+  .text-pretty {
+    text-wrap: normal;
+  }
+}
+
+/* Additional browser compatibility fixes */
+@supports not (selector(:is(*))) {
+  .dark * {
+    /* Fallback for :is() selector */
+  }
+}
+
+/* Ensure proper box-sizing for all elements */
+*, *::before, *::after {
+  box-sizing: border-box;
+}
+
+/* Fix for potential layout issues with newer CSS properties */
+html {
+  -webkit-text-size-adjust: 100%;
+  -ms-text-size-adjust: 100%;
+}
+
+/* Ensure proper rendering of custom properties */
+:root {
+  /* Fallback values for older browsers */
+  --radius: 0.625rem;
+}

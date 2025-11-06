@@ -10,6 +10,7 @@ import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Alert, AlertDescription } from "@/components/ui/alert"
+import { Navigation } from "@/components/navigation"
 import {
   Cpu,
   ArrowLeft,
@@ -38,6 +39,7 @@ import {
   Info,
 } from "lucide-react"
 import { mockBuilds, mockComponents, type Build, type Component } from "@/lib/mock-data"
+import { formatCurrency } from "@/lib/currency"
 
 const categoryIcons = {
   cpu: Cpu,
@@ -174,16 +176,13 @@ export default function ComparePage() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 dark:from-slate-900 dark:to-slate-800">
-      {/* Header */}
-      <header className="border-b bg-white/80 backdrop-blur-sm dark:bg-slate-900/80">
+      <Navigation />
+      
+      {/* Page Header */}
+      <div className="border-b bg-white/80 backdrop-blur-sm dark:bg-slate-900/80">
         <div className="container mx-auto px-4 py-4">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-4">
-              <Link href="/" className="flex items-center gap-2">
-                <Cpu className="h-8 w-8 text-blue-600" />
-                <h1 className="text-2xl font-bold text-slate-900 dark:text-white">BuildMate</h1>
-              </Link>
-              <div className="h-8 w-px bg-slate-300 dark:bg-slate-600" />
               <h2 className="text-xl font-semibold text-slate-700 dark:text-slate-300">Build Comparison</h2>
             </div>
             <div className="flex items-center gap-2">
@@ -202,7 +201,7 @@ export default function ComparePage() {
             </div>
           </div>
         </div>
-      </header>
+      </div>
 
       <div className="container mx-auto px-4 py-8">
         {allBuilds.length === 1 ? (
@@ -236,7 +235,7 @@ export default function ComparePage() {
                               <h3 className="font-semibold text-slate-900 dark:text-white">{build.name}</h3>
                               <p className="text-sm text-slate-600 dark:text-slate-400">{build.description}</p>
                             </div>
-                            <Badge variant="secondary">${build.totalPrice.toLocaleString()}</Badge>
+                            <Badge variant="secondary">{formatCurrency(build.totalPrice)}</Badge>
                           </div>
 
                           <div className="flex flex-wrap gap-1 mb-3">
@@ -346,7 +345,7 @@ export default function ComparePage() {
                       <CardContent className="space-y-4">
                         <div className="flex items-center justify-between">
                           <span className="text-sm text-slate-600 dark:text-slate-400">Total Price</span>
-                          <span className="text-xl font-bold text-blue-600">${build.totalPrice.toLocaleString()}</span>
+                          <span className="text-xl font-bold text-blue-600">{formatCurrency(build.totalPrice)}</span>
                         </div>
 
                         <div className="flex items-center justify-between">
@@ -404,15 +403,15 @@ export default function ComparePage() {
                             <div className="grid grid-cols-3 gap-4 text-center">
                               <div>
                                 <p className="text-sm text-slate-600 dark:text-slate-400">Lowest</p>
-                                <p className="text-2xl font-bold text-green-600">${priceData.min.toLocaleString()}</p>
+                                <p className="text-2xl font-bold text-green-600">{formatCurrency(priceData.min)}</p>
                               </div>
                               <div>
                                 <p className="text-sm text-slate-600 dark:text-slate-400">Average</p>
-                                <p className="text-2xl font-bold text-blue-600">${Math.round(priceData.avg).toLocaleString()}</p>
+                                <p className="text-2xl font-bold text-blue-600">{formatCurrency(Math.round(priceData.avg))}</p>
                               </div>
                               <div>
                                 <p className="text-sm text-slate-600 dark:text-slate-400">Highest</p>
-                                <p className="text-2xl font-bold text-red-600">${priceData.max.toLocaleString()}</p>
+                                <p className="text-2xl font-bold text-red-600">{formatCurrency(priceData.max)}</p>
                               </div>
                             </div>
                             <div className="space-y-2">
@@ -426,7 +425,7 @@ export default function ComparePage() {
                                         style={{ width: `${((build.totalPrice - priceData.min) / (priceData.max - priceData.min)) * 100}%` }}
                                       />
                                     </div>
-                                    <span className="text-sm font-medium w-20 text-right">${build.totalPrice.toLocaleString()}</span>
+                                    <span className="text-sm font-medium w-20 text-right">{formatCurrency(build.totalPrice)}</span>
                                   </div>
                                 </div>
                               ))}
@@ -477,7 +476,7 @@ export default function ComparePage() {
                                     {component ? (
                                       <div className="space-y-1">
                                         <p className="text-sm font-medium">{component.name}</p>
-                                        <p className="text-xs text-slate-600 dark:text-slate-400">${component.price}</p>
+                                        <p className="text-xs text-slate-600 dark:text-slate-400">{formatCurrency(component.price)}</p>
                                         <div className="flex items-center justify-center">
                                           {[...Array(5)].map((_, i) => (
                                             <Star
@@ -609,7 +608,7 @@ export default function ComparePage() {
                               <div>
                                 <h3 className="font-semibold text-lg">{build.name}</h3>
                                 <p className="text-sm text-slate-600 dark:text-slate-400">
-                                  ${build.totalPrice.toLocaleString()} • {performanceScore}/100 Performance
+                                  {formatCurrency(build.totalPrice)} • {performanceScore}/100 Performance
                                 </p>
                               </div>
                               <Badge variant={index === 0 ? "default" : "secondary"}>
@@ -630,7 +629,7 @@ export default function ComparePage() {
                               </div>
                               <div className="text-center">
                                 <p className="text-sm text-slate-600 dark:text-slate-400">Price per Performance</p>
-                                <p className="text-2xl font-bold text-blue-600">${Math.round(pricePerPerformance)}</p>
+                                <p className="text-2xl font-bold text-blue-600">{formatCurrency(Math.round(pricePerPerformance))}</p>
                                 <p className="text-xs text-slate-500">per performance point</p>
                               </div>
                               <div className="text-center">
@@ -687,4 +686,5 @@ export default function ComparePage() {
     </div>
   )
 }
+
 

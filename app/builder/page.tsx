@@ -19,6 +19,7 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog"
+import { Navigation } from "@/components/navigation"
 import {
   Cpu,
   HardDrive,
@@ -44,6 +45,9 @@ import { CompatibilityChecker, type CompatibilityResult } from "@/lib/compatibil
 import { filterComponentsByPerformance } from "@/lib/performance-filter"
 import { DuplicateDetector, type BuildComparison } from "@/lib/duplicate-detector"
 import { DuplicateCheckDialog } from "@/components/duplicate-warning"
+import { formatCurrency } from "@/lib/currency"
+import { getCSPRecommendations, getUpgradeRecommendations, type CSPSolution } from "@/lib/algorithm-service"
+import { TrendingUp, Loader2, CheckCircle2 } from "lucide-react"
 
 const categoryIcons = {
   cpu: Cpu,
@@ -91,6 +95,15 @@ export default function BuilderPage() {
   const [duplicateComparisons, setDuplicateComparisons] = useState<BuildComparison[]>([])
   const [showDuplicateDialog, setShowDuplicateDialog] = useState(false)
   const [isCheckingDuplicates, setIsCheckingDuplicates] = useState(false)
+  
+  // Algorithm integration states
+  const [cspSolutions, setCspSolutions] = useState<CSPSolution[]>([])
+  const [isCSPDialogOpen, setIsCSPDialogOpen] = useState(false)
+  const [isLoadingCSP, setIsLoadingCSP] = useState(false)
+  const [upgradeRecommendations, setUpgradeRecommendations] = useState<any[]>([])
+  const [isLoadingUpgrades, setIsLoadingUpgrades] = useState(false)
+  const [showUpgradeDialog, setShowUpgradeDialog] = useState(false)
+  const [algorithmError, setAlgorithmError] = useState<string | null>(null)
 
   // Filter components by category, search term, performance category, and budget
   const getFilteredComponents = (category: ComponentCategory) => {
@@ -157,6 +170,85 @@ export default function BuilderPage() {
       [category]: null,
     }))
   }
+
+  // CSP Recommendation Checker Integration
+  const handleGetCSPRecommendations = async () => {
+    if (!budgetEnabled || budget <= 0) {
+      setAlgorithmError("Please set a budget first")
+      return
+    }
+
+    setIsLoadingCSP(true)
+    setAlgorithmError(null)
+
+    try {
+      // Map selected components to CSP format
+      const userInputs: Record<string, number> = {}
+      if (selectedComponents.cpu) {
+        userInputs["CPU"] = parseInt(selectedComponents.cpu.id.replace(/\D/g, '')) || 0
+      }
+      if (selectedComponents.gpu) {
+        userInputs["Video Card"] = parseInt(selectedComponents.gpu.id.replace(/\D/g, '')) || 0
+      }
+
+      const solutions = await getCSPRecommendations(budget, userInputs)
+      setCspSolutions(solutions)
+      setIsCSPDialogOpen(true)
+    } catch (error: any) {
+      console.error("Error getting CSP recommendations:", error)
+      setAlgorithmError(error.message || "Failed to get recommendations. Make sure Python backend is running.")
+    } finally {
+      setIsLoadingCSP(false)
+    }
+  }
+
+  // Apply CSP solution to build
+  const handleApplyCSPSolution = (solution: CSPSolution) => {
+    // This would need to map CSP solution components back to our component format
+    // For now, we'll just show a message
+    alert("Solution applied! (Note: This requires mapping CSP components to your component database)")
+    setIsCSPDialogOpen(false)
+  }
+
+  // Upgrade Algorithm Integration
+  const handleGetUpgradeRecommendations = async () => {
+    const selectedComponentsList = Object.values(selectedComponents).filter(Boolean)
+    
+    if (selectedComponentsList.length === 0) {
+      setAlgorithmError("Please select some components first")
+      return
+    }
+
+    setIsLoadingUpgrades(true)
+    setAlgorithmError(null)
+
+    try {
+      // Transform selected components to algorithm format
+      const currentBuild = selectedComponentsList.map((comp) => ({
+        component_id: parseInt(comp!.id.replace(/\D/g, '')) || 0,
+        component_name: comp!.name,
+        component_price: comp!.price,
+        category_name: comp!.category === "gpu" ? "GPU" : 
+                      comp!.category === "cpu" ? "CPU" :
+                      comp!.category === "memory" ? "Memory" :
+                      comp!.category === "storage" ? "Storage" :
+                      comp!.category === "psu" ? "PSU" :
+                      comp!.category === "case" ? "Case" :
+                      comp!.category === "cooling" ? "Cooling" :
+                      comp!.category === "motherboard" ? "Motherboard" : comp!.category
+      }))
+
+      const recommendations = await getUpgradeRecommendations(currentBuild)
+      setUpgradeRecommendations(recommendations)
+      setShowUpgradeDialog(true)
+    } catch (error: any) {
+      console.error("Error getting upgrade recommendations:", error)
+      setAlgorithmError(error.message || "Failed to get upgrade recommendations. Make sure Python backend is running.")
+    } finally {
+      setIsLoadingUpgrades(false)
+    }
+  }
+
 
   const checkForDuplicates = async () => {
     if (!user) return
@@ -254,8 +346,10 @@ export default function BuilderPage() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 dark:from-slate-900 dark:to-slate-800">
-      {/* Header */}
-      <header className="border-b bg-white/80 backdrop-blur-sm dark:bg-slate-900/80">
+      <Navigation />
+      
+      {/* Builder Header */}
+      <div className="border-b bg-white/80 backdrop-blur-sm dark:bg-slate-900/80">
         <div className="container mx-auto px-4 py-4">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-4">
@@ -315,7 +409,7 @@ export default function BuilderPage() {
             </div>
           </div>
         </div>
-      </header>
+      </div>
 
       <div className="container mx-auto px-4 py-6">
         <div className="grid lg:grid-cols-3 gap-6">
@@ -381,7 +475,7 @@ export default function BuilderPage() {
                     {budgetEnabled && (
                       <>
                         <div className="flex items-center gap-2">
-                          <span className="text-sm text-slate-600 dark:text-slate-400">$</span>
+                          <span className="text-sm text-slate-600 dark:text-slate-400">₱</span>
                           <Input
                             type="number"
                             value={budget}
@@ -389,16 +483,16 @@ export default function BuilderPage() {
                             placeholder="Enter budget"
                             className="w-32"
                             min="0"
-                            step="50"
+                            step="1000"
                           />
                         </div>
                         <div className="flex items-center gap-2 text-sm">
                           <span className={`font-medium ${isOverBudget ? 'text-red-600' : 'text-slate-600 dark:text-slate-400'}`}>
-                            Spent: ${totalPrice.toLocaleString()}
+                            Spent: {formatCurrency(totalPrice)}
                           </span>
                           <span className="text-slate-400">|</span>
                           <span className={`font-medium ${isOverBudget ? 'text-red-600' : 'text-green-600'}`}>
-                            {isOverBudget ? `Over by $${Math.abs(remainingBudget).toLocaleString()}` : `Remaining: $${remainingBudget.toLocaleString()}`}
+                            {isOverBudget ? `Over by ${formatCurrency(Math.abs(remainingBudget))}` : `Remaining: ${formatCurrency(remainingBudget)}`}
                           </span>
                         </div>
                         <div className="flex-1">
@@ -414,6 +508,53 @@ export default function BuilderPage() {
                       </>
                     )}
                   </div>
+
+                  {/* Algorithm Buttons */}
+                  <div className="flex items-center gap-2 pt-2 border-t border-slate-200 dark:border-slate-700">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={handleGetCSPRecommendations}
+                      disabled={!budgetEnabled || budget <= 0 || isLoadingCSP}
+                      className="flex items-center gap-2"
+                    >
+                      {isLoadingCSP ? (
+                        <>
+                          <Loader2 className="h-4 w-4 animate-spin" />
+                          Loading...
+                        </>
+                      ) : (
+                        <>
+                          <CheckCircle2 className="h-4 w-4" />
+                          CSP Recommendation Checker
+                        </>
+                      )}
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={handleGetUpgradeRecommendations}
+                      disabled={Object.values(selectedComponents).filter(Boolean).length === 0 || isLoadingUpgrades}
+                      className="flex items-center gap-2"
+                    >
+                      {isLoadingUpgrades ? (
+                        <>
+                          <Loader2 className="h-4 w-4 animate-spin" />
+                          Loading...
+                        </>
+                      ) : (
+                        <>
+                          <TrendingUp className="h-4 w-4" />
+                          Get Upgrade Suggestions
+                        </>
+                      )}
+                    </Button>
+                  </div>
+                  {algorithmError && (
+                    <div className="p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg">
+                      <p className="text-sm text-red-800 dark:text-red-200">{algorithmError}</p>
+                    </div>
+                  )}
                 </div>
               </CardHeader>
               <CardContent>
@@ -495,7 +636,7 @@ export default function BuilderPage() {
                                             ? 'text-red-600'
                                             : 'text-slate-900 dark:text-white'
                                         }`}>
-                                          ${component.price}
+                                          {formatCurrency(component.price)}
                                         </p>
                                         {budgetEnabled && budget > 0 && component.price > (budget - totalPrice + (selectedComponents[component.category]?.price || 0)) && (
                                           <Badge variant="destructive" className="text-xs">
@@ -669,7 +810,7 @@ export default function BuilderPage() {
                       <div className="text-right">
                         {component ? (
                           <div>
-                            <p className="text-sm font-medium">${component.price}</p>
+                            <p className="text-sm font-medium">{formatCurrency(component.price)}</p>
                             <Button
                               variant="ghost"
                               size="sm"
@@ -680,7 +821,7 @@ export default function BuilderPage() {
                             </Button>
                           </div>
                         ) : (
-                          <p className="text-sm text-slate-400">$0</p>
+                          <p className="text-sm text-slate-400">{formatCurrency(0)}</p>
                         )}
                       </div>
                     </div>
@@ -692,12 +833,12 @@ export default function BuilderPage() {
                     <p className="font-semibold text-slate-900 dark:text-white">Total Price</p>
                     <div className="text-right">
                       <p className={`text-xl font-bold ${isOverBudget ? 'text-red-600' : 'text-blue-600'}`}>
-                        ${totalPrice.toLocaleString()}
+                        {formatCurrency(totalPrice)}
                       </p>
                       {budgetEnabled && budget > 0 && (
                         <p className={`text-sm ${isOverBudget ? 'text-red-500' : 'text-green-600'}`}>
                           {isOverBudget 
-                            ? `Over budget by $${Math.abs(remainingBudget).toLocaleString()}`
+                            ? `Over budget by ${formatCurrency(Math.abs(remainingBudget))}`
                             : `Within budget (${Math.round(100 - budgetPercentage)}% remaining)`
                           }
                         </p>
@@ -778,6 +919,117 @@ export default function BuilderPage() {
         onProceedAnyway={handleProceedAnyway}
         onModifyBuild={handleModifyBuild}
       />
+
+      {/* CSP Recommendation Checker Dialog */}
+      <Dialog open={isCSPDialogOpen} onOpenChange={setIsCSPDialogOpen}>
+        <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <CheckCircle2 className="h-5 w-5 text-blue-600" />
+              CSP Recommendation Checker
+            </DialogTitle>
+            <DialogDescription>
+              Compatible component combinations that fit your budget using Constraint Satisfaction Problem algorithm
+            </DialogDescription>
+          </DialogHeader>
+          {cspSolutions.length === 0 ? (
+            <div className="text-center py-8">
+              <p className="text-slate-600 dark:text-slate-400">No solutions found. Try adjusting your budget or selected components.</p>
+            </div>
+          ) : (
+            <div className="space-y-4">
+              {cspSolutions.slice(0, 5).map((solution, index) => {
+                const solutionPrice = Object.values(solution).reduce((sum: number, comp: any) => sum + (comp.price || 0), 0)
+                return (
+                  <Card key={index} className="border-slate-200 dark:border-slate-700">
+                    <CardHeader>
+                      <div className="flex items-center justify-between">
+                        <CardTitle className="text-lg">Solution {index + 1}</CardTitle>
+                        <Badge variant="secondary" className="text-lg font-semibold">
+                          {formatCurrency(solutionPrice)}
+                        </Badge>
+                      </div>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="grid md:grid-cols-2 gap-3">
+                        {Object.entries(solution).map(([category, comp]: [string, any]) => (
+                          <div key={category} className="flex items-center gap-2 p-2 bg-slate-50 dark:bg-slate-800 rounded">
+                            <Cpu className="h-4 w-4 text-blue-500" />
+                            <div className="flex-1">
+                              <p className="text-sm font-medium">{category}</p>
+                              <p className="text-xs text-slate-600 dark:text-slate-400">{comp.name}</p>
+                            </div>
+                            <span className="text-sm font-semibold">{formatCurrency(comp.price)}</span>
+                          </div>
+                        ))}
+                      </div>
+                      <Button
+                        className="w-full mt-4"
+                        onClick={() => handleApplyCSPSolution(solution)}
+                      >
+                        Apply This Solution
+                      </Button>
+                    </CardContent>
+                  </Card>
+                )
+              })}
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
+
+      {/* Upgrade Recommendations Dialog */}
+      <Dialog open={showUpgradeDialog} onOpenChange={setShowUpgradeDialog}>
+        <DialogContent className="max-w-2xl">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <TrendingUp className="h-5 w-5 text-green-600" />
+              Upgrade Recommendations
+            </DialogTitle>
+            <DialogDescription>
+              Suggested component upgrades for your current build
+            </DialogDescription>
+          </DialogHeader>
+          {upgradeRecommendations.length === 0 ? (
+            <div className="text-center py-8">
+              <p className="text-slate-600 dark:text-slate-400">No upgrade recommendations available.</p>
+            </div>
+          ) : (
+            <div className="space-y-3">
+              {upgradeRecommendations.map((rec, index) => (
+                <Card key={index} className="border-slate-200 dark:border-slate-700">
+                  <CardContent className="p-4">
+                    <div className="flex items-center justify-between">
+                      <div className="flex-1">
+                        <p className="text-sm font-medium text-slate-900 dark:text-white">
+                          {rec.current_component}
+                        </p>
+                        {rec.recommended_upgrade ? (
+                          <>
+                            <div className="flex items-center gap-2 mt-1">
+                              <span className="text-xs text-slate-500">→</span>
+                              <p className="text-sm text-green-600 dark:text-green-400 font-medium">
+                                {rec.recommended_upgrade}
+                              </p>
+                            </div>
+                            {rec.new_price && (
+                              <p className="text-xs text-slate-600 dark:text-slate-400 mt-1">
+                                New price: {formatCurrency(rec.new_price)}
+                              </p>
+                            )}
+                          </>
+                        ) : (
+                          <p className="text-xs text-slate-500 mt-1">No upgrade available</p>
+                        )}
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }

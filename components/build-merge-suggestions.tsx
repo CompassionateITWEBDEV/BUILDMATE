@@ -20,8 +20,9 @@ import {
   Fan,
   Clapperboard as Motherboard
 } from "lucide-react"
-import { Component, ComponentCategory } from "@/lib/mock-data"
+import { Component, ComponentCategory, mockComponents } from "@/lib/mock-data"
 import { BuildComparison } from "@/lib/duplicate-detector"
+import { formatCurrency } from "@/lib/currency"
 
 interface BuildMergeSuggestionsProps {
   comparisons: BuildComparison[]
@@ -167,7 +168,7 @@ export function BuildMergeSuggestions({
                       <p className="text-xs text-slate-500">{suggestion.reason}</p>
                     </div>
                     <div className="text-right">
-                      <p className="text-sm font-medium">${suggestion.component.price}</p>
+                      <p className="text-sm font-medium">{formatCurrency(suggestion.component.price)}</p>
                       <Button
                         size="sm"
                         variant="ghost"
@@ -217,7 +218,7 @@ export function BuildMergeSuggestions({
                       <p className="text-xs text-slate-500">{categoryNames[category as ComponentCategory]}</p>
                     </div>
                     <div className="text-right">
-                      <p className="text-sm font-medium">${component.price}</p>
+                      <p className="text-sm font-medium">{formatCurrency(component.price)}</p>
                     </div>
                   </div>
                 )

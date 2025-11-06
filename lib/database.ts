@@ -228,6 +228,20 @@ export const buildService = {
     }
   },
 
+  async getAll() {
+    const { data, error } = await supabase
+      .from('builds')
+      .select(`
+        *,
+        build_types(*),
+        users(*)
+      `)
+      .order('date_created', { ascending: false })
+    
+    if (error) throw error
+    return data
+  },
+
   async getByUserId(userId: number) {
     const { data, error } = await supabase
       .from('builds')
@@ -281,6 +295,35 @@ export const buildService = {
       .eq('build_id', buildId)
     
     if (error) throw error
+  },
+
+  async getStatistics() {
+    // Get total builders count
+    const { count: buildersCount, error: buildersError } = await supabase
+      .from('users')
+      .select('*', { count: 'exact', head: true })
+    
+    if (buildersError) throw buildersError
+
+    // Get total builds count
+    const { count: buildsCount, error: buildsError } = await supabase
+      .from('builds')
+      .select('*', { count: 'exact', head: true })
+    
+    if (buildsError) throw buildsError
+
+    // Get total comments count (as a proxy for engagement/likes for now)
+    const { count: commentsCount, error: commentsError } = await supabase
+      .from('comments')
+      .select('*', { count: 'exact', head: true })
+    
+    if (commentsError) throw commentsError
+
+    return {
+      totalBuilders: buildersCount || 0,
+      totalBuilds: buildsCount || 0,
+      totalLikes: commentsCount || 0 // Using comments as proxy for now
+    }
   }
 }
 
@@ -333,6 +376,7 @@ export const buildComponentService = {
     if (error) throw error
     return data
   },
+
 
   async updateBuildComponents(buildId: number, componentIds: number[]) {
     // First, remove all existing components

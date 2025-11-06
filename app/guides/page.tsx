@@ -7,7 +7,9 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Badge } from "@/components/ui/badge"
 import { Input } from "@/components/ui/input"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { Navigation } from "@/components/navigation"
 import { Cpu, BookOpen, Play, Clock, Users, Wrench, Zap, Shield, Search, Star, CheckCircle } from "lucide-react"
+import { formatCurrency } from "@/lib/currency"
 
 const buildGuides = [
   {
@@ -24,7 +26,7 @@ const buildGuides = [
     image: "/gaming-pc-build-guide.png",
     steps: 12,
     tools: ["Phillips screwdriver", "Anti-static wrist strap", "Zip ties"],
-    estimatedCost: "$800-1200",
+    estimatedCost: "₱44,000-66,000",
     lastUpdated: "2 weeks ago",
     tags: ["first-build", "gaming", "budget-friendly"],
   },
@@ -41,7 +43,7 @@ const buildGuides = [
     image: "/professional-workstation-pc.jpg",
     steps: 15,
     tools: ["Phillips screwdriver", "Anti-static wrist strap", "Thermal paste", "Cable management kit"],
-    estimatedCost: "$2500-4000",
+    estimatedCost: "₱137,500-220,000",
     lastUpdated: "1 week ago",
     tags: ["professional", "high-performance", "content-creation"],
   },
@@ -58,7 +60,7 @@ const buildGuides = [
     image: "/budget-office-computer.jpg",
     steps: 8,
     tools: ["Phillips screwdriver", "Anti-static wrist strap"],
-    estimatedCost: "$400-600",
+    estimatedCost: "₱22,000-33,000",
     lastUpdated: "3 days ago",
     tags: ["budget", "office", "productivity"],
   },
@@ -75,7 +77,7 @@ const buildGuides = [
     image: "/gaming-pc-build-guide.png",
     steps: 14,
     tools: ["Phillips screwdriver", "Anti-static wrist strap", "Zip ties", "Small flashlight"],
-    estimatedCost: "$1200-1800",
+    estimatedCost: "₱66,000-99,000",
     lastUpdated: "5 days ago",
     tags: ["mini-itx", "compact", "space-saving"],
   },
@@ -92,7 +94,7 @@ const buildGuides = [
     image: "/gaming-pc-build-guide.png",
     steps: 16,
     tools: ["Phillips screwdriver", "Anti-static wrist strap", "RGB controller", "Cable management kit"],
-    estimatedCost: "$1500-2500",
+    estimatedCost: "₱82,500-137,500",
     lastUpdated: "1 week ago",
     tags: ["rgb", "showcase", "aesthetics"],
   },
@@ -109,7 +111,7 @@ const buildGuides = [
     image: "/budget-office-computer.jpg",
     steps: 13,
     tools: ["Phillips screwdriver", "Anti-static wrist strap", "Sound dampening material", "Fan controller"],
-    estimatedCost: "$1000-1600",
+    estimatedCost: "₱55,000-88,000",
     lastUpdated: "4 days ago",
     tags: ["silent", "quiet", "noise-reduction"],
   },
@@ -179,37 +181,7 @@ export default function GuidesPage() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 dark:from-slate-900 dark:to-slate-800">
-      {/* Header */}
-      <header className="border-b bg-white/80 backdrop-blur-sm dark:bg-slate-900/80">
-        <div className="container mx-auto px-4 py-4">
-          <div className="flex items-center justify-between">
-            <Link href="/" className="flex items-center gap-2">
-              <Cpu className="h-8 w-8 text-blue-600" />
-              <h1 className="text-2xl font-bold text-slate-900 dark:text-white">BuildMate</h1>
-            </Link>
-            <nav className="hidden md:flex items-center gap-6">
-              <Link
-                href="/builder"
-                className="text-slate-600 hover:text-slate-900 dark:text-slate-300 dark:hover:text-white"
-              >
-                PC Builder
-              </Link>
-              <Link
-                href="/builds"
-                className="text-slate-600 hover:text-slate-900 dark:text-slate-300 dark:hover:text-white"
-              >
-                Community Builds
-              </Link>
-              <Link href="/guides" className="text-slate-900 dark:text-white font-medium">
-                Build Guides
-              </Link>
-            </nav>
-            <Button asChild>
-              <Link href="/builder">Start Building</Link>
-            </Button>
-          </div>
-        </div>
-      </header>
+      <Navigation />
 
       <div className="container mx-auto px-4 py-8">
         {/* Page Header */}

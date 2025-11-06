@@ -28,6 +28,7 @@ import {
   Send,
 } from "lucide-react"
 import { mockBuilds, mockUsers } from "@/lib/mock-data"
+import { formatCurrency } from "@/lib/currency"
 // Removed authentication - using mock user data
 
 const categoryIcons = {
@@ -151,7 +152,7 @@ export default function BuildDetailPage() {
                     <p className="text-slate-600 dark:text-slate-400">{build.description}</p>
                   </div>
                   <Badge variant="secondary" className="text-lg font-bold px-3 py-1">
-                    ${build.totalPrice.toLocaleString()}
+                    {formatCurrency(build.totalPrice)}
                   </Badge>
                 </div>
 
@@ -226,9 +227,9 @@ export default function BuildDetailPage() {
                       </div>
                       <div className="text-right">
                         {component ? (
-                          <p className="font-semibold text-slate-900 dark:text-white">${component.price}</p>
+                          <p className="font-semibold text-slate-900 dark:text-white">{formatCurrency(component.price)}</p>
                         ) : (
-                          <p className="text-slate-400">$0</p>
+                          <p className="text-slate-400">{formatCurrency(0)}</p>
                         )}
                       </div>
                     </div>
@@ -306,7 +307,7 @@ export default function BuildDetailPage() {
                 </div>
                 <div className="flex justify-between text-sm">
                   <span className="text-slate-600 dark:text-slate-400">Total Price</span>
-                  <span className="font-medium">${build.totalPrice.toLocaleString()}</span>
+                  <span className="font-medium">{formatCurrency(build.totalPrice)}</span>
                 </div>
                 <div className="flex justify-between text-sm">
                   <span className="text-slate-600 dark:text-slate-400">Likes</span>
@@ -370,7 +371,7 @@ export default function BuildDetailPage() {
                   >
                     <h4 className="font-medium text-sm mb-1">{relatedBuild.name}</h4>
                     <div className="flex items-center justify-between text-xs text-slate-500">
-                      <span>${relatedBuild.totalPrice.toLocaleString()}</span>
+                      <span>{formatCurrency(relatedBuild.totalPrice)}</span>
                       <div className="flex items-center gap-1">
                         <Heart className="h-3 w-3" />
                         {relatedBuild.likes}

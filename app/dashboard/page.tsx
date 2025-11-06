@@ -1,12 +1,14 @@
 "use client"
 
-import { useState } from "react"
+import { useEffect, useState } from "react"
+import { useRouter } from "next/navigation"
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { Navigation } from "@/components/navigation"
 import {
   Cpu,
   Plus,
@@ -18,31 +20,50 @@ import {
   Star,
   Heart,
   MessageCircle,
-  MessageSquare,
-  BarChart3,
   Share,
   Edit,
   Eye,
   Calendar,
   Trophy,
 } from "lucide-react"
+import { useAuth } from "@/contexts/supabase-auth-context"
 import { mockBuilds } from "@/lib/mock-data"
 
 export default function DashboardPage() {
+  const { user, logout, isLoading } = useAuth()
+  const router = useRouter()
   const [activeTab, setActiveTab] = useState("overview")
 
-  // Mock user data
-  const user = {
-    id: "1",
-    username: "PC Builder",
-    email: "builder@example.com",
-    user_type: "user" as const,
-    avatar: "/placeholder-user.jpg",
-    likedBuilds: ["1", "2", "3"]
+  useEffect(() => {
+    if (!isLoading && !user) {
+      router.push("/login")
+    }
+  }, [user, isLoading, router])
+
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 dark:from-slate-900 dark:to-slate-800 flex items-center justify-center">
+        <div className="text-center">
+          <Cpu className="h-12 w-12 text-blue-600 mx-auto mb-4 animate-pulse" />
+          <p className="text-slate-600 dark:text-slate-400">Loading...</p>
+        </div>
+      </div>
+    )
   }
 
-  const userBuilds = mockBuilds.filter((build) => build.createdBy === user.id)
-  const likedBuilds = mockBuilds.filter((build) => user.likedBuilds.includes(build.id))
+  if (!user) {
+    return null
+  }
+
+  const handleLogout = async () => {
+    await logout()
+    router.push("/")
+    router.refresh()
+  }
+
+  // For now, using mock data - will be replaced with Supabase queries
+  const userBuilds = mockBuilds.filter((build) => build.createdBy === String(user.user_id))
+  const likedBuilds: typeof mockBuilds = [] // Will be fetched from Supabase
   const totalLikes = userBuilds.reduce((sum, build) => sum + build.likes, 0)
   const totalViews = userBuilds.length * 1200 // Mock view count
 
@@ -74,34 +95,7 @@ export default function DashboardPage() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 dark:from-slate-900 dark:to-slate-800">
-      {/* Header */}
-      <header className="border-b bg-white/80 backdrop-blur-sm dark:bg-slate-900/80">
-        <div className="container mx-auto px-4 py-4">
-          <div className="flex items-center justify-between">
-            <Link href="/" className="flex items-center gap-2">
-              <Cpu className="h-8 w-8 text-blue-600" />
-              <h1 className="text-2xl font-bold text-slate-900 dark:text-white">BuildMate</h1>
-            </Link>
-            <div className="flex items-center gap-4">
-              <div className="flex items-center gap-3">
-                <Avatar className="h-8 w-8">
-                  <AvatarImage src={user.avatar || "/placeholder.svg"} />
-                  <AvatarFallback>{user.username.charAt(0).toUpperCase()}</AvatarFallback>
-                </Avatar>
-                <span className="text-slate-600 dark:text-slate-300">Welcome, {user.username}!</span>
-              </div>
-              <Button variant="outline" size="sm">
-                <Settings className="h-4 w-4 mr-2" />
-                Settings
-              </Button>
-              <Button variant="outline" size="sm">
-                <LogOut className="h-4 w-4 mr-2" />
-                Logout
-              </Button>
-            </div>
-          </div>
-        </div>
-      </header>
+      <Navigation variant="dashboard" />
 
       <div className="container mx-auto px-4 py-8">
         <div className="mb-8">
@@ -249,34 +243,6 @@ export default function DashboardPage() {
                           </div>
                         </CardContent>
                       </Card>
-
-                      <Link href="/support">
-                        <Card className="border-slate-200 dark:border-slate-700 hover:shadow-md transition-shadow cursor-pointer">
-                          <CardContent className="p-4">
-                            <div className="flex items-center gap-3">
-                              <MessageSquare className="h-8 w-8 text-purple-600" />
-                              <div>
-                                <h3 className="font-medium">Get Support</h3>
-                                <p className="text-sm text-slate-600 dark:text-slate-400">Help & troubleshooting</p>
-                              </div>
-                            </div>
-                          </CardContent>
-                        </Card>
-                      </Link>
-
-                      <Link href="/compare">
-                        <Card className="border-slate-200 dark:border-slate-700 hover:shadow-md transition-shadow cursor-pointer">
-                          <CardContent className="p-4">
-                            <div className="flex items-center gap-3">
-                              <BarChart3 className="h-8 w-8 text-orange-600" />
-                              <div>
-                                <h3 className="font-medium">Compare Builds</h3>
-                                <p className="text-sm text-slate-600 dark:text-slate-400">Analyze specs & performance</p>
-                              </div>
-                            </div>
-                          </CardContent>
-                        </Card>
-                      </Link>
                     </div>
                   </CardContent>
                 </Card>

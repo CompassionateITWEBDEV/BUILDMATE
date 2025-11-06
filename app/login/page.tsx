@@ -9,52 +9,67 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Alert, AlertDescription } from "@/components/ui/alert"
+import { Navigation } from "@/components/navigation"
+import { useAuth } from "@/contexts/supabase-auth-context"
 import { Cpu, Eye, EyeOff, Loader2 } from "lucide-react"
 
 export default function LoginPage() {
   const [email, setEmail] = useState("")
   const [password, setPassword] = useState("")
   const [showPassword, setShowPassword] = useState(false)
-  const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState("")
   const router = useRouter()
+  const { login, isLoading } = useAuth()
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setError("")
 
+    // Client-side validation
     if (!email || !password) {
       setError("Email and password are required")
       return
     }
 
-    setIsLoading(true)
+    // Validate email format
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+    if (!emailRegex.test(email)) {
+      setError("Please enter a valid email address")
+      return
+    }
+
+    // Validate password length
+    if (password.length < 6) {
+      setError("Password must be at least 6 characters long")
+      return
+    }
 
     try {
-      // Simulate login process
-      await new Promise(resolve => setTimeout(resolve, 1000))
+      const result = await login(email, password)
       
-      console.log("Login successful, redirecting to dashboard...")
-      router.push("/dashboard")
-    } catch (err) {
-      setError("Login failed. Please try again.")
-    } finally {
-      setIsLoading(false)
+      if (result.success) {
+        console.log("Login successful, redirecting to dashboard...")
+        router.push("/dashboard")
+      } else {
+        // Display the specific error message from the login function
+        setError(result.error || "Invalid email or password. Please try again.")
+      }
+    } catch (err: any) {
+      console.error("Login error:", err)
+      setError(err.message || "Login failed. Please try again.")
     }
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 dark:from-slate-900 dark:to-slate-800 flex items-center justify-center p-4">
-      <div className="w-full max-w-md">
-        {/* Header */}
-        <div className="text-center mb-8">
-          <Link href="/" className="inline-flex items-center gap-2 mb-4">
-            <Cpu className="h-8 w-8 text-blue-600" />
-            <span className="text-2xl font-bold text-slate-900 dark:text-white">BuildMate</span>
-          </Link>
-          <h1 className="text-3xl font-bold text-slate-900 dark:text-white mb-2">Welcome Back</h1>
-          <p className="text-slate-600 dark:text-slate-400">Sign in to continue building your dream PC</p>
-        </div>
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 dark:from-slate-900 dark:to-slate-800">
+      <Navigation variant="minimal" />
+      <div className="flex items-center justify-center p-4 min-h-[calc(100vh-80px)]">
+        <div className="w-full max-w-md">
+          {/* Header */}
+          <div className="text-center mb-8">
+            <h1 className="text-3xl font-bold text-slate-900 dark:text-white mb-2">Welcome Back</h1>
+            <p className="text-slate-600 dark:text-slate-400">Sign in to continue building your dream PC</p>
+          </div>
 
         {/* Login Form */}
         <Card className="border-slate-200 dark:border-slate-700">
@@ -155,13 +170,14 @@ export default function LoginPage() {
           </CardContent>
         </Card>
 
-        <div className="mt-6 text-center">
-          <Link
-            href="/"
-            className="inline-flex items-center text-sm text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white"
-          >
-            ← Back to Home
-          </Link>
+          <div className="mt-6 text-center">
+            <Link
+              href="/"
+              className="inline-flex items-center text-sm text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white"
+            >
+              ← Back to Home
+            </Link>
+          </div>
         </div>
       </div>
     </div>

@@ -134,3 +134,17 @@ After creating the tables:
 - ❌ **Need to create remaining database tables**
 - ❌ **Ready to test authentication once tables are created**
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+

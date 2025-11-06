@@ -10,6 +10,8 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { Checkbox } from "@/components/ui/checkbox"
+import { Navigation } from "@/components/navigation"
+import { useAuth } from "@/contexts/supabase-auth-context"
 import { Cpu, Eye, EyeOff, Loader2 } from "lucide-react"
 
 export default function RegisterPage() {
@@ -20,9 +22,9 @@ export default function RegisterPage() {
   const [showPassword, setShowPassword] = useState(false)
   const [showConfirmPassword, setShowConfirmPassword] = useState(false)
   const [acceptTerms, setAcceptTerms] = useState(false)
-  const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState("")
   const router = useRouter()
+  const { register, isLoading } = useAuth()
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -48,35 +50,33 @@ export default function RegisterPage() {
       return
     }
 
-    setIsLoading(true)
-
     try {
-      // Simulate registration process
-      await new Promise(resolve => setTimeout(resolve, 1000))
+      const success = await register(username, email, password)
       
-      console.log("Registration successful, redirecting to dashboard...")
-      router.push("/dashboard")
+      if (success) {
+        console.log("Registration successful, redirecting to dashboard...")
+        router.push("/dashboard")
+      } else {
+        setError("Registration failed. Email or username may already be taken.")
+      }
     } catch (err) {
+      console.error("Registration error:", err)
       setError("Registration failed. Please try again.")
-    } finally {
-      setIsLoading(false)
     }
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 dark:from-slate-900 dark:to-slate-800 flex items-center justify-center p-4">
-      <div className="w-full max-w-md">
-        {/* Logo and Header */}
-        <div className="text-center mb-8">
-          <Link href="/" className="inline-flex items-center gap-2 mb-6">
-            <Cpu className="h-8 w-8 text-blue-600" />
-            <span className="text-2xl font-bold text-slate-900 dark:text-white">BuildMate</span>
-          </Link>
-          <h1 className="text-3xl font-bold text-slate-900 dark:text-white mb-2">Create Account</h1>
-          <p className="text-slate-600 dark:text-slate-400">
-            Join the community and start building your dream PC
-          </p>
-        </div>
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 dark:from-slate-900 dark:to-slate-800">
+      <Navigation variant="minimal" />
+      <div className="flex items-center justify-center p-4 min-h-[calc(100vh-80px)]">
+        <div className="w-full max-w-md">
+          {/* Header */}
+          <div className="text-center mb-8">
+            <h1 className="text-3xl font-bold text-slate-900 dark:text-white mb-2">Create Account</h1>
+            <p className="text-slate-600 dark:text-slate-400">
+              Join the community and start building your dream PC
+            </p>
+          </div>
 
         {/* Registration Form */}
         <Card className="border-slate-200 dark:border-slate-700">
@@ -211,13 +211,14 @@ export default function RegisterPage() {
           </CardContent>
         </Card>
 
-        <div className="mt-6 text-center">
-          <Link
-            href="/"
-            className="inline-flex items-center text-sm text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white"
-          >
-            ← Back to Home
-          </Link>
+          <div className="mt-6 text-center">
+            <Link
+              href="/"
+              className="inline-flex items-center text-sm text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white"
+            >
+              ← Back to Home
+            </Link>
+          </div>
         </div>
       </div>
     </div>

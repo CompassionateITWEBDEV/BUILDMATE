@@ -1,62 +1,13 @@
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
 import { Card, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import { Navigation } from "@/components/navigation"
 import { Cpu, HardDrive, Monitor, Zap, Users, BookOpen, Star } from "lucide-react"
 
 export default function HomePage() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 dark:from-slate-900 dark:to-slate-800">
-      {/* Header */}
-      <header className="border-b bg-white/80 backdrop-blur-sm dark:bg-slate-900/80">
-        <div className="container mx-auto px-4 py-4">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <Cpu className="h-8 w-8 text-blue-600" />
-              <h1 className="text-2xl font-bold text-slate-900 dark:text-white">BuildMate</h1>
-            </div>
-            <nav className="hidden md:flex items-center gap-6">
-              <Link
-                href="/builder"
-                className="text-slate-600 hover:text-slate-900 dark:text-slate-300 dark:hover:text-white"
-              >
-                PC Builder
-              </Link>
-              <Link
-                href="/builds"
-                className="text-slate-600 hover:text-slate-900 dark:text-slate-300 dark:hover:text-white"
-              >
-                Community Builds
-              </Link>
-              <Link
-                href="/guides"
-                className="text-slate-600 hover:text-slate-900 dark:text-slate-300 dark:hover:text-white"
-              >
-                Build Guides
-              </Link>
-              <Link
-                href="/support"
-                className="text-slate-600 hover:text-slate-900 dark:text-slate-300 dark:hover:text-white"
-              >
-                Support
-              </Link>
-              <Link
-                href="/compare"
-                className="text-slate-600 hover:text-slate-900 dark:text-slate-300 dark:hover:text-white"
-              >
-                Compare
-              </Link>
-            </nav>
-            <div className="flex items-center gap-2">
-              <Button variant="outline" asChild>
-                <Link href="/login">Login</Link>
-              </Button>
-              <Button asChild>
-                <Link href="/register">Sign Up</Link>
-              </Button>
-            </div>
-          </div>
-        </div>
-      </header>
+      <Navigation />
 
       {/* Hero Section */}
       <section className="py-20">

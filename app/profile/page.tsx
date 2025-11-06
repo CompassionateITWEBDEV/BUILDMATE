@@ -10,25 +10,30 @@ import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { Separator } from "@/components/ui/separator"
 import { Switch } from "@/components/ui/switch"
+import { Navigation } from "@/components/navigation"
+import { ProtectedRoute } from "@/components/protected-route"
+import { useAuth } from "@/contexts/supabase-auth-context"
 import { ArrowLeft, Camera, Save, Calendar, MapPin, LinkIcon, Bell, Shield } from "lucide-react"
-// Removed authentication - using mock user data
 
 export default function ProfilePage() {
-  // Mock user data instead of authentication
-  const user = { 
-    id: "1", 
-    username: "PC Builder", 
+  const { user } = useAuth()
+  
+  // Use actual user data or fallback to mock data
+  const userData = user || { 
+    user_id: 1, 
+    user_name: "PC Builder", 
     email: "builder@example.com",
-    createdAt: new Date("2024-01-15")
+    created_at: new Date("2024-01-15").toISOString()
   }
+  
   const [isEditing, setIsEditing] = useState(false)
   const [profileData, setProfileData] = useState({
-    username: user?.username || "",
-    email: user?.email || "",
+    username: userData?.user_name || "",
+    email: userData?.email || "",
     bio: "PC building enthusiast and tech lover. Always looking for the latest components and sharing knowledge with the community.",
     location: "San Francisco, CA",
     website: "https://myportfolio.com",
-    joinDate: user?.createdAt || new Date(),
+    joinDate: userData?.created_at ? new Date(userData.created_at) : new Date(),
   })
 
   const [notifications, setNotifications] = useState({
@@ -66,21 +71,24 @@ export default function ProfilePage() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 dark:from-slate-900 dark:to-slate-800">
-      {/* Header */}
-      <header className="border-b bg-white/80 backdrop-blur-sm dark:bg-slate-900/80">
-        <div className="container mx-auto px-4 py-4">
-          <div className="flex items-center gap-4">
-            <Button variant="ghost" size="sm" asChild>
-              <Link href="/dashboard">
-                <ArrowLeft className="h-4 w-4 mr-2" />
-                Back to Dashboard
-              </Link>
-            </Button>
-            <h1 className="text-xl font-bold text-slate-900 dark:text-white">Profile Settings</h1>
+    <ProtectedRoute>
+      <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 dark:from-slate-900 dark:to-slate-800">
+        <Navigation variant="dashboard" />
+        
+        {/* Page Header */}
+        <div className="border-b bg-white/80 backdrop-blur-sm dark:bg-slate-900/80">
+          <div className="container mx-auto px-4 py-4">
+            <div className="flex items-center gap-4">
+              <Button variant="ghost" size="sm" asChild>
+                <Link href="/dashboard">
+                  <ArrowLeft className="h-4 w-4 mr-2" />
+                  Back to Dashboard
+                </Link>
+              </Button>
+              <h1 className="text-xl font-bold text-slate-900 dark:text-white">Profile Settings</h1>
+            </div>
           </div>
         </div>
-      </header>
 
       <div className="container mx-auto px-4 py-8 max-w-4xl">
         <div className="grid lg:grid-cols-3 gap-8">
@@ -89,8 +97,8 @@ export default function ProfilePage() {
             <CardHeader className="text-center">
               <div className="relative mx-auto mb-4">
                 <Avatar className="h-24 w-24">
-                  <AvatarImage src={user.avatar || "/placeholder.svg"} />
-                  <AvatarFallback className="text-2xl">{user.username.charAt(0).toUpperCase()}</AvatarFallback>
+                  <AvatarImage src="/placeholder.svg" />
+                  <AvatarFallback className="text-2xl">{userData.user_name.charAt(0).toUpperCase()}</AvatarFallback>
                 </Avatar>
                 <Button size="sm" className="absolute -bottom-2 -right-2 rounded-full p-2">
                   <Camera className="h-4 w-4" />
@@ -360,6 +368,7 @@ export default function ProfilePage() {
           </div>
         </div>
       </div>
-    </div>
+      </div>
+    </ProtectedRoute>
   )
 }
