@@ -1,7 +1,8 @@
+
 "use client"
 
 import * as React from "react"
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { useRouter } from "next/navigation"
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
@@ -344,6 +345,66 @@ export default function BuilderPage() {
   const compatibilityResult = getCompatibilityResult()
   const recommendations = new CompatibilityChecker(selectedComponents).getRecommendations()
 
+  const runCSPAlgorithm = async () => {
+    try {
+      const response = await fetch("http://localhost:5000/api/csp", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          budget,
+          user_inputs: Object.fromEntries(
+            Object.entries(selectedComponents)
+              .filter(([_, comp]) => comp !== null)
+              .map(([category, comp]) => [category, comp.id])
+          ),
+        }),
+      });
+
+      const data = await response.json();
+      console.log("CSP Solutions:", data.solutions);
+    } catch (err) {
+      console.error("Error running CSP:", err);
+    }
+  };
+
+  const runGraphAlgorithm = async () => {
+    try {
+      const response = await fetch("http://localhost:5000/api/graph", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          current_build: Object.values(selectedComponents)
+            .filter((comp) => comp !== null)
+            .map((comp) => ({
+              component_id: comp.id,
+              component_name: comp.name,
+              component_price: comp.price,
+              category_name: comp.category,
+            })),
+        }),
+      });
+
+      const data = await response.json();
+      console.log("Graph Recommendations:", data.recommendations);
+    } catch (err) {
+      console.error("Error running Graph algorithm:", err);
+    }
+  };
+
+
+  useEffect(() => {
+    const hasSelected = Object.values(selectedComponents).some(c => c !== null);
+    if (budget >= 0 && hasSelected) {
+      console.log("🧠 Running CSP Compatibility Algorithm...");
+      runCSPAlgorithm();
+      console.log("🔗 Running Graph Upgrade Algorithm...");
+      runGraphAlgorithm();
+    }
+  }, [budget, selectedComponents]);
+
+
+
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 dark:from-slate-900 dark:to-slate-800">
       <Navigation />
@@ -572,33 +633,40 @@ export default function BuilderPage() {
                     const filteredComponents = getFilteredComponents(category as ComponentCategory)
                     return (
                       <TabsContent key={category} value={category} className="space-y-4">
-                        {filteredComponents.length === 0 ? (
-                          <div className="text-center py-8 text-slate-500 dark:text-slate-400">
-                            <div className="flex flex-col items-center gap-2">
-                              <Search className="h-8 w-8 text-slate-300" />
-                              <p className="text-sm">
-                                No {categoryNames[category as ComponentCategory].toLowerCase()} components found
-                              </p>
-                              <p className="text-xs">
-                                {performanceCategory !== "all" 
-                                  ? `for ${performanceCategories[performanceCategory].name} performance category`
-                                  : "matching your search criteria"
-                                }
-                              </p>
-                            </div>
+                        {budgetEnabled && budget === 0 ? (
+                        <div className="text-center py-8 text-slate-500 dark:text-slate-400">
+                          <div className="flex flex-col items-center gap-2">
+                            <AlertCircle className="h-8 w-8 text-yellow-400" />
+                            <p className="text-sm font-medium">Please set a valid budget to view components.</p>
+                            <p className="text-xs text-slate-400">Components will appear once you set a non-zero budget.</p>
                           </div>
-                        ) : (
-                          <div className="grid gap-4">
-                            {filteredComponents.map((component) => (
-                          <Card
-                            key={component.id}
-                            className={`border-slate-200 dark:border-slate-700 cursor-pointer transition-all hover:shadow-md ${
-                              selectedComponents[component.category]?.id === component.id
-                                ? "ring-2 ring-blue-500 border-blue-500"
-                                : ""
-                            }`}
-                            onClick={() => handleComponentSelect(component)}
-                          >
+                        </div>
+                      ) : filteredComponents.length === 0 ? (
+                        <div className="text-center py-8 text-slate-500 dark:text-slate-400">
+                          <div className="flex flex-col items-center gap-2">
+                            <Search className="h-8 w-8 text-slate-300" />
+                            <p className="text-sm">
+                              No {categoryNames[category as ComponentCategory].toLowerCase()} components found
+                            </p>
+                            <p className="text-xs">
+                              {performanceCategory !== "all"
+                                ? `for ${performanceCategories[performanceCategory].name} performance category`
+                                : "matching your search criteria"}
+                            </p>
+                          </div>
+                        </div>
+                      ) : (
+                        <div className="grid gap-4">
+                          {filteredComponents.map((component) => (
+                            <Card
+                              key={component.id}
+                              className={`border-slate-200 dark:border-slate-700 cursor-pointer transition-all hover:shadow-md ${
+                                selectedComponents[component.category]?.id === component.id
+                                  ? "ring-2 ring-blue-500 border-blue-500"
+                                  : ""
+                              }`}
+                              onClick={() => handleComponentSelect(component)}
+                            >
                             <CardContent className="p-4">
                               <div className="flex items-start gap-4">
                                 <img
