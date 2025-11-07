@@ -39,29 +39,25 @@ def root():
     return jsonify({"message": "Python Algorithm Backend", "endpoints": ["/api/csp", "/api/graph", "/health"]}), 200
 
 def transform_component_for_csp(comp):
-    """Transform Supabase component to CSP format"""
-    category_name = comp.get('component_categories', {}).get('category_name', '')
-    
-    # Map category names to CSP format
+    """Transform Supabase component to CSP format using category_id"""
     category_map = {
-        'CPU': 'CPU',
-        'GPU': 'Video Card',
-        'Memory': 'Memory',
-        'Storage': 'Storage',
-        'PSU': 'Power Supply',
-        'Case': 'Case',
-        'Cooling': 'CPU Cooler',
-        'Motherboard': 'Motherboard'
+        1: "CPU",
+        2: "Motherboard",
+        3: "Memory",
+        4: "Storage",
+        5: "Video Card",
+        6: "Power Supply",
+        7: "Case",
+        8: "CPU Cooler"
     }
     
-    csp_category = category_map.get(category_name, category_name)
+    csp_category = category_map.get(comp.get("category_id"), "Unknown")
     
     # Parse compatibility information if available
     attrs = {}
     if comp.get('compatibility_information'):
         try:
-            compat_info = json.loads(comp['compatibility_information'])
-            attrs = compat_info
+            attrs = json.loads(comp['compatibility_information'])
         except:
             pass
     
@@ -72,6 +68,7 @@ def transform_component_for_csp(comp):
         "category": csp_category,
         "attrs": attrs
     }
+
 
 @app.route('/api/csp', methods=['POST'])
 def run_csp():
@@ -112,6 +109,49 @@ def run_graph():
         import traceback
         traceback.print_exc()
         return jsonify({"error": str(e)}), 500
+    
+@app.route('/api/components', methods=['GET'])
+def get_components():
+    """Return all components with category names for frontend."""
+    try:
+        raw_components = csp_db.fetch_all_components()
+        
+        
+        # Map category_id to category_name
+        category_map = {
+            1: "CPU",
+            2: "Motherboard",
+            3: "RAM",
+            4: "Storage",
+            5: "GPU",
+            6: "PSU",
+            7: "Case",
+            8: "Cooling"
+        }
+
+        components = []
+        for c in raw_components:
+            components.append({
+                "id": c.get("component_id"),
+                "name": c.get("component_name"),
+                "price": float(c.get("component_price", 0) or 0),
+                "category_id": c.get("category_id"),
+                "category_name": category_map.get(c.get("category_id"), "Unknown"),
+                "compatibility": c.get("compatibility_information"),
+                "retailer_id": c.get("retailer_id"),
+            })
+        print("Fetched components:", raw_components)
+        return jsonify({"components": components}), 200
+
+    except Exception as e:
+        print("Error fetching components:", e)
+        import traceback
+        traceback.print_exc()
+        return jsonify({"error": str(e)}), 500
+
+
+
+
 
 if __name__ == '__main__':
     app.run(host="0.0.0.0", port=5000)

@@ -62,7 +62,7 @@ const categoryIcons = {
 }
 
 const categoryNames = {
-  cpu: "Processor",
+  cpu: "Processors",
   motherboard: "Motherboard",
   memory: "Memory (RAM)",
   storage: "Storage",
@@ -86,6 +86,12 @@ export default function BuilderPage() {
     case: null,
     cooling: null,
   })
+  // Real Components from supabase
+  // Real Components
+  const [components, setComponents] = useState<any[]>([]); // Make sure it's an array
+  const [isLoadingComponents, setIsLoadingComponents] = useState(false)
+  const [fetchError, setFetchError] = useState<string | null>(null)
+
   const [activeCategory, setActiveCategory] = useState<ComponentCategory>("cpu")
   const [searchTerm, setSearchTerm] = useState("")
   const [buildName, setBuildName] = useState("My Custom Build")
@@ -108,40 +114,36 @@ export default function BuilderPage() {
 
   // Filter components by category, search term, performance category, and budget
   const getFilteredComponents = (category: ComponentCategory) => {
-    const categoryFiltered = mockComponents.filter((component) => component.category === category)
-    
-    const performanceFiltered = filterComponentsByPerformance(
-      categoryFiltered,
-      performanceCategory,
-      performanceCategories[performanceCategory].requirements
-    )
-    
-    const searchFiltered = performanceFiltered.filter(
-      (component) =>
-        component.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        component.brand.toLowerCase().includes(searchTerm.toLowerCase()),
-    )
+  const categoryFiltered = components.filter((component) => component.category === category)
+  
+  const performanceFiltered = filterComponentsByPerformance(
+    categoryFiltered,
+    performanceCategory,
+    performanceCategories[performanceCategory].requirements
+  )
+  
+  const searchFiltered = performanceFiltered.filter(
+    (component) =>
+      component.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      component.brand.toLowerCase().includes(searchTerm.toLowerCase()),
+  )
 
-    // Apply budget filtering if enabled
-    if (budgetEnabled && budget > 0) {
-      const currentSpent = Object.values(selectedComponents)
-        .filter(Boolean)
-        .reduce((sum, component) => sum + component!.price, 0)
-      
-      const remainingBudget = budget - currentSpent
-      
-      return searchFiltered.filter((component) => {
-        // If this component is already selected, always show it
-        if (selectedComponents[category]?.id === component.id) {
-          return true
-        }
-        // Otherwise, only show if it fits within remaining budget
-        return component.price <= remainingBudget
-      })
-    }
+  if (budgetEnabled && budget > 0) {
+    const currentSpent = Object.values(selectedComponents)
+      .filter(Boolean)
+      .reduce((sum, component) => sum + component!.price, 0)
     
-    return searchFiltered
+    const remainingBudget = budget - currentSpent
+    
+    return searchFiltered.filter((component) => {
+      if (selectedComponents[category]?.id === component.id) return true
+      return component.price <= remainingBudget
+    })
   }
+  
+  return searchFiltered
+}
+
 
   // Calculate total price
   const totalPrice = Object.values(selectedComponents)
@@ -392,18 +394,41 @@ export default function BuilderPage() {
   };
 
 
+  // Effect for fetching components
   useEffect(() => {
-    const hasSelected = Object.values(selectedComponents).some(c => c !== null);
-    if (budget >= 0 && hasSelected) {
+    console.log("useEffect mounted");
+    const fetchComponents = async () => {
+      console.log("Starting fetch...");
+      try {
+        const res = await fetch("http://localhost:5000/api/components");
+        console.log("Fetch response received");
+        const data = await res.json();
+        console.log("Fetched components:", data.components);
+        setComponents(data.components);
+      } catch (err) {
+        console.error("Error fetching components:", err);
+      }
+    };
+
+    fetchComponents();
+  }, []);
+
+
+  // Effect for running algorithms when budget or selection changes
+  useEffect(() => {
+    const hasSelected = Object.values(selectedComponents).some(component => component !== null);
+
+    if (hasSelected) {
       console.log("🧠 Running CSP Compatibility Algorithm...");
       runCSPAlgorithm();
+
       console.log("🔗 Running Graph Upgrade Algorithm...");
       runGraphAlgorithm();
     }
-  }, [budget, selectedComponents]);
+  }, [selectedComponents]);
 
 
-
+  
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 dark:from-slate-900 dark:to-slate-800">
@@ -633,109 +658,94 @@ export default function BuilderPage() {
                     const filteredComponents = getFilteredComponents(category as ComponentCategory)
                     return (
                       <TabsContent key={category} value={category} className="space-y-4">
-                        {budgetEnabled && budget === 0 ? (
-                        <div className="text-center py-8 text-slate-500 dark:text-slate-400">
-                          <div className="flex flex-col items-center gap-2">
-                            <AlertCircle className="h-8 w-8 text-yellow-400" />
-                            <p className="text-sm font-medium">Please set a valid budget to view components.</p>
-                            <p className="text-xs text-slate-400">Components will appear once you set a non-zero budget.</p>
+                        {filteredComponents.length === 0 ? (
+                          <div className="text-center py-8 text-slate-500 dark:text-slate-400">
+                            <div className="flex flex-col items-center gap-2">
+                              <Search className="h-8 w-8 text-slate-300" />
+                              <p className="text-sm">
+                                No {categoryNames[category as ComponentCategory].toLowerCase()} components found
+                              </p>
+                              <p className="text-xs">
+                                {performanceCategory !== "all"
+                                  ? `for ${performanceCategories[performanceCategory].name} performance category`
+                                  : "matching your search criteria"}
+                              </p>
+                            </div>
                           </div>
-                        </div>
-                      ) : filteredComponents.length === 0 ? (
-                        <div className="text-center py-8 text-slate-500 dark:text-slate-400">
-                          <div className="flex flex-col items-center gap-2">
-                            <Search className="h-8 w-8 text-slate-300" />
-                            <p className="text-sm">
-                              No {categoryNames[category as ComponentCategory].toLowerCase()} components found
-                            </p>
-                            <p className="text-xs">
-                              {performanceCategory !== "all"
-                                ? `for ${performanceCategories[performanceCategory].name} performance category`
-                                : "matching your search criteria"}
-                            </p>
-                          </div>
-                        </div>
-                      ) : (
-                        <div className="grid gap-4">
-                          {filteredComponents.map((component) => (
-                            <Card
-                              key={component.id}
-                              className={`border-slate-200 dark:border-slate-700 cursor-pointer transition-all hover:shadow-md ${
-                                selectedComponents[component.category]?.id === component.id
-                                  ? "ring-2 ring-blue-500 border-blue-500"
-                                  : ""
-                              }`}
-                              onClick={() => handleComponentSelect(component)}
-                            >
-                            <CardContent className="p-4">
-                              <div className="flex items-start gap-4">
-                                <img
-                                  src={component.image || "/placeholder.svg"}
-                                  alt={component.name}
-                                  className="w-16 h-16 object-cover rounded-lg bg-slate-100 dark:bg-slate-800"
-                                />
-                                <div className="flex-1">
-                                  <div className="flex items-start justify-between">
-                                    <div>
-                                      <h3 className="font-semibold text-slate-900 dark:text-white">{component.name}</h3>
-                                      <p className="text-sm text-slate-600 dark:text-slate-400 mb-2">
-                                        {component.brand}
-                                      </p>
-                                      <div className="flex items-center gap-2 mb-2">
-                                        <div className="flex items-center">
-                                          {[...Array(5)].map((_, i) => (
-                                            <div
-                                              key={i}
-                                              className={`w-3 h-3 ${
-                                                i < Math.floor(component.rating) ? "text-yellow-400" : "text-slate-300"
-                                              }`}
-                                            >
-                                              ★
+                        ) : (
+                          <div className="grid gap-4">
+                            {filteredComponents.map((component) => (
+                              <Card
+                                key={component.id}
+                                className={`border-slate-200 dark:border-slate-700 cursor-pointer transition-all hover:shadow-md ${
+                                  selectedComponents[component.category]?.id === component.id
+                                    ? "ring-2 ring-blue-500 border-blue-500"
+                                    : ""
+                                }`}
+                                onClick={() => handleComponentSelect(component)}
+                              >
+                                <CardContent className="p-4">
+                                  <div className="flex items-start gap-4">
+                                    <img
+                                      src={component.image || "/placeholder.svg"}
+                                      alt={component.name}
+                                      className="w-16 h-16 object-cover rounded-lg bg-slate-100 dark:bg-slate-800"
+                                    />
+                                    <div className="flex-1">
+                                      <div className="flex items-start justify-between">
+                                        <div>
+                                          <h3 className="font-semibold text-slate-900 dark:text-white">{component.name}</h3>
+                                          <p className="text-sm text-slate-600 dark:text-slate-400 mb-2">{component.brand}</p>
+                                          <div className="flex items-center gap-2 mb-2">
+                                            <div className="flex items-center">
+                                              {[...Array(5)].map((_, i) => (
+                                                <div
+                                                  key={i}
+                                                  className={`w-3 h-3 ${i < Math.floor(component.rating) ? "text-yellow-400" : "text-slate-300"}`}
+                                                >
+                                                  ★
+                                                </div>
+                                              ))}
+                                            </div>
+                                            <span className="text-xs text-slate-500">({component.reviews} reviews)</span>
+                                          </div>
+                                        </div>
+                                        <div className="text-right">
+                                          <div className="flex items-center gap-2">
+                                            <p className="text-lg font-bold text-slate-900 dark:text-white">
+                                              {formatCurrency(component.price)}
+                                            </p>
+                                            {budgetEnabled && component.price > (budget - totalPrice + (selectedComponents[component.category]?.price || 0)) && (
+                                              <Badge variant="destructive" className="text-xs">
+                                                Over Budget
+                                              </Badge>
+                                            )}
+                                          </div>
+                                          {selectedComponents[component.category]?.id === component.id && (
+                                            <Badge className="mt-1">Selected</Badge>
+                                          )}
+                                        </div>
+                                      </div>
+
+                                      {/* Component specifications */}
+                                      <div className="grid grid-cols-2 gap-2 text-xs text-slate-600 dark:text-slate-400">
+                                        {Object.entries(component.specifications || {})
+                                          .slice(0, 4)
+                                          .map(([key, value]) => (
+                                            <div key={key}>
+                                              <span className="font-medium">{key}:</span> {value}
                                             </div>
                                           ))}
-                                        </div>
-                                        <span className="text-xs text-slate-500">({component.reviews} reviews)</span>
                                       </div>
                                     </div>
-                                    <div className="text-right">
-                                      <div className="flex items-center gap-2">
-                                        <p className={`text-lg font-bold ${
-                                          budgetEnabled && budget > 0 && component.price > (budget - totalPrice + (selectedComponents[component.category]?.price || 0))
-                                            ? 'text-red-600'
-                                            : 'text-slate-900 dark:text-white'
-                                        }`}>
-                                          {formatCurrency(component.price)}
-                                        </p>
-                                        {budgetEnabled && budget > 0 && component.price > (budget - totalPrice + (selectedComponents[component.category]?.price || 0)) && (
-                                          <Badge variant="destructive" className="text-xs">
-                                            Over Budget
-                                          </Badge>
-                                        )}
-                                      </div>
-                                      {selectedComponents[component.category]?.id === component.id && (
-                                        <Badge className="mt-1">Selected</Badge>
-                                      )}
-                                    </div>
                                   </div>
-
-                                  {/* Component specifications */}
-                                  <div className="grid grid-cols-2 gap-2 text-xs text-slate-600 dark:text-slate-400">
-                                    {Object.entries(component.specifications)
-                                      .slice(0, 4)
-                                      .map(([key, value]) => (
-                                        <div key={key}>
-                                          <span className="font-medium">{key}:</span> {value}
-                                        </div>
-                                      ))}
-                                  </div>
-                                </div>
-                              </div>
-                            </CardContent>
-                          </Card>
+                                </CardContent>
+                              </Card>
                             ))}
                           </div>
                         )}
                       </TabsContent>
+
                     )
                   })}
                 </Tabs>
