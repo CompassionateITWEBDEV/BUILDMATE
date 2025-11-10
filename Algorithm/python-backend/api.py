@@ -1,7 +1,12 @@
+import logging
 from flask import Flask, request, jsonify
 from flask_cors import CORS
-import sys, os
-import json
+import sys, os, json
+import importlib.util
+import re
+
+# Configure logging
+logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(message)s")
 
 # Add both 'csp' and 'graph' directories to Python path
 csp_path = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', 'csp'))
@@ -9,18 +14,15 @@ graph_path = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', 'grap
 sys.path.insert(0, csp_path)
 sys.path.insert(0, graph_path)
 
+# Import CSP solver and graph upgrade modules
 from csp_recommender import CSPBacktracking
 from graph_upgrade import generate_upgrade_recommendations
 
-# Import db_utils functions directly
-import importlib.util
-
-# Load csp db_utils
+# Load db_utils modules dynamically
 csp_db_spec = importlib.util.spec_from_file_location("csp_db_utils", os.path.join(csp_path, "db_utils.py"))
 csp_db = importlib.util.module_from_spec(csp_db_spec)
 csp_db_spec.loader.exec_module(csp_db)
 
-# Load graph db_utils
 graph_db_spec = importlib.util.spec_from_file_location("graph_db_utils", os.path.join(graph_path, "db_utils.py"))
 graph_db = importlib.util.module_from_spec(graph_db_spec)
 graph_db_spec.loader.exec_module(graph_db)
@@ -28,18 +30,37 @@ graph_db_spec.loader.exec_module(graph_db)
 app = Flask(__name__)
 CORS(app)
 
-@app.route('/health', methods=['GET'])
-def health_check():
-    """Health check endpoint"""
-    return jsonify({"status": "ok", "message": "Python backend is running"}), 200
+# Essential categories for a full build
+REQUIRED_CATEGORIES = [
+    "CPU", "CPU Cooler", "Motherboard", "Memory",
+    "Storage", "Video Card", "Case", "Power Supply"
+]
 
-@app.route('/', methods=['GET'])
-def root():
-    """Root endpoint"""
-    return jsonify({"message": "Python Algorithm Backend", "endpoints": ["/api/csp", "/api/graph", "/health"]}), 200
+CATEGORY_MAP_FRONTEND = {
+    1: "CPU",
+    2: "Motherboard",
+    3: "RAM",
+    4: "Storage",
+    5: "GPU",
+    6: "PSU",
+    7: "Case",
+    8: "Cooling"
+}
+
+
+def parse_power(value):
+    """Convert string like '35W' or numeric to float."""
+    if value is None:
+        return 0.0
+    if isinstance(value, (int, float)):
+        return float(value)
+    # Extract digits and optional decimal point
+    match = re.search(r'[\d.]+', str(value))
+    if match:
+        return float(match.group())
+    return 0.0
 
 def transform_component_for_csp(comp):
-    """Transform Supabase component to CSP format using category_id"""
     category_map = {
         1: "CPU",
         2: "Motherboard",
@@ -50,17 +71,28 @@ def transform_component_for_csp(comp):
         7: "Case",
         8: "CPU Cooler"
     }
-    
     csp_category = category_map.get(comp.get("category_id"), "Unknown")
-    
-    # Parse compatibility information if available
+
     attrs = {}
     if comp.get('compatibility_information'):
         try:
-            attrs = json.loads(comp['compatibility_information'])
-        except:
-            pass
-    
+            raw_attrs = comp['compatibility_information']
+            if isinstance(raw_attrs, str):
+                raw_attrs = json.loads(raw_attrs)
+        except Exception:
+            raw_attrs = {}
+
+        attrs['socket'] = raw_attrs.get('socket') or raw_attrs.get('cpu_socket')
+        attrs['ram_type'] = raw_attrs.get('ram_type')
+        attrs['tdp'] = parse_power(raw_attrs.get('tdp'))
+        attrs['wattage'] = parse_power(raw_attrs.get('wattage'))
+
+        # CPU Cooler supported sockets
+        supported = raw_attrs.get('supported_sockets') or raw_attrs.get('socket_support') or []
+        if isinstance(supported, str):
+            supported = [s.strip() for s in supported.split(',')]
+        attrs['supported_sockets'] = supported
+
     return {
         "id": comp.get('component_id'),
         "name": comp.get('component_name', ''),
@@ -69,6 +101,17 @@ def transform_component_for_csp(comp):
         "attrs": attrs
     }
 
+
+@app.route('/health', methods=['GET'])
+def health_check():
+    return jsonify({"status": "ok", "message": "Python backend is running"}), 200
+
+@app.route('/', methods=['GET'])
+def root():
+    return jsonify({
+        "message": "Python Algorithm Backend",
+        "endpoints": ["/api/csp", "/api/graph", "/api/components", "/health"]
+    }), 200
 
 @app.route('/api/csp', methods=['POST'])
 def run_csp():
@@ -79,56 +122,51 @@ def run_csp():
 
         # Fetch components from Supabase
         raw_components = csp_db.fetch_all_components()
-        
+
         # Transform to CSP format
         components = [transform_component_for_csp(comp) for comp in raw_components]
-        
-        solver = CSPBacktracking(components)
-        solutions = solver.solve(budget, user_inputs)
 
-        return jsonify({"solutions": solutions})
+        solver = CSPBacktracking(components)
+        solutions = list(solver.solve(budget, user_inputs))  # exhaust generator to count
+
+        total_found = len(solutions)
+        limited_solutions = solutions[:4]  # send only 4 back to client
+
+        logging.info("CSP: Found %d valid builds, returning %d solutions", total_found, len(limited_solutions))
+
+        return jsonify({
+            "solutions": limited_solutions,
+            "total_found": total_found
+        })
+
     except Exception as e:
-        print(f"Error in CSP endpoint: {e}")
-        import traceback
-        traceback.print_exc()
+        logging.error("Error in CSP endpoint: %s", e, exc_info=True)
         return jsonify({"error": str(e)}), 500
+
+
+
+
 
 @app.route('/api/graph', methods=['POST'])
 def run_graph():
     try:
         data = request.json
         current_build = data.get("current_build", [])
-        
-        # Fetch all components from Supabase (already in correct format)
+
+        # Fetch all components from Supabase
         all_components = graph_db.fetch_all_components()
-        
         recommendations = generate_upgrade_recommendations(current_build, all_components)
+
         return jsonify({"recommendations": recommendations})
     except Exception as e:
-        print("Error running graph algorithm:", e)
-        import traceback
-        traceback.print_exc()
+        logging.error("Error running graph algorithm: %s", e, exc_info=True)
         return jsonify({"error": str(e)}), 500
-    
+
 @app.route('/api/components', methods=['GET'])
 def get_components():
     """Return all components with category names for frontend."""
     try:
         raw_components = csp_db.fetch_all_components()
-        
-        
-        # Map category_id to category_name
-        category_map = {
-            1: "CPU",
-            2: "Motherboard",
-            3: "RAM",
-            4: "Storage",
-            5: "GPU",
-            6: "PSU",
-            7: "Case",
-            8: "Cooling"
-        }
-
         components = []
         for c in raw_components:
             components.append({
@@ -136,22 +174,14 @@ def get_components():
                 "name": c.get("component_name"),
                 "price": float(c.get("component_price", 0) or 0),
                 "category_id": c.get("category_id"),
-                "category_name": category_map.get(c.get("category_id"), "Unknown"),
+                "category_name": CATEGORY_MAP_FRONTEND.get(c.get("category_id"), "Unknown"),
                 "compatibility": c.get("compatibility_information"),
                 "retailer_id": c.get("retailer_id"),
             })
-        print("Fetched components:", raw_components)
         return jsonify({"components": components}), 200
-
     except Exception as e:
-        print("Error fetching components:", e)
-        import traceback
-        traceback.print_exc()
+        logging.error("Error fetching components: %s", e, exc_info=True)
         return jsonify({"error": str(e)}), 500
-
-
-
-
 
 if __name__ == '__main__':
     app.run(host="0.0.0.0", port=5000)

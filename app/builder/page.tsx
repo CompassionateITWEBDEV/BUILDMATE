@@ -1,4 +1,3 @@
-
 "use client"
 
 import * as React from "react"
@@ -39,8 +38,11 @@ import {
   Info,
   Lightbulb,
   MessageSquare,
+  TrendingUp,
+  Loader2,
+  CheckCircle2
 } from "lucide-react"
-// Removed authentication - using mock user data
+
 import { mockComponents, type Component, type ComponentCategory, type PerformanceCategory, performanceCategories } from "@/lib/mock-data"
 import { CompatibilityChecker, type CompatibilityResult } from "@/lib/compatibility-checker"
 import { filterComponentsByPerformance } from "@/lib/performance-filter"
@@ -48,7 +50,6 @@ import { DuplicateDetector, type BuildComparison } from "@/lib/duplicate-detecto
 import { DuplicateCheckDialog } from "@/components/duplicate-warning"
 import { formatCurrency } from "@/lib/currency"
 import { getCSPRecommendations, getUpgradeRecommendations, type CSPSolution } from "@/lib/algorithm-service"
-import { TrendingUp, Loader2, CheckCircle2 } from "lucide-react"
 
 const categoryIcons = {
   cpu: Cpu,
@@ -73,9 +74,9 @@ const categoryNames = {
 }
 
 export default function BuilderPage() {
-  // Mock user data instead of authentication
   const user = { id: "1", username: "PC Builder", email: "builder@example.com" }
   const router = useRouter()
+
   const [selectedComponents, setSelectedComponents] = useState<Record<ComponentCategory, Component | null>>({
     cpu: null,
     motherboard: null,
@@ -86,12 +87,10 @@ export default function BuilderPage() {
     case: null,
     cooling: null,
   })
-  // Real Components from supabase
-  // Real Components
-  const [components, setComponents] = useState<any[]>([]); // Make sure it's an array
+
+  const [components, setComponents] = useState<Component[]>([])
   const [isLoadingComponents, setIsLoadingComponents] = useState(false)
   const [fetchError, setFetchError] = useState<string | null>(null)
-
   const [activeCategory, setActiveCategory] = useState<ComponentCategory>("cpu")
   const [searchTerm, setSearchTerm] = useState("")
   const [buildName, setBuildName] = useState("My Custom Build")
@@ -102,8 +101,6 @@ export default function BuilderPage() {
   const [duplicateComparisons, setDuplicateComparisons] = useState<BuildComparison[]>([])
   const [showDuplicateDialog, setShowDuplicateDialog] = useState(false)
   const [isCheckingDuplicates, setIsCheckingDuplicates] = useState(false)
-  
-  // Algorithm integration states
   const [cspSolutions, setCspSolutions] = useState<CSPSolution[]>([])
   const [isCSPDialogOpen, setIsCSPDialogOpen] = useState(false)
   const [isLoadingCSP, setIsLoadingCSP] = useState(false)
@@ -112,45 +109,33 @@ export default function BuilderPage() {
   const [showUpgradeDialog, setShowUpgradeDialog] = useState(false)
   const [algorithmError, setAlgorithmError] = useState<string | null>(null)
 
-  // Filter components by category, search term, performance category, and budget
+  const [cspPage, setCspPage] = useState(0)
+  const SOLUTIONS_PER_PAGE = 4
+
   const getFilteredComponents = (category: ComponentCategory) => {
-  const categoryFiltered = components.filter((component) => component.category === category)
-  
-  const performanceFiltered = filterComponentsByPerformance(
-    categoryFiltered,
-    performanceCategory,
-    performanceCategories[performanceCategory].requirements
-  )
-  
-  const searchFiltered = performanceFiltered.filter(
-    (component) =>
-      component.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      component.brand.toLowerCase().includes(searchTerm.toLowerCase()),
-  )
+    const categoryFiltered = components.filter((component) => component.category === category)
 
-  if (budgetEnabled && budget > 0) {
-    const currentSpent = Object.values(selectedComponents)
-      .filter(Boolean)
-      .reduce((sum, component) => sum + component!.price, 0)
-    
-    const remainingBudget = budget - currentSpent
-    
-    return searchFiltered.filter((component) => {
-      if (selectedComponents[category]?.id === component.id) return true
-      return component.price <= remainingBudget
-    })
+    const performanceFiltered = filterComponentsByPerformance(
+      categoryFiltered,
+      performanceCategory,
+      performanceCategories[performanceCategory].requirements
+    )
+
+    const searchFiltered = performanceFiltered.filter(
+      (component) =>
+        component.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        component.brand.toLowerCase().includes(searchTerm.toLowerCase()),
+    )
+
+    // Remove budget-based filtering — all components will show
+    return searchFiltered
   }
-  
-  return searchFiltered
-}
 
 
-  // Calculate total price
   const totalPrice = Object.values(selectedComponents)
     .filter(Boolean)
     .reduce((sum, component) => sum + component!.price, 0)
 
-  // Calculate remaining budget
   const remainingBudget = budgetEnabled ? budget - totalPrice : 0
   const isOverBudget = budgetEnabled && totalPrice > budget
   const budgetPercentage = budgetEnabled && budget > 0 ? (totalPrice / budget) * 100 : 0
@@ -174,7 +159,6 @@ export default function BuilderPage() {
     }))
   }
 
-  // CSP Recommendation Checker Integration
   const handleGetCSPRecommendations = async () => {
     if (!budgetEnabled || budget <= 0) {
       setAlgorithmError("Please set a budget first")
@@ -185,17 +169,31 @@ export default function BuilderPage() {
     setAlgorithmError(null)
 
     try {
-      // Map selected components to CSP format
+      // Build user_inputs map
       const userInputs: Record<string, number> = {}
-      if (selectedComponents.cpu) {
-        userInputs["CPU"] = parseInt(selectedComponents.cpu.id.replace(/\D/g, '')) || 0
-      }
-      if (selectedComponents.gpu) {
-        userInputs["Video Card"] = parseInt(selectedComponents.gpu.id.replace(/\D/g, '')) || 0
+      if (selectedComponents.cpu) userInputs["CPU"] = parseInt(selectedComponents.cpu.id)
+      if (selectedComponents.gpu) userInputs["Video Card"] = parseInt(selectedComponents.gpu.id)
+
+      // Call Flask backend
+      const res = await fetch("http://localhost:5000/api/csp", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          budget,
+          user_inputs: userInputs,
+        }),
+      })
+
+      if (!res.ok) {
+        throw new Error(`Backend error: ${res.statusText}`)
       }
 
-      const solutions = await getCSPRecommendations(budget, userInputs)
-      setCspSolutions(solutions)
+      const data = await res.json()
+
+      // Take only the first 4 solutions
+      setCspSolutions(data.solutions.slice(0, 4))
       setIsCSPDialogOpen(true)
     } catch (error: any) {
       console.error("Error getting CSP recommendations:", error)
@@ -205,15 +203,12 @@ export default function BuilderPage() {
     }
   }
 
-  // Apply CSP solution to build
+
   const handleApplyCSPSolution = (solution: CSPSolution) => {
-    // This would need to map CSP solution components back to our component format
-    // For now, we'll just show a message
-    alert("Solution applied! (Note: This requires mapping CSP components to your component database)")
+    alert("Solution applied! (Mapping required to component database)")
     setIsCSPDialogOpen(false)
   }
 
-  // Upgrade Algorithm Integration
   const handleGetUpgradeRecommendations = async () => {
     const selectedComponentsList = Object.values(selectedComponents).filter(Boolean)
     
@@ -226,19 +221,11 @@ export default function BuilderPage() {
     setAlgorithmError(null)
 
     try {
-      // Transform selected components to algorithm format
       const currentBuild = selectedComponentsList.map((comp) => ({
         component_id: parseInt(comp!.id.replace(/\D/g, '')) || 0,
         component_name: comp!.name,
         component_price: comp!.price,
-        category_name: comp!.category === "gpu" ? "GPU" : 
-                      comp!.category === "cpu" ? "CPU" :
-                      comp!.category === "memory" ? "Memory" :
-                      comp!.category === "storage" ? "Storage" :
-                      comp!.category === "psu" ? "PSU" :
-                      comp!.category === "case" ? "Case" :
-                      comp!.category === "cooling" ? "Cooling" :
-                      comp!.category === "motherboard" ? "Motherboard" : comp!.category
+        category_name: comp!.category.charAt(0).toUpperCase() + comp!.category.slice(1),
       }))
 
       const recommendations = await getUpgradeRecommendations(currentBuild)
@@ -252,18 +239,12 @@ export default function BuilderPage() {
     }
   }
 
-
   const checkForDuplicates = async () => {
     if (!user) return
-
     setIsCheckingDuplicates(true)
     
     try {
-      // Generate fingerprint for current build
       const currentBuildFingerprint = DuplicateDetector.generateFingerprint(selectedComponents)
-      
-      // In a real app, this would fetch existing builds from the database
-      // For now, we'll simulate with mock data
       const mockExistingBuilds = [
         {
           components: { cpu: "cpu-1", motherboard: "mobo-1", memory: "ram-1", storage: "ssd-1", gpu: "gpu-1", psu: "psu-1", case: "case-1", cooling: "cooling-1" },
@@ -271,29 +252,18 @@ export default function BuilderPage() {
           componentCount: 8,
           priceRange: 'mid' as const,
           performanceCategory: 'gaming'
-        },
-        {
-          components: { cpu: "cpu-2", motherboard: "mobo-2", memory: "ram-2", storage: "ssd-2", gpu: "gpu-2", psu: "psu-2", case: "case-2", cooling: "cooling-2" },
-          totalPrice: 800,
-          componentCount: 6,
-          priceRange: 'budget' as const,
-          performanceCategory: 'office'
         }
       ]
-
-      // Check for duplicates
       const comparisons = DuplicateDetector.checkForDuplicates(currentBuildFingerprint, mockExistingBuilds)
-      
       if (comparisons.length > 0) {
         setDuplicateComparisons(comparisons)
         setShowDuplicateDialog(true)
-        return false // Don't proceed with save
+        return false
       }
-      
-      return true // No duplicates found, proceed with save
+      return true
     } catch (error) {
       console.error("Error checking for duplicates:", error)
-      return true // Proceed anyway if there's an error
+      return true
     } finally {
       setIsCheckingDuplicates(false)
     }
@@ -304,131 +274,76 @@ export default function BuilderPage() {
       router.push("/login")
       return
     }
-
-    // Check for duplicates first
     const canProceed = await checkForDuplicates()
-    if (!canProceed) {
-      return // Duplicate dialog will be shown
-    }
-
-    // In a real app, this would save to the backend
+    if (!canProceed) return
     console.log("Saving build:", { name: buildName, components: selectedComponents, totalPrice })
     setIsSaveDialogOpen(false)
-    // Show success message or redirect
   }
 
   const handleProceedAnyway = () => {
-    // In a real app, this would save to the backend
     console.log("Saving build despite duplicates:", { name: buildName, components: selectedComponents, totalPrice })
     setIsSaveDialogOpen(false)
     setShowDuplicateDialog(false)
-    // Show success message or redirect
   }
 
   const handleModifyBuild = () => {
-    // Reset some components to make the build more unique
-    setSelectedComponents(prev => ({
-      ...prev,
-      cooling: null // Remove cooling to make it different
-    }))
+    setSelectedComponents(prev => ({ ...prev, cooling: null }))
     setShowDuplicateDialog(false)
   }
 
-  const handleViewSimilar = (buildId: string) => {
-    // Navigate to similar build
-    console.log("Viewing similar build:", buildId)
-  }
-
-  const handleEditSimilar = (buildId: string) => {
-    // Navigate to edit similar build
-    console.log("Editing similar build:", buildId)
-  }
+  const handleViewSimilar = (buildId: string) => console.log("Viewing similar build:", buildId)
+  const handleEditSimilar = (buildId: string) => console.log("Editing similar build:", buildId)
 
   const compatibilityResult = getCompatibilityResult()
   const recommendations = new CompatibilityChecker(selectedComponents).getRecommendations()
 
-  const runCSPAlgorithm = async () => {
-    try {
-      const response = await fetch("http://localhost:5000/api/csp", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          budget,
-          user_inputs: Object.fromEntries(
-            Object.entries(selectedComponents)
-              .filter(([_, comp]) => comp !== null)
-              .map(([category, comp]) => [category, comp.id])
-          ),
-        }),
-      });
-
-      const data = await response.json();
-      console.log("CSP Solutions:", data.solutions);
-    } catch (err) {
-      console.error("Error running CSP:", err);
-    }
-  };
-
-  const runGraphAlgorithm = async () => {
-    try {
-      const response = await fetch("http://localhost:5000/api/graph", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          current_build: Object.values(selectedComponents)
-            .filter((comp) => comp !== null)
-            .map((comp) => ({
-              component_id: comp.id,
-              component_name: comp.name,
-              component_price: comp.price,
-              category_name: comp.category,
-            })),
-        }),
-      });
-
-      const data = await response.json();
-      console.log("Graph Recommendations:", data.recommendations);
-    } catch (err) {
-      console.error("Error running Graph algorithm:", err);
-    }
-  };
-
-
-  // Effect for fetching components
   useEffect(() => {
-    console.log("useEffect mounted");
-    const fetchComponents = async () => {
-      console.log("Starting fetch...");
-      try {
-        const res = await fetch("http://localhost:5000/api/components");
-        console.log("Fetch response received");
-        const data = await res.json();
-        console.log("Fetched components:", data.components);
-        setComponents(data.components);
-      } catch (err) {
-        console.error("Error fetching components:", err);
-      }
-    };
+  const fetchComponents = async () => {
+    setIsLoadingComponents(true)
+    try {
+      const res = await fetch("http://localhost:5000/api/components")
+      const data = await res.json()
 
-    fetchComponents();
-  }, []);
+      // Map API response to the UI format
+      const mappedComponents = data.components.map((comp: any) => ({
+        id: comp.id.toString(),
+        name: comp.name,
+        price: comp.price,
+        category: (() => {
+          switch (comp.category_id) {
+            case 1: return "cpu"
+            case 2: return "motherboard"
+            case 3: return "memory"
+            case 4: return "storage"
+            case 5: return "gpu"
+            case 6: return "psu"
+            case 7: return "case"
+            case 8: return "cooling"
+            default: return "cpu"
+          }
+        })(),
+        specifications: comp.compatibility || {},
+        image: comp.image || "/placeholder.svg",
+        brand: comp.brand || "Unknown",
+        rating: comp.rating || 0,
+        reviews: comp.reviews || 0,
+      }))
 
-
-  // Effect for running algorithms when budget or selection changes
-  useEffect(() => {
-    const hasSelected = Object.values(selectedComponents).some(component => component !== null);
-
-    if (hasSelected) {
-      console.log("🧠 Running CSP Compatibility Algorithm...");
-      runCSPAlgorithm();
-
-      console.log("🔗 Running Graph Upgrade Algorithm...");
-      runGraphAlgorithm();
+      setComponents(mappedComponents)
+      console.log("Mapped components:", mappedComponents)
+    } catch (err) {
+      console.error(err)
+      setFetchError("Failed to fetch components")
+    } finally {
+      setIsLoadingComponents(false)
     }
-  }, [selectedComponents]);
+  }
+  fetchComponents()
+}, [])
 
 
-  
+
+
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 dark:from-slate-900 dark:to-slate-800">
