@@ -22,6 +22,7 @@ export interface UpgradeRecommendation {
   current_component: string
   recommended_upgrade: string | null
   new_price: number | null
+  upgrade_cost?: number | null
 }
 
 /**
@@ -75,11 +76,14 @@ export async function getCSPRecommendations(
   } catch (error: any) {
     console.error('Error getting CSP recommendations:', error)
     
+    // Handle network errors specifically
+    if (error.name === 'TypeError' || error.name === 'NetworkError' || error.message?.includes('fetch') || error.message?.includes('network')) {
+      throw new Error('Network error: Cannot connect to server. Make sure the Python backend is running on port 5000. Start it with: cd Algorithm/python-backend && python api.py')
+    }
+    
     // Provide user-friendly error messages
     if (error.message) {
       throw error
-    } else if (error.name === 'TypeError' || error.message?.includes('fetch')) {
-      throw new Error('Cannot connect to server. Make sure the Python backend is running on port 5000.')
     } else {
       throw new Error('Failed to get CSP recommendations. Please check if the Python backend is running.')
     }
@@ -95,7 +99,12 @@ export async function getUpgradeRecommendations(
     component_name: string
     component_price: number
     category_name: string
-  }>
+  }>,
+  budget?: number,
+  compatibilityInfo?: {
+    socket?: string
+    memoryType?: string
+  }
 ): Promise<UpgradeRecommendation[]> {
   try {
     const response = await fetch(`${API_BASE}/upgrade`, {
@@ -105,6 +114,8 @@ export async function getUpgradeRecommendations(
       },
       body: JSON.stringify({
         current_build: currentBuild,
+        budget: budget || null,
+        compatibility_info: compatibilityInfo || null,
       }),
     })
 
@@ -140,11 +151,14 @@ export async function getUpgradeRecommendations(
   } catch (error: any) {
     console.error('Error getting upgrade recommendations:', error)
     
+    // Handle network errors specifically
+    if (error.name === 'TypeError' || error.name === 'NetworkError' || error.message?.includes('fetch') || error.message?.includes('network')) {
+      throw new Error('Network error: Cannot connect to server. Make sure the Python backend is running on port 5000. Start it with: cd Algorithm/python-backend && python api.py')
+    }
+    
     // Provide user-friendly error messages
     if (error.message) {
       throw error
-    } else if (error.name === 'TypeError' || error.message?.includes('fetch')) {
-      throw new Error('Cannot connect to server. Make sure the Python backend is running on port 5000.')
     } else {
       throw new Error('Failed to get upgrade recommendations. Please check if the Python backend is running.')
     }

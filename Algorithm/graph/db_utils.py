@@ -27,7 +27,7 @@ def fetch_build_components(build_id):
     ]
 
 def fetch_all_components():
-    url = f"{SUPABASE_URL}/rest/v1/components?select=component_id,component_name,component_price,category_id,component_categories(category_name)"
+    url = f"{SUPABASE_URL}/rest/v1/components?select=component_id,component_name,component_price,compatibility_information,category_id,component_categories(category_name)"
     res = requests.get(url, headers=headers)
     data = res.json()
 
@@ -36,6 +36,7 @@ def fetch_all_components():
             "component_id": d["component_id"],
             "component_name": d["component_name"],
             "component_price": d["component_price"],
+            "compatibility_information": d.get("compatibility_information"),
             "category_name": d["component_categories"]["category_name"]
         }
         for d in data

@@ -61,6 +61,86 @@ export class CompatibilityChecker {
     }
   }
 
+  // Helper methods to parse compatibility information from JSON
+  private getMemoryTypeFromCompatibility(component: Component): string | undefined {
+    try {
+      const compatStr = component.specifications.Compatibility as string
+      if (typeof compatStr === 'string') {
+        const compat = JSON.parse(compatStr)
+        return compat.type || compat.memoryType || compat.ram_type
+      }
+    } catch (e) {
+      // Try to extract from compatibility object directly
+      return component.compatibility.memoryType
+    }
+    return undefined
+  }
+
+  private getWattageFromCompatibility(component: Component): number | undefined {
+    try {
+      const compatStr = component.specifications.Compatibility as string
+      if (typeof compatStr === 'string') {
+        const compat = JSON.parse(compatStr)
+        return compat.wattage || compat.powerRequirement
+      }
+    } catch (e) {
+      // Already checked compatibility.powerRequirement in the main method
+    }
+    return undefined
+  }
+
+  private getDimensionFromCompatibility(component: Component, dimension: 'length' | 'width' | 'height'): number | undefined {
+    try {
+      const compatStr = component.specifications.Compatibility as string
+      if (typeof compatStr === 'string') {
+        const compat = JSON.parse(compatStr)
+        if (compat.dimensions && compat.dimensions[dimension]) {
+          return compat.dimensions[dimension]
+        }
+        return compat[dimension]
+      }
+    } catch (e) {
+      // Already checked compatibility.dimensions in the main method
+    }
+    return undefined
+  }
+
+  private getCaseMaxGpuLength(caseComponent: Component): number | undefined {
+    // Try specifications first (set during component conversion)
+    const fromSpecs = Number.parseInt(caseComponent.specifications.maxGpuLength as string)
+    if (fromSpecs) return fromSpecs
+    
+    // Try parsing from Compatibility JSON
+    try {
+      const compatStr = caseComponent.specifications.Compatibility as string
+      if (typeof compatStr === 'string') {
+        const compat = JSON.parse(compatStr)
+        return compat.maxGpuLength || compat.dimensions?.maxGpuLength
+      }
+    } catch (e) {
+      // Ignore parse errors
+    }
+    return undefined
+  }
+
+  private getCaseMaxGpuHeight(caseComponent: Component): number | undefined {
+    // Try specifications first (set during component conversion)
+    const fromSpecs = Number.parseInt(caseComponent.specifications.maxCoolerHeight as string)
+    if (fromSpecs) return fromSpecs
+    
+    // Try parsing from Compatibility JSON
+    try {
+      const compatStr = caseComponent.specifications.Compatibility as string
+      if (typeof compatStr === 'string') {
+        const compat = JSON.parse(compatStr)
+        return compat.maxCoolerHeight || compat.dimensions?.maxCoolerHeight
+      }
+    } catch (e) {
+      // Ignore parse errors
+    }
+    return undefined
+  }
+
   private checkCpuMotherboardCompatibility(issues: CompatibilityIssue[]) {
     const cpu = this.components.cpu
     const motherboard = this.components.motherboard
@@ -101,15 +181,29 @@ export class CompatibilityChecker {
 
     if (!memory || !motherboard) return
 
+    // Get memory type from compatibility or specifications
+    const memoryType = memory.compatibility.memoryType || 
+                      (memory.specifications.type as string) ||
+                      this.getMemoryTypeFromCompatibility(memory)
+    
+    // Get motherboard memory type
+    const mbMemoryType = motherboard.compatibility.memoryType || 
+                        (motherboard.specifications.memoryType as string) ||
+                        this.getMemoryTypeFromCompatibility(motherboard)
+
     // Memory type compatibility
-    if (memory.specifications.type !== motherboard.compatibility.memoryType) {
-      issues.push({
-        type: "error",
-        category: "memory",
-        message: `Memory type ${memory.specifications.type} is not supported by motherboard (supports ${motherboard.compatibility.memoryType})`,
-        affectedComponents: ["memory", "motherboard"],
-        suggestion: `Choose ${motherboard.compatibility.memoryType} memory modules`,
-      })
+    if (memoryType && mbMemoryType && memoryType !== mbMemoryType) {
+      // Check if memory type is in a list (e.g., ["DDR4", "DDR5"])
+      const mbSupports = Array.isArray(mbMemoryType) ? mbMemoryType : [mbMemoryType]
+      if (!mbSupports.includes(memoryType)) {
+        issues.push({
+          type: "error",
+          category: "memory",
+          message: `Memory type ${memoryType || 'undefined'} is not supported by motherboard (supports ${Array.isArray(mbMemoryType) ? mbMemoryType.join('/') : mbMemoryType})`,
+          affectedComponents: ["memory", "motherboard"],
+          suggestion: `Choose ${Array.isArray(mbMemoryType) ? mbMemoryType.join(' or ') : mbMemoryType} memory modules`,
+        })
+      }
     }
 
     // Memory capacity check
@@ -144,10 +238,24 @@ export class CompatibilityChecker {
       return
     }
 
-    const psuWattage = Number.parseInt(psu.specifications.wattage) || 0
+    // Get PSU wattage from compatibility or specifications
+    const psuWattage = psu.compatibility.powerRequirement || 
+                      Number.parseInt(psu.specifications.Wattage as string) ||
+                      Number.parseInt(psu.specifications.wattage as string) ||
+                      this.getWattageFromCompatibility(psu) ||
+                      0
+    
     const recommendedWattage = Math.ceil(totalPowerDraw * 1.2) // 20% headroom
 
-    if (psuWattage < totalPowerDraw) {
+    if (psuWattage === 0) {
+      issues.push({
+        type: "warning",
+        category: "psu",
+        message: "Power supply wattage information not available",
+        affectedComponents: ["psu"],
+        suggestion: `Ensure power supply has at least ${recommendedWattage}W capacity`,
+      })
+    } else if (psuWattage < totalPowerDraw) {
       issues.push({
         type: "error",
         category: "psu",
@@ -174,11 +282,15 @@ export class CompatibilityChecker {
 
     if (!gpu || !pcCase) return
 
-    // GPU length compatibility
-    const gpuLength = gpu.compatibility.dimensions?.length || 0
-    const caseMaxGpuLength = pcCase.specifications.maxGpuLength || 0
+    // GPU length compatibility - get from compatibility.dimensions or parse from compatibility info
+    const gpuLength = gpu.compatibility.dimensions?.length || 
+                     this.getDimensionFromCompatibility(gpu, 'length') ||
+                     0
+    
+    // Case max GPU length - get from compatibility info
+    const caseMaxGpuLength = this.getCaseMaxGpuLength(pcCase) || 0
 
-    if (gpuLength > caseMaxGpuLength) {
+    if (gpuLength > 0 && caseMaxGpuLength > 0 && gpuLength > caseMaxGpuLength) {
       issues.push({
         type: "error",
         category: "gpu",
@@ -189,10 +301,13 @@ export class CompatibilityChecker {
     }
 
     // GPU height compatibility
-    const gpuHeight = gpu.compatibility.dimensions?.height || 0
-    const caseMaxGpuHeight = pcCase.specifications.maxGpuHeight || 0
+    const gpuHeight = gpu.compatibility.dimensions?.height || 
+                     this.getDimensionFromCompatibility(gpu, 'height') ||
+                     0
+    
+    const caseMaxGpuHeight = this.getCaseMaxGpuHeight(pcCase) || 0
 
-    if (gpuHeight > caseMaxGpuHeight) {
+    if (gpuHeight > 0 && caseMaxGpuHeight > 0 && gpuHeight > caseMaxGpuHeight) {
       issues.push({
         type: "error",
         category: "gpu",
@@ -210,15 +325,62 @@ export class CompatibilityChecker {
 
     if (!cooling || !cpu) return
 
-    // CPU socket compatibility
-    if (cooling.compatibility.socket && !cooling.compatibility.socket.includes(cpu.compatibility.socket || "")) {
-      issues.push({
-        type: "error",
-        category: "cooling",
-        message: `CPU cooler is not compatible with ${cpu.compatibility.socket} socket`,
-        affectedComponents: ["cooling", "cpu"],
-        suggestion: `Choose a cooler that supports ${cpu.compatibility.socket} socket`,
-      })
+    // CPU socket compatibility - get supported sockets from compatibility info
+    const cpuSocket = cpu.compatibility.socket
+    if (cpuSocket && cpuSocket !== 'Standard') {
+      // Try to get supported sockets from compatibility info
+      let supportedSockets: string[] = []
+      
+      // Try parsing from Compatibility JSON
+      try {
+        const compatStr = cooling.specifications.Compatibility as string
+        if (typeof compatStr === 'string') {
+          const compat = JSON.parse(compatStr)
+          if (compat.supportedSockets) {
+            supportedSockets = Array.isArray(compat.supportedSockets) 
+              ? compat.supportedSockets 
+              : [compat.supportedSockets]
+          } else if (compat.supported_sockets) {
+            supportedSockets = Array.isArray(compat.supported_sockets) 
+              ? compat.supported_sockets 
+              : [compat.supported_sockets]
+          }
+        }
+      } catch (e) {
+        // Ignore parse errors
+      }
+      
+      // If no supported sockets found, check specifications for supportedSockets field
+      if (supportedSockets.length === 0 && cooling.specifications.supportedSockets) {
+        try {
+          const parsed = JSON.parse(cooling.specifications.supportedSockets as string)
+          if (Array.isArray(parsed)) {
+            supportedSockets = parsed
+          }
+        } catch (e) {
+          // Not a JSON string, ignore
+        }
+      }
+      
+      // Check compatibility
+      if (supportedSockets.length > 0 && !supportedSockets.includes(cpuSocket)) {
+        issues.push({
+          type: "error",
+          category: "cooling",
+          message: `CPU cooler is not compatible with ${cpuSocket} socket`,
+          affectedComponents: ["cooling", "cpu"],
+          suggestion: `Choose a cooler that supports ${cpuSocket} socket`,
+        })
+      } else if (supportedSockets.length === 0) {
+        // Warn if no supported sockets info available
+        issues.push({
+          type: "warning",
+          category: "cooling",
+          message: `CPU cooler socket compatibility information not available`,
+          affectedComponents: ["cooling", "cpu"],
+          suggestion: `Verify that the cooler supports ${cpuSocket} socket`,
+        })
+      }
     }
 
     // Cooler height vs case clearance
@@ -289,20 +451,43 @@ export class CompatibilityChecker {
 
   private calculateCompatibilityScore(issues: CompatibilityIssue[]): number {
     let score = 100
+    const selectedCount = Object.values(this.components).filter(Boolean).length
+
+    // If we have very few components selected, incompatibilities should have more impact
+    const isEarlyBuild = selectedCount <= 3
 
     issues.forEach((issue) => {
       switch (issue.type) {
         case "error":
-          score -= 25
+          // Critical incompatibilities: reduce score more significantly
+          // If it's an early build (few components), penalize more heavily
+          if (isEarlyBuild) {
+            score -= 40 // More severe penalty when only 2-3 components selected
+          } else {
+            score -= 30 // Standard penalty for errors
+          }
           break
         case "warning":
-          score -= 10
+          // Warnings: moderate penalty
+          if (isEarlyBuild) {
+            score -= 15 // More significant when few components
+          } else {
+            score -= 10 // Standard warning penalty
+          }
           break
         case "info":
           score -= 2
           break
       }
     })
+
+    // Additional penalty if there are multiple errors affecting the same components
+    // This ensures that incompatible component pairs are properly penalized
+    const errorIssues = issues.filter(issue => issue.type === "error")
+    if (errorIssues.length > 0 && selectedCount <= 2) {
+      // If only 2 components selected and they have errors, reduce score further
+      score -= 10
+    }
 
     return Math.max(0, score)
   }

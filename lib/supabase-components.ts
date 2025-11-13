@@ -3,32 +3,105 @@ import type { Component, ComponentCategory, PerformanceCategory } from './mock-d
 
 // Convert database component to app component format
 function convertDbComponentToAppComponent(dbComponent: any): Component {
+  // Parse compatibility information from JSON
+  let compatInfo: any = {}
+  try {
+    const compatStr = dbComponent.compatibility_information
+    if (typeof compatStr === 'string') {
+      compatInfo = JSON.parse(compatStr)
+    } else if (compatStr && typeof compatStr === 'object') {
+      compatInfo = compatStr
+    }
+  } catch (e) {
+    console.warn('Could not parse compatibility information:', e)
+  }
+
+  // Map database category names to app category names
+  const dbCategoryName = dbComponent.component_categories?.category_name?.toLowerCase() || ''
+  const categoryMap: Record<string, ComponentCategory> = {
+    'cpu': 'cpu',
+    'gpu': 'gpu',
+    'memory': 'memory',
+    'ram': 'memory',
+    'storage': 'storage',
+    'psu': 'psu',
+    'power supply': 'psu',
+    'case': 'case',
+    'cooling': 'cooling',
+    'cpu cooler': 'cooling'
+  }
+  const appCategory = categoryMap[dbCategoryName] || (dbCategoryName as ComponentCategory) || 'cpu'
+
+  // Extract brand from component name (usually first part before dash)
+  const brand = dbComponent.component_name?.split(' - ')[0]?.trim() || 
+                dbComponent.retailers?.retailer_name || 
+                'Unknown'
+
+  // Build compatibility object from parsed data
+  // For Memory components, use 'type' field; for others use 'memoryType'
+  let memoryTypeValue = compatInfo.memoryType || compatInfo.ram_type
+  if (appCategory === 'memory' && !memoryTypeValue) {
+    // Memory components use 'type' field (e.g., "DDR4", "DDR5")
+    memoryTypeValue = compatInfo.type
+  }
+  
+  const compatibility: Component['compatibility'] = {
+    socket: compatInfo.socket || 'Standard',
+    formFactor: compatInfo.formFactor || (appCategory === 'case' ? compatInfo.type : 'Standard'),
+    memoryType: Array.isArray(memoryTypeValue) 
+      ? memoryTypeValue[0] 
+      : (memoryTypeValue || (appCategory === 'memory' ? 'DDR4' : undefined)),
+    powerRequirement: compatInfo.powerRequirement || compatInfo.wattage || compatInfo.tdp || (appCategory === 'psu' ? 500 : 100),
+    dimensions: compatInfo.dimensions || {
+      length: compatInfo.length || (appCategory === 'gpu' ? 220 : 100),
+      width: compatInfo.width || 100,
+      height: compatInfo.height || (appCategory === 'gpu' ? 120 : 50)
+    },
+    memorySupport: compatInfo.memorySupport || compatInfo.ram_type || memoryTypeValue,
+    m2Slots: compatInfo.m2Slots?.toString(),
+    sataPorts: compatInfo.sataPorts?.toString()
+  }
+  
+  // Store supportedSockets in specifications for CPU Cooler compatibility checking
+  // (Note: supportedSockets is not in the Component compatibility type, so we store it in specifications)
+  
+  // For case components, store maxGpuLength and maxCoolerHeight in specifications for compatibility checker
+  // (dimensions are already set above, but we also need these in specs for the checker)
+
   return {
     id: `component-${dbComponent.component_id}`,
     name: dbComponent.component_name,
-    brand: dbComponent.retailers?.retailer_name || 'Unknown',
-    price: dbComponent.component_price || 0,
-    category: dbComponent.component_categories?.category_name?.toLowerCase() as ComponentCategory || 'cpu',
-    image: `/placeholder.svg`, // You can add image URLs to your database
-    rating: 4.5, // You can add ratings to your database
-    reviews: Math.floor(Math.random() * 1000) + 100, // You can add review counts to your database
+    brand: brand,
+    price: Number(dbComponent.component_price) || 0,
+    category: appCategory,
+    image: `/placeholder.svg`,
+    rating: 4.5,
+    reviews: Math.floor(Math.random() * 1000) + 100,
     specifications: {
-      'Compatibility': dbComponent.compatibility_information || 'Standard compatibility',
+      'Compatibility': JSON.stringify(compatInfo, null, 2) || 'Standard compatibility',
       'Price': `$${dbComponent.component_price || 0}`,
       'Category': dbComponent.component_categories?.category_name || 'Unknown',
-      'Retailer': dbComponent.retailers?.retailer_name || 'Unknown'
+      'Retailer': dbComponent.retailers?.retailer_name || 'Unknown',
+      // Add type field for Memory components
+      ...(appCategory === 'memory' && compatInfo.type && { 'type': compatInfo.type }),
+      ...(compatInfo.tdp && { 'TDP': `${compatInfo.tdp}W` }),
+      ...(compatInfo.wattage && { 'Wattage': `${compatInfo.wattage}W` }),
+      ...(compatInfo.vram && { 'VRAM': compatInfo.vram }),
+      ...(compatInfo.capacity && { 'Capacity': compatInfo.capacity }),
+      ...(compatInfo.speed && { 'Speed': compatInfo.speed }),
+      ...(compatInfo.interface && { 'Interface': compatInfo.interface }),
+      // Add case dimensions
+      ...(appCategory === 'case' && compatInfo.maxGpuLength && { 'maxGpuLength': compatInfo.maxGpuLength.toString() }),
+      ...(appCategory === 'case' && compatInfo.maxCoolerHeight && { 'maxCoolerHeight': compatInfo.maxCoolerHeight.toString() }),
+      // Add supportedSockets for CPU Cooler (stored in specifications since not in compatibility type)
+      ...(appCategory === 'cooling' && compatInfo.supportedSockets && { 
+        'supportedSockets': JSON.stringify(Array.isArray(compatInfo.supportedSockets) ? compatInfo.supportedSockets : [compatInfo.supportedSockets])
+      }),
+      ...(appCategory === 'cooling' && compatInfo.supported_sockets && { 
+        'supportedSockets': JSON.stringify(Array.isArray(compatInfo.supported_sockets) ? compatInfo.supported_sockets : [compatInfo.supported_sockets])
+      })
     },
-    compatibility: {
-      socket: 'Standard',
-      formFactor: 'Standard',
-      memoryType: 'DDR4',
-      powerRequirement: 100,
-      dimensions: {
-        length: 100,
-        width: 100,
-        height: 50
-      }
-    },
+    compatibility,
     performanceTags: ['all'] as PerformanceCategory[]
   }
 }

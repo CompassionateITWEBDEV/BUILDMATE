@@ -5,7 +5,7 @@ const PYTHON_API_URL = process.env.PYTHON_API_URL || 'http://localhost:5000'
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json()
-    const { current_build } = body
+    const { current_build, budget, compatibility_info } = body
 
     // Create AbortController for timeout
     const controller = new AbortController()
@@ -20,6 +20,8 @@ export async function POST(request: NextRequest) {
         },
         body: JSON.stringify({
           current_build,
+          budget: budget || null,
+          compatibility_info: compatibility_info || null,
         }),
         signal: controller.signal,
       })
