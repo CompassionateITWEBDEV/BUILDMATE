@@ -492,11 +492,19 @@ export class CompatibilityChecker {
     return Math.max(0, score)
   }
 
-  private calculatePowerRequirement(): number {
-    return Object.values(this.components)
-      .filter(Boolean)
-      .reduce((total, component) => total + (component!.compatibility.powerRequirement || 0), 0)
-  }
+    private calculatePowerRequirement(): number {
+      return Object.entries(this.components)
+        .filter(([category, component]) => category.toLowerCase() !== "psu" && component) // ✅ skip PSU
+        .reduce((total, [_, component]) => {
+          const power =
+            component!.compatibility.powerRequirement ||
+            Number.parseInt(component!.specifications.powerRequirement as string) ||
+            Number.parseInt(component!.specifications.tdp as string) || // in case CPU uses TDP
+            0
+          return total + power
+        }, 0)
+    }
+
 
   // Get component recommendations based on current selection
   getRecommendations(): string[] {

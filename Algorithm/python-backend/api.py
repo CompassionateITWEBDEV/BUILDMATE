@@ -61,6 +61,10 @@ def parse_power(value):
     return 0.0
 
 def transform_component_for_csp(comp):
+    """
+    Transform raw component data from DB into CSP format.
+    Handles socket compatibility, TDP, wattage, and case/GPU/cooler attributes.
+    """
     category_map = {
         1: "CPU",
         2: "Motherboard",
@@ -82,24 +86,46 @@ def transform_component_for_csp(comp):
         except Exception:
             raw_attrs = {}
 
-        attrs['socket'] = raw_attrs.get('socket') or raw_attrs.get('cpu_socket')
-        attrs['ram_type'] = raw_attrs.get('ram_type')
-        attrs['tdp'] = parse_power(raw_attrs.get('tdp'))
-        attrs['wattage'] = parse_power(raw_attrs.get('wattage'))
+        # CPU / Motherboard attributes
+        attrs['socket'] = (
+            raw_attrs.get('socket') or
+            raw_attrs.get('cpu_socket') or
+            raw_attrs.get('cpuSocket')
+        )
+        attrs['ram_type'] = raw_attrs.get('ram_type') or raw_attrs.get('ramType')
+        attrs['tdp'] = parse_power(raw_attrs.get('tdp')) or parse_power(raw_attrs.get('tdpRating'))
+        attrs['wattage'] = parse_power(raw_attrs.get('wattage')) or parse_power(raw_attrs.get('powerRequirement'))
 
-        # CPU Cooler supported sockets
-        supported = raw_attrs.get('supported_sockets') or raw_attrs.get('socket_support') or []
+        # CPU Cooler supported sockets (handles snake_case and camelCase)
+        supported = (
+            raw_attrs.get('supported_sockets') or
+            raw_attrs.get('socket_support') or
+            raw_attrs.get('supportedSockets') or
+            raw_attrs.get('sockets') or
+            []
+        )
         if isinstance(supported, str):
             supported = [s.strip() for s in supported.split(',')]
         attrs['supported_sockets'] = supported
 
+        # Case / GPU / Cooler attributes
+        attrs['maxGpuLength'] = raw_attrs.get('maxGpuLength') or raw_attrs.get('max_gpu_length') or 0
+        attrs['maxCoolerHeight'] = raw_attrs.get('maxCoolerHeight') or raw_attrs.get('max_cooler_height') or 0
+        attrs['height'] = raw_attrs.get('height', 0)
+        attrs['length'] = raw_attrs.get('length', 0)
+
+    component_id = comp.get('component_id')
+    component_name = comp.get('component_name', '')
+    component_price = float(comp.get('component_price', 0) or 0)
+
     return {
-        "id": comp.get('component_id'),
-        "name": comp.get('component_name', ''),
-        "price": float(comp.get('component_price', 0) or 0),
+        "id": component_id,
+        "name": component_name,
+        "price": component_price,
         "category": csp_category,
         "attrs": attrs
     }
+
 
 
 @app.route('/health', methods=['GET'])
@@ -127,24 +153,25 @@ def run_csp():
         components = [transform_component_for_csp(comp) for comp in raw_components]
 
         solver = CSPBacktracking(components)
-        solutions = list(solver.solve(budget, user_inputs))  # exhaust generator to count
 
-        total_found = len(solutions)
-        limited_solutions = solutions[:4]  # send only 4 back to client
+        # Use generator to limit to 4 solutions
+        solutions = []
+        for i, sol in enumerate(solver.solve(budget, user_inputs)):
+            if i >= 20:  # limit to 20
+                break
+            solutions.append(sol)
 
-        logging.info("CSP: Found %d valid builds, returning %d solutions", total_found, len(limited_solutions))
+        total_found = i + 1 if solutions else 0  # total found so far (may be more, generator truncated)
+        logging.info("CSP: Returning %d solutions (generator-limited)", len(solutions))
 
         return jsonify({
-            "solutions": limited_solutions,
+            "solutions": solutions,
             "total_found": total_found
         })
 
     except Exception as e:
         logging.error("Error in CSP endpoint: %s", e, exc_info=True)
         return jsonify({"error": str(e)}), 500
-
-
-
 
 
 @app.route('/api/graph', methods=['POST'])

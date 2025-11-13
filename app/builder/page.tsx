@@ -111,7 +111,7 @@ export default function BuilderPage() {
   const [algorithmError, setAlgorithmError] = useState<string | null>(null)
 
   const [cspPage, setCspPage] = useState(0)
-  const SOLUTIONS_PER_PAGE = 4
+  const SOLUTIONS_PER_PAGE = 2
 
   const getFilteredComponents = (category: ComponentCategory) => {
     const categoryFiltered = components.filter((component) => component.category === category)
@@ -200,8 +200,8 @@ export default function BuilderPage() {
       // Use algorithm service instead of direct fetch
       const solutions = await getCSPRecommendations(budget, userInputs)
       
-      // Take only the first 4 solutions
-      setCspSolutions(solutions.slice(0, 4))
+      setCspSolutions(solutions)
+      setCspPage(0)
       setIsCSPDialogOpen(true)
     } catch (error: any) {
       console.error("Error getting CSP recommendations:", error)
@@ -213,9 +213,30 @@ export default function BuilderPage() {
 
 
   const handleApplyCSPSolution = (solution: CSPSolution) => {
-    alert("Solution applied! (Mapping required to component database)")
+    // Map solution categories to ComponentCategory keys
+    const newSelected: Record<ComponentCategory, Component | null> = { ...selectedComponents }
+
+    Object.entries(solution).forEach(([category, comp]: [string, any]) => {
+      // Convert the solution category string to your ComponentCategory keys if needed
+      const key = category.toLowerCase() as ComponentCategory
+        newSelected[key] = {
+          id: comp.id,
+          name: comp.name,
+          brand: comp.brand || "",
+          price: comp.price,
+          category: key,
+          image: comp.image || "",
+          rating: comp.rating || 0,
+          reviews: comp.reviews || 0,
+          specifications: comp.specifications || {},
+          compatibility: comp.compatibility || {}, // << add this
+        }
+    })
+
+    setSelectedComponents(newSelected)
     setIsCSPDialogOpen(false)
   }
+
 
   const handleGetUpgradeRecommendations = async () => {
     const selectedComponentsList = Object.values(selectedComponents).filter(Boolean)
@@ -779,7 +800,7 @@ export default function BuilderPage() {
                   return (
                     <div key={category} className="flex items-center justify-between">
                       <div className="flex items-center gap-3">
-                        <Icon className="h-4 w-4 text-slate-500" />
+                        {Icon ? <Icon className="h-4 w-4 text-slate-500" /> : null}
                         <div>
                           <p className="text-sm font-medium text-slate-900 dark:text-white">
                             {categoryNames[category as ComponentCategory]}
@@ -922,41 +943,61 @@ export default function BuilderPage() {
             </div>
           ) : (
             <div className="space-y-4">
-              {cspSolutions.slice(0, 5).map((solution, index) => {
-                const solutionPrice = Object.values(solution).reduce((sum: number, comp: any) => sum + (comp.price || 0), 0)
-                return (
-                  <Card key={index} className="border-slate-200 dark:border-slate-700">
-                    <CardHeader>
-                      <div className="flex items-center justify-between">
-                        <CardTitle className="text-lg">Solution {index + 1}</CardTitle>
-                        <Badge variant="secondary" className="text-lg font-semibold">
-                          {formatCurrency(solutionPrice)}
-                        </Badge>
-                      </div>
-                    </CardHeader>
-                    <CardContent>
-                      <div className="grid md:grid-cols-2 gap-3">
-                        {Object.entries(solution).map(([category, comp]: [string, any]) => (
-                          <div key={category} className="flex items-center gap-2 p-2 bg-slate-50 dark:bg-slate-800 rounded">
-                            <Cpu className="h-4 w-4 text-blue-500" />
-                            <div className="flex-1">
-                              <p className="text-sm font-medium">{category}</p>
-                              <p className="text-xs text-slate-600 dark:text-slate-400">{comp.name}</p>
+              {cspSolutions
+                .slice(cspPage * SOLUTIONS_PER_PAGE, (cspPage + 1) * SOLUTIONS_PER_PAGE)
+                .map((solution, index) => {
+                  const solutionPrice = Object.values(solution).reduce((sum: number, comp: any) => sum + (comp.price || 0), 0)
+                  return (
+                    <Card key={index} className="border-slate-200 dark:border-slate-700">
+                      <CardHeader>
+                        <div className="flex items-center justify-between">
+                          <CardTitle className="text-lg">Solution {cspPage * SOLUTIONS_PER_PAGE + index + 1}</CardTitle>
+                          <Badge variant="secondary" className="text-lg font-semibold">
+                            {formatCurrency(solutionPrice)}
+                          </Badge>
+                        </div>
+                      </CardHeader>
+                      <CardContent>
+                        <div className="grid md:grid-cols-2 gap-3">
+                          {Object.entries(solution).map(([category, comp]: [string, any]) => (
+                            <div key={category} className="flex items-center gap-2 p-2 bg-slate-50 dark:bg-slate-800 rounded">
+                              <Cpu className="h-4 w-4 text-blue-500" />
+                              <div className="flex-1">
+                                <p className="text-sm font-medium">{category}</p>
+                                <p className="text-xs text-slate-600 dark:text-slate-400">{comp.name}</p>
+                              </div>
+                              <span className="text-sm font-semibold">{formatCurrency(comp.price)}</span>
                             </div>
-                            <span className="text-sm font-semibold">{formatCurrency(comp.price)}</span>
-                          </div>
-                        ))}
-                      </div>
-                      <Button
-                        className="w-full mt-4"
-                        onClick={() => handleApplyCSPSolution(solution)}
-                      >
-                        Apply This Solution
-                      </Button>
-                    </CardContent>
-                  </Card>
-                )
+                          ))}
+                        </div>
+                        <Button
+                          className="w-full mt-4"
+                          onClick={() => handleApplyCSPSolution(solution)}
+                        >
+                          Apply This Solution
+                        </Button>
+                      </CardContent>
+                    </Card>
+                  )
               })}
+
+              {/* Pagination Controls */}
+              <div className="flex justify-between mt-4">
+                <Button
+                  variant="outline"
+                  onClick={() => setCspPage((prev) => Math.max(prev - 1, 0))}
+                  disabled={cspPage === 0}
+                >
+                  Previous
+                </Button>
+                <Button
+                  variant="outline"
+                  onClick={() => setCspPage((prev) => (prev + 1) * SOLUTIONS_PER_PAGE < cspSolutions.length ? prev + 1 : prev)}
+                  disabled={(cspPage + 1) * SOLUTIONS_PER_PAGE >= cspSolutions.length}
+                >
+                  Next
+                </Button>
+              </div>
             </div>
           )}
         </DialogContent>
