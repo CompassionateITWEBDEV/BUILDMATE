@@ -50,6 +50,7 @@ import { DuplicateDetector, type BuildComparison } from "@/lib/duplicate-detecto
 import { DuplicateCheckDialog } from "@/components/duplicate-warning"
 import { formatCurrency } from "@/lib/currency"
 import { getCSPRecommendations, getUpgradeRecommendations, type CSPSolution } from "@/lib/algorithm-service"
+import { getSupabaseComponents } from "@/lib/supabase-components"
 
 const categoryIcons = {
   cpu: Cpu,
@@ -298,48 +299,31 @@ export default function BuilderPage() {
   const recommendations = new CompatibilityChecker(selectedComponents).getRecommendations()
 
   useEffect(() => {
-  const fetchComponents = async () => {
-    setIsLoadingComponents(true)
-    try {
-      const res = await fetch("http://localhost:5000/api/components")
-      const data = await res.json()
-
-      // Map API response to the UI format
-      const mappedComponents = data.components.map((comp: any) => ({
-        id: comp.id.toString(),
-        name: comp.name,
-        price: comp.price,
-        category: (() => {
-          switch (comp.category_id) {
-            case 1: return "cpu"
-            case 2: return "motherboard"
-            case 3: return "memory"
-            case 4: return "storage"
-            case 5: return "gpu"
-            case 6: return "psu"
-            case 7: return "case"
-            case 8: return "cooling"
-            default: return "cpu"
-          }
-        })(),
-        specifications: comp.compatibility || {},
-        image: comp.image || "/placeholder.svg",
-        brand: comp.brand || "Unknown",
-        rating: comp.rating || 0,
-        reviews: comp.reviews || 0,
-      }))
-
-      setComponents(mappedComponents)
-      console.log("Mapped components:", mappedComponents)
-    } catch (err) {
-      console.error(err)
-      setFetchError("Failed to fetch components")
-    } finally {
-      setIsLoadingComponents(false)
+    const fetchComponents = async () => {
+      setIsLoadingComponents(true)
+      try {
+        // Fetch components from Supabase database
+        const dbComponents = await getSupabaseComponents()
+        
+        if (dbComponents.length > 0) {
+          setComponents(dbComponents)
+          console.log(`Loaded ${dbComponents.length} components from database`)
+        } else {
+          // Fallback to mock data if database is empty
+          console.warn("No components found in database, using mock data")
+          setComponents(mockComponents)
+        }
+      } catch (err) {
+        console.error("Error fetching components:", err)
+        setFetchError("Failed to fetch components")
+        // Fallback to mock data on error
+        setComponents(mockComponents)
+      } finally {
+        setIsLoadingComponents(false)
+      }
     }
-  }
-  fetchComponents()
-}, [])
+    fetchComponents()
+  }, [])
 
 
 
