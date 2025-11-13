@@ -170,31 +170,38 @@ export default function BuilderPage() {
     setAlgorithmError(null)
 
     try {
-      // Build user_inputs map
+      // Build user_inputs map - extract numeric ID from component-{id} format
       const userInputs: Record<string, number> = {}
-      if (selectedComponents.cpu) userInputs["CPU"] = parseInt(selectedComponents.cpu.id)
-      if (selectedComponents.gpu) userInputs["Video Card"] = parseInt(selectedComponents.gpu.id)
-
-      // Call Flask backend
-      const res = await fetch("http://localhost:5000/api/csp", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          budget,
-          user_inputs: userInputs,
-        }),
-      })
-
-      if (!res.ok) {
-        throw new Error(`Backend error: ${res.statusText}`)
+      if (selectedComponents.cpu) {
+        userInputs["CPU"] = parseInt(selectedComponents.cpu.id.replace(/\D/g, '')) || 0
+      }
+      if (selectedComponents.gpu) {
+        userInputs["Video Card"] = parseInt(selectedComponents.gpu.id.replace(/\D/g, '')) || 0
+      }
+      if (selectedComponents.motherboard) {
+        userInputs["Motherboard"] = parseInt(selectedComponents.motherboard.id.replace(/\D/g, '')) || 0
+      }
+      if (selectedComponents.memory) {
+        userInputs["Memory"] = parseInt(selectedComponents.memory.id.replace(/\D/g, '')) || 0
+      }
+      if (selectedComponents.storage) {
+        userInputs["Storage"] = parseInt(selectedComponents.storage.id.replace(/\D/g, '')) || 0
+      }
+      if (selectedComponents.psu) {
+        userInputs["Power Supply"] = parseInt(selectedComponents.psu.id.replace(/\D/g, '')) || 0
+      }
+      if (selectedComponents.case) {
+        userInputs["Case"] = parseInt(selectedComponents.case.id.replace(/\D/g, '')) || 0
+      }
+      if (selectedComponents.cooling) {
+        userInputs["CPU Cooler"] = parseInt(selectedComponents.cooling.id.replace(/\D/g, '')) || 0
       }
 
-      const data = await res.json()
-
+      // Use algorithm service instead of direct fetch
+      const solutions = await getCSPRecommendations(budget, userInputs)
+      
       // Take only the first 4 solutions
-      setCspSolutions(data.solutions.slice(0, 4))
+      setCspSolutions(solutions.slice(0, 4))
       setIsCSPDialogOpen(true)
     } catch (error: any) {
       console.error("Error getting CSP recommendations:", error)
