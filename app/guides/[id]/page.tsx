@@ -11,7 +11,6 @@ import {
   ArrowLeft,
   Clock,
   Users,
-  Star,
   CheckCircle,
   AlertTriangle,
   Info,
@@ -129,8 +128,6 @@ export default function GuideDetailPage() {
     description: "Complete step-by-step guide for building your first gaming PC from scratch",
     difficulty: "Beginner",
     duration: "2-3 hours",
-    rating: 4.8,
-    reviews: 1247,
     views: "45.2k",
     category: "Gaming",
     estimatedCost: "$800-1200",
@@ -204,10 +201,6 @@ export default function GuideDetailPage() {
                       <div className="flex items-center gap-1 text-sm text-slate-600 dark:text-slate-400">
                         <Users className="h-4 w-4" />
                         {guide.views} views
-                      </div>
-                      <div className="flex items-center gap-1 text-sm text-slate-600 dark:text-slate-400">
-                        <Star className="h-4 w-4 text-yellow-400 fill-current" />
-                        {guide.rating} ({guide.reviews} reviews)
                       </div>
                     </div>
 

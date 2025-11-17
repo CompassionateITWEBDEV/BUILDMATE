@@ -10,6 +10,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Navigation } from "@/components/navigation"
 import { Cpu, BookOpen, Play, Clock, Users, Wrench, Zap, Shield, Search, Star, CheckCircle } from "lucide-react"
 import { formatCurrency } from "@/lib/currency"
+import { type PerformanceCategory, performanceCategories } from "@/lib/mock-data"
 
 const buildGuides = [
   {
@@ -23,6 +24,7 @@ const buildGuides = [
     rating: 4.8,
     reviews: 1247,
     category: "Gaming",
+    performanceCategory: "gaming" as PerformanceCategory,
     image: "/gaming-pc-build-guide.png",
     steps: 12,
     tools: ["Phillips screwdriver", "Anti-static wrist strap", "Zip ties"],
@@ -40,6 +42,7 @@ const buildGuides = [
     rating: 4.9,
     reviews: 567,
     category: "Workstation",
+    performanceCategory: "academic" as PerformanceCategory,
     image: "/professional-workstation-pc.jpg",
     steps: 15,
     tools: ["Phillips screwdriver", "Anti-static wrist strap", "Thermal paste", "Cable management kit"],
@@ -57,6 +60,7 @@ const buildGuides = [
     rating: 4.6,
     reviews: 892,
     category: "Office",
+    performanceCategory: "office" as PerformanceCategory,
     image: "/budget-office-computer.jpg",
     steps: 8,
     tools: ["Phillips screwdriver", "Anti-static wrist strap"],
@@ -74,6 +78,7 @@ const buildGuides = [
     rating: 4.7,
     reviews: 423,
     category: "Gaming",
+    performanceCategory: "gaming" as PerformanceCategory,
     image: "/gaming-pc-build-guide.png",
     steps: 14,
     tools: ["Phillips screwdriver", "Anti-static wrist strap", "Zip ties", "Small flashlight"],
@@ -91,6 +96,7 @@ const buildGuides = [
     rating: 4.5,
     reviews: 734,
     category: "Gaming",
+    performanceCategory: "gaming" as PerformanceCategory,
     image: "/gaming-pc-build-guide.png",
     steps: 16,
     tools: ["Phillips screwdriver", "Anti-static wrist strap", "RGB controller", "Cable management kit"],
@@ -108,12 +114,49 @@ const buildGuides = [
     rating: 4.8,
     reviews: 298,
     category: "Office",
+    performanceCategory: "office" as PerformanceCategory,
     image: "/budget-office-computer.jpg",
     steps: 13,
     tools: ["Phillips screwdriver", "Anti-static wrist strap", "Sound dampening material", "Fan controller"],
     estimatedCost: "₱55,000-88,000",
     lastUpdated: "4 days ago",
     tags: ["silent", "quiet", "noise-reduction"],
+  },
+  {
+    id: "academic-research-build",
+    title: "Academic Research & Development PC",
+    description: "Build a powerful PC optimized for research, data analysis, coding, and educational workloads",
+    difficulty: "Intermediate",
+    duration: "3-4 hours",
+    views: "12.5k",
+    rating: 4.7,
+    reviews: 234,
+    category: "Academic",
+    performanceCategory: "academic" as PerformanceCategory,
+    image: "/professional-workstation-pc.jpg",
+    steps: 14,
+    tools: ["Phillips screwdriver", "Anti-static wrist strap", "Thermal paste", "Cable management kit"],
+    estimatedCost: "₱99,000-165,000",
+    lastUpdated: "1 week ago",
+    tags: ["research", "academic", "development", "coding"],
+  },
+  {
+    id: "student-coding-build",
+    title: "Student Coding & Learning PC",
+    description: "Perfect build for students learning programming, running VMs, and handling multiple development tools",
+    difficulty: "Beginner",
+    duration: "2-3 hours",
+    views: "19.3k",
+    rating: 4.6,
+    reviews: 456,
+    category: "Academic",
+    performanceCategory: "academic" as PerformanceCategory,
+    image: "/budget-office-computer.jpg",
+    steps: 11,
+    tools: ["Phillips screwdriver", "Anti-static wrist strap", "Zip ties"],
+    estimatedCost: "₱77,000-110,000",
+    lastUpdated: "5 days ago",
+    tags: ["student", "coding", "learning", "development"],
   },
 ]
 
@@ -145,7 +188,7 @@ const quickTips = [
 
 export default function GuidesPage() {
   const [searchTerm, setSearchTerm] = useState("")
-  const [selectedCategory, setSelectedCategory] = useState("all")
+  const [selectedPerformanceCategory, setSelectedPerformanceCategory] = useState<PerformanceCategory>("all")
   const [selectedDifficulty, setSelectedDifficulty] = useState("all")
   const [sortBy, setSortBy] = useState("popular")
 
@@ -156,10 +199,10 @@ export default function GuidesPage() {
         guide.description.toLowerCase().includes(searchTerm.toLowerCase()) ||
         guide.tags.some((tag) => tag.toLowerCase().includes(searchTerm.toLowerCase()))
 
-      const matchesCategory = selectedCategory === "all" || guide.category.toLowerCase() === selectedCategory
+      const matchesPerformanceCategory = selectedPerformanceCategory === "all" || guide.performanceCategory === selectedPerformanceCategory
       const matchesDifficulty = selectedDifficulty === "all" || guide.difficulty.toLowerCase() === selectedDifficulty
 
-      return matchesSearch && matchesCategory && matchesDifficulty
+      return matchesSearch && matchesPerformanceCategory && matchesDifficulty
     })
 
     // Sort guides
@@ -241,15 +284,19 @@ export default function GuidesPage() {
               />
             </div>
             <div className="flex gap-2">
-              <Select value={selectedCategory} onValueChange={setSelectedCategory}>
-                <SelectTrigger className="w-40">
-                  <SelectValue placeholder="Category" />
+              <Select value={selectedPerformanceCategory} onValueChange={(value) => setSelectedPerformanceCategory(value as PerformanceCategory)}>
+                <SelectTrigger className="w-48">
+                  <SelectValue placeholder="Performance Category" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="all">All Categories</SelectItem>
-                  <SelectItem value="gaming">Gaming</SelectItem>
-                  <SelectItem value="workstation">Workstation</SelectItem>
-                  <SelectItem value="office">Office</SelectItem>
+                  {Object.entries(performanceCategories).map(([key, category]) => (
+                    <SelectItem key={key} value={key}>
+                      <div className="flex flex-col">
+                        <span className="font-medium">{category.name}</span>
+                        <span className="text-xs text-slate-500">{category.description}</span>
+                      </div>
+                    </SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
               <Select value={selectedDifficulty} onValueChange={setSelectedDifficulty}>
@@ -282,9 +329,9 @@ export default function GuidesPage() {
         <div className="mb-8">
           <div className="flex items-center justify-between mb-6">
             <h3 className="text-2xl font-bold text-slate-900 dark:text-white">
-              {selectedCategory === "all"
+              {selectedPerformanceCategory === "all"
                 ? "All Guides"
-                : `${selectedCategory.charAt(0).toUpperCase() + selectedCategory.slice(1)} Guides`}
+                : `${performanceCategories[selectedPerformanceCategory].name} Guides`}
             </h3>
             <span className="text-sm text-slate-600 dark:text-slate-400">
               {filteredGuides.length} guide{filteredGuides.length !== 1 ? "s" : ""} found
@@ -304,7 +351,7 @@ export default function GuidesPage() {
                     className="w-full h-48 object-cover rounded-t-lg"
                   />
                   <div className="absolute top-4 left-4 flex gap-2">
-                    <Badge className="bg-blue-600">{guide.category}</Badge>
+                    <Badge className="bg-blue-600">{performanceCategories[guide.performanceCategory].name}</Badge>
                     <Badge
                       variant={
                         guide.difficulty === "Beginner"
@@ -398,7 +445,7 @@ export default function GuidesPage() {
                 variant="outline"
                 onClick={() => {
                   setSearchTerm("")
-                  setSelectedCategory("all")
+                  setSelectedPerformanceCategory("all")
                   setSelectedDifficulty("all")
                 }}
               >

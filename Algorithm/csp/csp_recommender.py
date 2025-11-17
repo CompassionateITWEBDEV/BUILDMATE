@@ -94,11 +94,15 @@ class CSPBacktracking:
 
         return True
 
-    # Generator version of backtracking
+    # Generator version of backtracking with early budget pruning
     def backtrack(self, categories, partial_build, budget):
+        # Early pruning: if current partial build already exceeds budget, stop exploring
+        current_cost = sum(c["price"] for c in partial_build.values() if c)
+        if current_cost > budget:
+            return  # Already over budget, no point continuing
+        
         if not categories:
-            total_cost = sum(c["price"] for c in partial_build.values())
-            if total_cost <= budget:
+            if current_cost <= budget:
                 yield partial_build.copy()
             return
 
@@ -108,7 +112,17 @@ class CSPBacktracking:
             yield from self.backtrack(categories[1:], partial_build, budget)
             return
 
-        for comp in self.by_cat.get(next_cat, []):
+        # Sort components by price (cheapest first) to find solutions faster
+        available_components = sorted(
+            self.by_cat.get(next_cat, []),
+            key=lambda c: c.get("price", float('inf'))
+        )
+        
+        for comp in available_components:
+            # Early budget check: skip if adding this component would exceed budget
+            if current_cost + comp.get("price", 0) > budget:
+                continue  # Skip expensive components that would exceed budget
+            
             if self.is_compatible(partial_build, comp):
                 partial_build[next_cat] = comp
                 yield from self.backtrack(categories[1:], partial_build, budget)
@@ -118,9 +132,18 @@ class CSPBacktracking:
         partial_build = {}
         id_map = {c["id"]: c for c in self.components}
 
+        # Build partial build from user inputs
         for cat, comp_id in user_inputs.items():
             if comp_id in id_map:
                 partial_build[cat] = id_map[comp_id]
+
+        # Validate budget: check if pre-selected components already exceed budget
+        pre_selected_cost = sum(c["price"] for c in partial_build.values() if c)
+        if pre_selected_cost > budget:
+            # Pre-selected components exceed budget, return empty generator
+            # This will be handled by the API to show appropriate error message
+            return
+            # Empty generator - no solutions possible
 
         remaining_cats = [c for c in CATEGORY_ORDER if c not in partial_build]
         return self.backtrack(remaining_cats, partial_build, budget)  # returns a generator

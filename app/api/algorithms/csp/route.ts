@@ -9,7 +9,7 @@ export async function POST(request: NextRequest) {
 
     // Create AbortController for timeout
     const controller = new AbortController()
-    const timeoutId = setTimeout(() => controller.abort(), 30000) // 30 second timeout
+    const timeoutId = setTimeout(() => controller.abort(), 300000) // 300 second (5 minute) timeout for CSP algorithm with larger budgets
 
     try {
       // Call Python backend

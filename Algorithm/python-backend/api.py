@@ -146,23 +146,56 @@ def run_csp():
         budget = data.get("budget", 0)
         user_inputs = data.get("user_inputs", {})
 
+        # Validate budget
+        if budget <= 0:
+            return jsonify({"error": "Budget must be greater than 0"}), 400
+
         # Fetch components from Supabase
         raw_components = csp_db.fetch_all_components()
 
         # Transform to CSP format
         components = [transform_component_for_csp(comp) for comp in raw_components]
 
+        # Check if pre-selected components exceed budget
+        id_map = {c.get("component_id"): c for c in raw_components}
+        pre_selected_cost = 0
+        pre_selected_names = []
+        for cat, comp_id in user_inputs.items():
+            if comp_id in id_map:
+                comp = id_map[comp_id]
+                price = float(comp.get("component_price", 0) or 0)
+                pre_selected_cost += price
+                pre_selected_names.append(f"{cat}: {comp.get('component_name', 'Unknown')} (₱{price:,.2f})")
+        
+        if pre_selected_cost > budget:
+            logging.warning("CSP: Pre-selected components (₱%.2f) exceed budget (₱%.2f)", pre_selected_cost, budget)
+            return jsonify({
+                "error": f"Pre-selected components cost ₱{pre_selected_cost:,.2f}, which exceeds your budget of ₱{budget:,.2f}. Please remove some components or increase your budget.",
+                "pre_selected_cost": pre_selected_cost,
+                "budget": budget,
+                "over_budget_by": pre_selected_cost - budget
+            }), 400
+
         solver = CSPBacktracking(components)
 
-        # Use generator to limit to 4 solutions
+        # Use generator to limit solutions (reduced to 10 for faster results)
         solutions = []
+        solution_count = 0
         for i, sol in enumerate(solver.solve(budget, user_inputs)):
-            if i >= 20:  # limit to 20
+            if i >= 10:  # limit to 10 solutions for faster response
                 break
             solutions.append(sol)
+            solution_count = i + 1
 
-        total_found = i + 1 if solutions else 0  # total found so far (may be more, generator truncated)
-        logging.info("CSP: Returning %d solutions (generator-limited)", len(solutions))
+        total_found = solution_count if solutions else 0
+        logging.info("CSP: Budget ₱%.2f, Pre-selected cost ₱%.2f, Returning %d solutions", budget, pre_selected_cost, len(solutions))
+
+        if not solutions:
+            return jsonify({
+                "error": f"No compatible solutions found within budget of ₱{budget:,.2f}. Try adjusting your budget or removing some pre-selected components.",
+                "solutions": [],
+                "total_found": 0
+            }), 200  # Return 200 but with error message in response
 
         return jsonify({
             "solutions": solutions,

@@ -74,14 +74,15 @@ export default function DebugAuthPage() {
 
   const testSupabaseConnection = async () => {
     try {
-      const { data, error } = await supabase.auth.signInWithPassword({
-        email: "test@example.com",
-        password: "testpassword"
-      })
+      // Test database connection instead of auth (which requires email confirmation)
+      const { data, error } = await supabase
+        .from('users')
+        .select('count')
+        .limit(1)
       
       setDebugInfo(prev => ({
         ...prev,
-        testConnection: error ? `Error: ${error.message}` : "Success"
+        testConnection: error ? `Error: ${error.message}` : "Database connection successful"
       }))
     } catch (err) {
       setDebugInfo(prev => ({

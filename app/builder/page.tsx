@@ -50,7 +50,7 @@ import { DuplicateDetector, type BuildComparison } from "@/lib/duplicate-detecto
 import { DuplicateCheckDialog } from "@/components/duplicate-warning"
 import { formatCurrency } from "@/lib/currency"
 import { getCSPRecommendations, getUpgradeRecommendations, type CSPSolution } from "@/lib/algorithm-service"
-import { getSupabaseComponents } from "@/lib/supabase-components"
+import { getSupabaseComponents, getSupabaseComponentsByCategory } from "@/lib/supabase-components"
 
 const categoryIcons = {
   cpu: Cpu,
@@ -106,6 +106,7 @@ export default function BuilderPage() {
   const [isCSPDialogOpen, setIsCSPDialogOpen] = useState(false)
   const [isLoadingCSP, setIsLoadingCSP] = useState(false)
   const [upgradeRecommendations, setUpgradeRecommendations] = useState<any[]>([])
+  const [upgradeCategoryMap, setUpgradeCategoryMap] = useState<Map<number, ComponentCategory>>(new Map())
   const [isLoadingUpgrades, setIsLoadingUpgrades] = useState(false)
   const [showUpgradeDialog, setShowUpgradeDialog] = useState(false)
   const [algorithmError, setAlgorithmError] = useState<string | null>(null)
@@ -166,6 +167,11 @@ export default function BuilderPage() {
       return
     }
 
+    if (budget < 10000) {
+      setAlgorithmError("CSP recommendations require a minimum budget of ₱10,000")
+      return
+    }
+
     setIsLoadingCSP(true)
     setAlgorithmError(null)
 
@@ -173,28 +179,28 @@ export default function BuilderPage() {
       // Build user_inputs map - extract numeric ID from component-{id} format
       const userInputs: Record<string, number> = {}
       if (selectedComponents.cpu) {
-        userInputs["CPU"] = parseInt(selectedComponents.cpu.id.replace(/\D/g, '')) || 0
+        userInputs["CPU"] = typeof selectedComponents.cpu.id === 'number' ? selectedComponents.cpu.id : parseInt(String(selectedComponents.cpu.id).replace(/\D/g, '')) || 0
       }
       if (selectedComponents.gpu) {
-        userInputs["Video Card"] = parseInt(selectedComponents.gpu.id.replace(/\D/g, '')) || 0
+        userInputs["Video Card"] = typeof selectedComponents.gpu.id === 'number' ? selectedComponents.gpu.id : parseInt(String(selectedComponents.gpu.id).replace(/\D/g, '')) || 0
       }
       if (selectedComponents.motherboard) {
-        userInputs["Motherboard"] = parseInt(selectedComponents.motherboard.id.replace(/\D/g, '')) || 0
+        userInputs["Motherboard"] = typeof selectedComponents.motherboard.id === 'number' ? selectedComponents.motherboard.id : parseInt(String(selectedComponents.motherboard.id).replace(/\D/g, '')) || 0
       }
       if (selectedComponents.memory) {
-        userInputs["Memory"] = parseInt(selectedComponents.memory.id.replace(/\D/g, '')) || 0
+        userInputs["Memory"] = typeof selectedComponents.memory.id === 'number' ? selectedComponents.memory.id : parseInt(String(selectedComponents.memory.id).replace(/\D/g, '')) || 0
       }
       if (selectedComponents.storage) {
-        userInputs["Storage"] = parseInt(selectedComponents.storage.id.replace(/\D/g, '')) || 0
+        userInputs["Storage"] = typeof selectedComponents.storage.id === 'number' ? selectedComponents.storage.id : parseInt(String(selectedComponents.storage.id).replace(/\D/g, '')) || 0
       }
       if (selectedComponents.psu) {
-        userInputs["Power Supply"] = parseInt(selectedComponents.psu.id.replace(/\D/g, '')) || 0
+        userInputs["Power Supply"] = typeof selectedComponents.psu.id === 'number' ? selectedComponents.psu.id : parseInt(String(selectedComponents.psu.id).replace(/\D/g, '')) || 0
       }
       if (selectedComponents.case) {
-        userInputs["Case"] = parseInt(selectedComponents.case.id.replace(/\D/g, '')) || 0
+        userInputs["Case"] = typeof selectedComponents.case.id === 'number' ? selectedComponents.case.id : parseInt(String(selectedComponents.case.id).replace(/\D/g, '')) || 0
       }
       if (selectedComponents.cooling) {
-        userInputs["CPU Cooler"] = parseInt(selectedComponents.cooling.id.replace(/\D/g, '')) || 0
+        userInputs["CPU Cooler"] = typeof selectedComponents.cooling.id === 'number' ? selectedComponents.cooling.id : parseInt(String(selectedComponents.cooling.id).replace(/\D/g, '')) || 0
       }
 
       // Use algorithm service instead of direct fetch
@@ -230,6 +236,7 @@ export default function BuilderPage() {
           reviews: comp.reviews || 0,
           specifications: comp.specifications || {},
           compatibility: comp.compatibility || {}, // << add this
+          performanceTags: comp.performanceTags || ['all'] as PerformanceCategory[],
         }
     })
 
@@ -251,7 +258,7 @@ export default function BuilderPage() {
 
     try {
       const currentBuild = selectedComponentsList.map((comp) => ({
-        component_id: parseInt(comp!.id.replace(/\D/g, '')) || 0,
+        component_id: typeof comp!.id === 'number' ? comp!.id : parseInt(String(comp!.id).replace(/\D/g, '')) || 0,
         component_name: comp!.name,
         component_price: comp!.price,
         category_name: comp!.category.charAt(0).toUpperCase() + comp!.category.slice(1),
@@ -259,12 +266,63 @@ export default function BuilderPage() {
 
       const recommendations = await getUpgradeRecommendations(currentBuild)
       setUpgradeRecommendations(recommendations)
+      
+      // Create a map of recommendation index to category by matching component names
+      const categoryMap = new Map<number, ComponentCategory>()
+      recommendations.forEach((rec, recIndex) => {
+        // Find the component in selectedComponentsList that matches this recommendation
+        const matchingComponent = selectedComponentsList.find(comp => 
+          comp!.name === rec.current_component
+        )
+        if (matchingComponent) {
+          categoryMap.set(recIndex, matchingComponent.category)
+        }
+      })
+      setUpgradeCategoryMap(categoryMap)
+      
       setShowUpgradeDialog(true)
     } catch (error: any) {
       console.error("Error getting upgrade recommendations:", error)
       setAlgorithmError(error.message || "Failed to get upgrade recommendations. Make sure Python backend is running.")
     } finally {
       setIsLoadingUpgrades(false)
+    }
+  }
+
+  const handleApplyUpgrade = async (recIndex: number, recommendedName: string) => {
+    const category = upgradeCategoryMap.get(recIndex)
+    if (!category) {
+      setAlgorithmError("Could not determine component category for upgrade")
+      return
+    }
+
+    try {
+      // Fetch all components in this category from Supabase
+      const categoryComponents = await getSupabaseComponentsByCategory(category)
+      
+      // Find the component by name (case-insensitive partial match)
+      const upgradedComponent = categoryComponents.find(comp => 
+        comp.name.toLowerCase().includes(recommendedName.toLowerCase()) ||
+        recommendedName.toLowerCase().includes(comp.name.toLowerCase())
+      )
+
+      if (!upgradedComponent) {
+        setAlgorithmError(`Could not find component "${recommendedName}" in ${category} category`)
+        return
+      }
+
+      // Apply the upgrade to the selected components
+      setSelectedComponents(prev => ({
+        ...prev,
+        [category]: upgradedComponent
+      }))
+
+      // Show success message and close dialog
+      setShowUpgradeDialog(false)
+      setAlgorithmError(null)
+    } catch (error: any) {
+      console.error("Error applying upgrade:", error)
+      setAlgorithmError(error.message || "Failed to apply upgrade")
     }
   }
 
@@ -493,9 +551,9 @@ export default function BuilderPage() {
                             type="number"
                             value={budget}
                             onChange={(e) => setBudget(Number(e.target.value))}
-                            placeholder="Enter budget"
+                            placeholder="Min ₱10,000 for CSP"
                             className="w-32"
-                            min="0"
+                            min="10000"
                             step="1000"
                           />
                         </div>
@@ -528,13 +586,14 @@ export default function BuilderPage() {
                       variant="outline"
                       size="sm"
                       onClick={handleGetCSPRecommendations}
-                      disabled={!budgetEnabled || budget <= 0 || isLoadingCSP}
+                      disabled={!budgetEnabled || budget < 10000 || isLoadingCSP}
                       className="flex items-center gap-2"
+                      title={budgetEnabled && budget < 10000 ? "CSP requires minimum budget of ₱10,000" : ""}
                     >
                       {isLoadingCSP ? (
                         <>
                           <Loader2 className="h-4 w-4 animate-spin" />
-                          Loading...
+                          Finding solutions... (may take up to 5 min)
                         </>
                       ) : (
                         <>
@@ -623,19 +682,6 @@ export default function BuilderPage() {
                                         <div>
                                           <h3 className="font-semibold text-slate-900 dark:text-white">{component.name}</h3>
                                           <p className="text-sm text-slate-600 dark:text-slate-400 mb-2">{component.brand}</p>
-                                          <div className="flex items-center gap-2 mb-2">
-                                            <div className="flex items-center">
-                                              {[...Array(5)].map((_, i) => (
-                                                <div
-                                                  key={i}
-                                                  className={`w-3 h-3 ${i < Math.floor(component.rating) ? "text-yellow-400" : "text-slate-300"}`}
-                                                >
-                                                  ★
-                                                </div>
-                                              ))}
-                                            </div>
-                                            <span className="text-xs text-slate-500">({component.reviews} reviews)</span>
-                                          </div>
                                         </div>
                                         <div className="text-right">
                                           <div className="flex items-center gap-2">
@@ -1022,7 +1068,12 @@ export default function BuilderPage() {
           ) : (
             <div className="space-y-3">
               {upgradeRecommendations.map((rec, index) => (
-                <Card key={index} className="border-slate-200 dark:border-slate-700">
+                <Card 
+                  key={index} 
+                  className={`border-slate-200 dark:border-slate-700 ${
+                    rec.recommended_upgrade ? 'hover:border-green-500 hover:shadow-md transition-all cursor-pointer' : ''
+                  }`}
+                >
                   <CardContent className="p-4">
                     <div className="flex items-center justify-between">
                       <div className="flex-1">
@@ -1042,11 +1093,25 @@ export default function BuilderPage() {
                                 New price: {formatCurrency(rec.new_price)}
                               </p>
                             )}
+                            {rec.upgrade_cost && (
+                              <p className="text-xs text-blue-600 dark:text-blue-400 mt-1">
+                                Upgrade cost: {formatCurrency(rec.upgrade_cost)}
+                              </p>
+                            )}
                           </>
                         ) : (
                           <p className="text-xs text-slate-500 mt-1">No upgrade available</p>
                         )}
                       </div>
+                      {rec.recommended_upgrade && (
+                        <Button
+                          size="sm"
+                          onClick={() => handleApplyUpgrade(index, rec.recommended_upgrade!)}
+                          className="ml-4"
+                        >
+                          Apply
+                        </Button>
+                      )}
                     </div>
                   </CardContent>
                 </Card>
