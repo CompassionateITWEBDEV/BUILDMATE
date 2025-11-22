@@ -24,11 +24,13 @@ export default function RegisterPage() {
   const [acceptTerms, setAcceptTerms] = useState(false)
   const [error, setError] = useState("")
   const router = useRouter()
+  const [successMessage, setSuccessMessage] = useState("");
   const { register, isLoading } = useAuth()
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setError("")
+    setSuccessMessage("")
 
     if (!username || !email || !password || !confirmPassword) {
       setError("All fields are required")
@@ -51,19 +53,22 @@ export default function RegisterPage() {
     }
 
     try {
-      const success = await register(username, email, password)
-      
-      if (success) {
-        console.log("Registration successful, redirecting to dashboard...")
-        router.push("/dashboard")
+      const result = await register(username, email, password)
+
+      if (result.success) {
+        setSuccessMessage(
+          "Account created! A verification email has been sent. Please check your inbox before logging in."
+        )
+
       } else {
-        setError("Registration failed. Email or username may already be taken.")
+        setError(result.error || "Registration failed. Email or username may already be taken.")
       }
     } catch (err) {
       console.error("Registration error:", err)
       setError("Registration failed. Please try again.")
     }
   }
+
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 dark:from-slate-900 dark:to-slate-800">
@@ -91,7 +96,11 @@ export default function RegisterPage() {
                   <AlertDescription>{error}</AlertDescription>
                 </Alert>
               )}
-
+              {successMessage && (
+                <Alert>
+                  <AlertDescription>{successMessage}</AlertDescription>
+                </Alert>
+              )}
               <div className="space-y-2">
                 <Label htmlFor="username">Username</Label>
                 <Input

@@ -66,15 +66,30 @@ export default function BuildDetailPage() {
   const [isLiked, setIsLiked] = useState(false)
   const [comment, setComment] = useState("")
   const [totalUserBuilds, setTotalUserBuilds] = useState(0)
-  const [comments, setComments] = useState<any[]>([]) // empty array initially
-  const [isFollowing, setIsFollowing] = useState(false);
-  const [followerCount, setFollowerCount] = useState(0);
-
+  const [comments, setComments] = useState([
+    {
+      id: "1",
+      user: "TechEnthusiast",
+      avatar: "/diverse-user-avatars.png",
+      content: "Amazing build! The component selection is perfect for 4K gaming.",
+      timestamp: "2 hours ago",
+      likes: 5,
+    },
+    {
+      id: "2",
+      user: "PCBuilder2024",
+      avatar: "/diverse-user-avatars.png",
+      content: "Great choice on the CPU cooler. How are the temps under load?",
+      timestamp: "5 hours ago",
+      likes: 2,
+    },
+  ])
 
   useEffect(() => {
     const fetchBuild = async () => {
-      if (!params.id) return;
+      if (!params.id) return
 
+      // Fetch build with components
       const { data: buildData, error: buildError } = await supabase
         .from("builds")
         .select(`
@@ -82,19 +97,20 @@ export default function BuildDetailPage() {
           build_components(*, components(*))
         `)
         .eq("build_id", Number(params.id))
-        .single();
+        .single()
 
       if (buildError || !buildData) {
-        setBuild(null);
-        setLoading(false);
-        return;
+        setBuild(null)
+        setLoading(false)
+        return
       }
 
-      // Map build_components into components object
+      // Map build_components array into components object and normalize prices
       const componentsObj = (buildData.build_components || []).reduce((acc: any, comp: any) => {
         if (!comp.components) return acc;
 
-        const categoryName = categoryMap[comp.components.category_id];
+        const categoryName = categoryMap[comp.components.category_id]; // <-- correct lookup
+
         if (!categoryName) return acc;
 
         if (!acc[categoryName]) acc[categoryName] = [];
@@ -107,300 +123,56 @@ export default function BuildDetailPage() {
         return acc;
       }, {});
 
+
+      // Set build state with totalPrice
       setBuild({
         ...buildData,
         totalPrice: buildData.total_price ?? 0,
         components: componentsObj,
-      });
-
-      // Fetch creator
+      })
+      console.log("Components:", componentsObj)
+      // Fetch the creator
       const { data: userData, error: userError } = await supabase
         .from("users")
         .select("*")
-        .eq("user_id", buildData.user_id)
-        .single();
-
+        .eq("user_id", buildData.user_id) // <-- Make sure this matches your DB field
+        .single()
       if (!userError && userData) {
-        setCreator(userData);
-
+        setCreator(userData)
+        // Fetch total builds by this user
         const { count, error: countError } = await supabase
           .from("builds")
           .select("*", { count: "exact", head: true })
-          .eq("user_id", userData.user_id);
-
-        if (!countError) setTotalUserBuilds(count || 0);
-
-        // Fetch followers AFTER setting creator
-        fetchFollowerData(userData.user_id);
-      }
-
-
-      if (user && creator) {
-        const { data: followData, error: followError } = await supabase
-          .from("followers")
-          .select("*")
-          .eq("user_id", creator.user_id)
-          .eq("follower_user_id", user.user_id)
-          .single();
-
-        setIsFollowing(!followError && !!followData);
-      }
-
-
-      // check if current user already liked
-      if (user) {
-        const { data: likedData, error: likedError } = await supabase
-          .from("build_likes")
-          .select("*")
-          .eq("build_id", buildData.build_id)
-          .eq("user_id", user.user_id)
-          .single();
-
-        setIsLiked(!likedError && !!likedData);
-      }
-
-      setLoading(false);
-    };
-
-    fetchBuild();
-    fetchComments(); // fetch comments separately
-
-    // Increase views (unique per user)
-    const incrementViews = async () => {
-      if (!params.id || !user) return;
-
-      const buildId = Number(params.id);
-
-      // Check if user already viewed this build
-      const { data: existingView, error: viewError } = await supabase
-        .from("build_views")
-        .select("*")
-        .eq("build_id", buildId)
-        .eq("user_id", user.user_id)
-        .single();
-
-      if (existingView) return; // already viewed
-
-      // Insert new view record (Supabase will auto-generate view_id and created_at)
-      await supabase
-        .from("build_views")
-        .insert({
-          build_id: buildId,
-          user_id: user.user_id,
-        });
-
-      // Increment views in builds table
-      await supabase
-        .from("builds")
-        .update({
-          views: (build?.views || 0) + 1,
-        })
-        .eq("build_id", buildId);
-
-      // Update local state
-      setBuild(prev => ({
-        ...prev,
-        views: (prev?.views || 0) + 1
-      }));
-    };
-
-  incrementViews();
-
-  }, [params.id]);
-
-  const fetchComments = async () => {
-    if (!params.id) return;
-
-    const { data: commentsData, error: commentsError } = await supabase
-      .from("build_comments")
-      .select(`
-        *,
-        users:user_id (
-          user_name,
-          avatar_url
-        )
-      `)
-      .eq("build_id", Number(params.id))
-      .order("created_at", { ascending: false }); // latest first
-
-    if (!commentsError && commentsData) {
-      const mappedComments = commentsData.map((c: any) => ({
-        id: c.comment_id,
-        user: c.users?.user_name || "Anonymous",
-        avatar: c.users?.avatar_url || "/placeholder.svg",
-        content: c.content,
-        timestamp: new Date(c.created_at).toLocaleString(),
-        likes: c.likes || 0,
-      }));
-      setComments(mappedComments);
-    }
-  };
-
-  const fetchFollowerData = async (creatorId: string) => {
-    if (!creatorId || !user) return;
-
-    // Fetch total followers
-    const { count: followersCount, error: countError } = await supabase
-      .from("followers")
-      .select("*", { count: "exact", head: true })
-      .eq("user_id", creatorId);
-
-    if (!countError) setFollowerCount(followersCount || 0);
-
-    // Check if current user is following
-    const { data: followData, error: followError } = await supabase
-      .from("followers")
-      .select("*")
-      .eq("user_id", creatorId)
-      .eq("follower_user_id", user.user_id)
-      .single();
-
-    setIsFollowing(!followError && !!followData);
-  };
-
-
-  const handleAddComment = async () => {
-    if (!comment.trim() || !user) return;
-
-    // Insert the new comment
-    const { data: newComment, error } = await supabase
-      .from("build_comments")
-      .insert({
-        build_id: build.build_id,
-        user_id: user.user_id,
-        content: comment,
-        likes: 0,
-      })
-      .select(`*, users:user_id(user_name)`)
-      .single();
-
-    if (!error && newComment) {
-      // Update the comments count in the builds table
-      await supabase
-        .from("builds")
-        .update({
-          comments: (build.comments || 0) + 1
-        })
-        .eq("build_id", build.build_id);
-
-      // Update local state
-      setComments((prev) => [
-        {
-          id: newComment.comment_id,
-          user: newComment.users?.user_name || "Anonymous",
-          avatar: newComment.users?.avatar || "/placeholder.svg",
-          content: newComment.content,
-          timestamp: new Date(newComment.created_at).toLocaleString(),
-          likes: newComment.likes || 0,
-        },
-        ...prev,
-      ]);
-
-      setBuild((prev: any) => ({
-        ...prev,
-        comments: (prev.comments || 0) + 1, // increment locally
-      }));
-
-      setComment("");
-      fetchComments(); // optional, in case you want to refetch all comments
-    }
-  };
-
-  const formatDate = (isoDate: string) => {
-    const date = new Date(isoDate);
-    return date.toLocaleDateString("en-US", {
-      year: "numeric",
-      month: "short",
-      day: "numeric",
-    });
-  };
-
-
-  const toggleLike = async () => {
-    if (!user) return;
-
-    if (creator?.user_id === user.user_id) {
-      alert("You cannot like your own build.");
-      return;
-    }
-
-    if (isLiked) {
-      // unlike
-      const { error: deleteLikeError } = await supabase
-        .from("build_likes")
-        .delete()
-        .eq("build_id", build.build_id)
-        .eq("user_id", user.user_id);
-
-      if (!deleteLikeError) {
-        // decrement likes in builds table
-        const { error: updateError } = await supabase
-          .from("builds")
-          .update({ likes: build.likes - 1 })
-          .eq("build_id", build.build_id);
-
-        if (!updateError) {
-          setIsLiked(false);
-          setBuild((prev: any) => ({
-            ...prev,
-            likes: prev.likes - 1,
-          }));
+          .eq("user_id", userData.user_id)
+        if (!countError) {
+          setTotalUserBuilds(count || 0)
+        } else {
+          console.log("Error fetching total builds:", countError)
         }
+      } else {
+        setCreator(null)
       }
-    } else {
-      // like
-      const { error: insertLikeError } = await supabase
-        .from("build_likes")
-        .insert({ 
-          build_id: build.build_id, 
-          user_id: user.user_id, 
-         });
-
-        
-
-      if (!insertLikeError) {
-        // increment likes in builds table
-        const { error: updateError } = await supabase
-          .from("builds")
-          .update({ likes: build.likes + 1 })
-          .eq("build_id", build.build_id);
-
-        if (!updateError) {
-          setIsLiked(true);
-          setBuild((prev: any) => ({
-            ...prev,
-            likes: prev.likes + 1,
-          }));
-        }
-      }
+      setLoading(false)
     }
-  };
+    
+    fetchBuild()
+  }, [params.id])
 
-  const toggleFollow = async () => {
-    if (!user || !creator) return;
-    if (user.user_id === creator.user_id) {
-      alert("You cannot follow yourself.");
-      return;
+  const handleAddComment = () => {
+    if (!comment.trim()) return
+
+    const newComment = {
+      id: Date.now().toString(),
+      user: user?.user_name || "Anonymous",
+      avatar: "/diverse-user-avatars.png",
+      content: comment,
+      timestamp: "Just now",
+      likes: 0,
     }
 
-    if (isFollowing) {
-      await supabase
-        .from("followers")
-        .delete()
-        .eq("user_id", creator.user_id)
-        .eq("follower_user_id", user.user_id);
-    } else {
-      await supabase
-        .from("followers")
-        .insert({
-          user_id: creator.user_id,
-          follower_user_id: user.user_id,
-        });
-    }
-    // Refresh follow status and count
-    fetchFollowerData(creator.user_id);
-  };
-
+    setComments((prev) => [newComment, ...prev])
+    setComment("")
+  }
 
   if (loading) {
     return (
@@ -455,7 +227,7 @@ export default function BuildDetailPage() {
                     <CardTitle className="text-2xl mb-2">{build.name}</CardTitle>
                     <div className="flex items-center gap-3 mb-3">
                       <Avatar className="h-8 w-8">
-                        <AvatarImage src={creator?.avatar_url || "/placeholder.svg"} />
+                        <AvatarImage src={creator?.avatar || "/placeholder.svg"} />
                         <AvatarFallback>{creator?.user_name?.charAt(0).toUpperCase() || "U"}</AvatarFallback>
                       </Avatar>
                       <div>
@@ -463,11 +235,11 @@ export default function BuildDetailPage() {
                         <div className="flex items-center gap-4 text-sm text-slate-500">
                           <div className="flex items-center gap-1">
                             <Calendar className="h-3 w-3" />
-                            <span>{formatDate(creator?.created_at)}</span>
+                            <span>Jan 15, 2024</span>
                           </div>
                           <div className="flex items-center gap-1">
                             <Eye className="h-3 w-3" />
-                            <span>{build.views} views</span>
+                            <span>1.2k views</span>
                           </div>
                         </div>
                       </div>
@@ -492,13 +264,12 @@ export default function BuildDetailPage() {
                 <div className="flex items-center gap-4 pt-4">
                   <Button
                     variant={isLiked ? "default" : "outline"}
-                    onClick={toggleLike}
+                    onClick={() => setIsLiked(!isLiked)}
                     className="flex items-center gap-2"
                   >
                     <Heart className={`h-4 w-4 ${isLiked ? "fill-current" : ""}`} />
-                    {build.likes} Likes
+                    {build.likes + (isLiked ? 1 : 0)} Likes
                   </Button>
-
                   <Button variant="outline" className="flex items-center gap-2 bg-transparent">
                     <Copy className="h-4 w-4" />
                     Clone Build
@@ -626,11 +397,11 @@ export default function BuildDetailPage() {
                 </div>
                 <div className="flex justify-between text-sm">
                   <span className="text-slate-600 dark:text-slate-400">Likes</span>
-                  <span className="font-medium">{build.likes}</span>
+                  <span className="font-medium">{build.likes + (isLiked ? 1 : 0)}</span>
                 </div>
                 <div className="flex justify-between text-sm">
                   <span className="text-slate-600 dark:text-slate-400">Views</span>
-                  <span className="font-medium">{build.views}</span>
+                  <span className="font-medium">1,247</span>
                 </div>
                 <div className="flex justify-between text-sm">
                   <span className="text-slate-600 dark:text-slate-400">Comments</span>
@@ -647,12 +418,12 @@ export default function BuildDetailPage() {
               <CardContent>
                 <div className="flex items-center gap-3 mb-4">
                   <Avatar className="h-12 w-12">
-                    <AvatarImage src={creator?.avatar_url || "/placeholder.svg"} />
+                    <AvatarImage src={creator?.avatar || "/placeholder.svg"} />
                     <AvatarFallback>{creator?.user_name?.charAt(0).toUpperCase() || "U"}</AvatarFallback>
                   </Avatar>
                   <div>
                     <h3 className="font-medium">{creator?.user_name || "Unknown"}</h3>
-                    <p className="text-sm text-slate-500">{formatDate(creator?.created_at)}</p>
+                    <p className="text-sm text-slate-500">Member since Jan 2024</p>
                   </div>
                 </div>
                 <div className="grid grid-cols-2 gap-4 text-sm">
@@ -662,16 +433,12 @@ export default function BuildDetailPage() {
                   </div>
                   <div>
                     <span className="text-slate-600 dark:text-slate-400">Followers</span>
-                    <p className="font-medium">{followerCount}</p>
+                    <p className="font-medium">234</p>
                   </div>
                 </div>
-                <Button
-                  className="w-full mt-4"
-                  variant={isFollowing ? "default" : "outline"}
-                  onClick={toggleFollow}
-                >
+                <Button className="w-full mt-4 bg-transparent" variant="outline">
                   <User className="h-4 w-4 mr-2" />
-                  {isFollowing ? "Following" : "Follow"}
+                  Follow
                 </Button>
               </CardContent>
             </Card>

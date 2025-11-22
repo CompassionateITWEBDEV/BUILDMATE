@@ -38,10 +38,8 @@ function convertDbComponentToAppComponent(dbComponent: any): Component {
                 'Unknown'
 
   // Build compatibility object from parsed data
-  // For Memory components, use 'type' field; for others use 'memoryType'
   let memoryTypeValue = compatInfo.memoryType || compatInfo.ram_type
   if (appCategory === 'memory' && !memoryTypeValue) {
-    // Memory components use 'type' field (e.g., "DDR4", "DDR5")
     memoryTypeValue = compatInfo.type
   }
   
@@ -61,12 +59,25 @@ function convertDbComponentToAppComponent(dbComponent: any): Component {
     m2Slots: compatInfo.m2Slots?.toString(),
     sataPorts: compatInfo.sataPorts?.toString()
   }
-  
-  // Store supportedSockets in specifications for CPU Cooler compatibility checking
-  // (Note: supportedSockets is not in the Component compatibility type, so we store it in specifications)
-  
-  // For case components, store maxGpuLength and maxCoolerHeight in specifications for compatibility checker
-  // (dimensions are already set above, but we also need these in specs for the checker)
+
+// Map Supabase component_purpose → performanceTags
+let performanceTags: PerformanceCategory[] = ['all']
+
+if (dbComponent.component_purpose) {
+  const mapPerf = {
+    'academic': 'academic',
+    'gaming': 'gaming',
+    'office': 'office'
+  } as Record<string, PerformanceCategory>
+
+  // Normalize the Capitalized string to lowercase for mapping
+  const raw = dbComponent.component_purpose.toLowerCase().trim()
+
+  if (mapPerf[raw]) {
+    performanceTags = ['all', mapPerf[raw]]
+  }
+}
+
 
   return {
     id: `component-${dbComponent.component_id}`,
@@ -82,7 +93,6 @@ function convertDbComponentToAppComponent(dbComponent: any): Component {
       'Price': `$${dbComponent.component_price || 0}`,
       'Category': dbComponent.component_categories?.category_name || 'Unknown',
       'Retailer': dbComponent.retailers?.retailer_name || 'Unknown',
-      // Add type field for Memory components
       ...(appCategory === 'memory' && compatInfo.type && { 'type': compatInfo.type }),
       ...(compatInfo.tdp && { 'TDP': `${compatInfo.tdp}W` }),
       ...(compatInfo.wattage && { 'Wattage': `${compatInfo.wattage}W` }),
@@ -90,10 +100,8 @@ function convertDbComponentToAppComponent(dbComponent: any): Component {
       ...(compatInfo.capacity && { 'Capacity': compatInfo.capacity }),
       ...(compatInfo.speed && { 'Speed': compatInfo.speed }),
       ...(compatInfo.interface && { 'Interface': compatInfo.interface }),
-      // Add case dimensions
       ...(appCategory === 'case' && compatInfo.maxGpuLength && { 'maxGpuLength': compatInfo.maxGpuLength.toString() }),
       ...(appCategory === 'case' && compatInfo.maxCoolerHeight && { 'maxCoolerHeight': compatInfo.maxCoolerHeight.toString() }),
-      // Add supportedSockets for CPU Cooler (stored in specifications since not in compatibility type)
       ...(appCategory === 'cooling' && compatInfo.supportedSockets && { 
         'supportedSockets': JSON.stringify(Array.isArray(compatInfo.supportedSockets) ? compatInfo.supportedSockets : [compatInfo.supportedSockets])
       }),
@@ -102,7 +110,7 @@ function convertDbComponentToAppComponent(dbComponent: any): Component {
       })
     },
     compatibility,
-    performanceTags: ['all'] as PerformanceCategory[]
+    performanceTags: performanceTags
   }
 }
 
@@ -110,6 +118,7 @@ function convertDbComponentToAppComponent(dbComponent: any): Component {
 export async function getSupabaseComponents(): Promise<Component[]> {
   try {
     const dbComponents = await componentService.getAll()
+    console.log(`Fetched ${dbComponents.length} components from Supabase`, dbComponents)
     return dbComponents.map(convertDbComponentToAppComponent)
   } catch (error) {
     console.error('Error fetching components from Supabase:', error)
@@ -120,15 +129,12 @@ export async function getSupabaseComponents(): Promise<Component[]> {
 // Get components by category from Supabase
 export async function getSupabaseComponentsByCategory(category: ComponentCategory): Promise<Component[]> {
   try {
-    // First get the category ID
     const categories = await categoryService.getAll()
     const categoryId = categories.find(c => c.category_name.toLowerCase() === category)?.category_id
-    
-    if (!categoryId) {
-      return []
-    }
+    if (!categoryId) return []
 
     const dbComponents = await componentService.getByCategory(categoryId)
+    console.log(`Fetched ${dbComponents.length} components for category "${category}"`, dbComponents)
     return dbComponents.map(convertDbComponentToAppComponent)
   } catch (error) {
     console.error('Error fetching components by category from Supabase:', error)
@@ -151,20 +157,15 @@ export async function getSupabaseComponentById(componentId: string): Promise<Com
 // Create a new component in Supabase
 export async function createSupabaseComponent(component: Omit<Component, 'id'>): Promise<Component | null> {
   try {
-    // Get category ID
     const categories = await categoryService.getAll()
     const categoryId = categories.find(c => c.category_name.toLowerCase() === component.category)?.category_id
-    
-    if (!categoryId) {
-      throw new Error('Category not found')
-    }
+    if (!categoryId) throw new Error('Category not found')
 
     const dbComponent = await componentService.create({
       component_name: component.name,
       component_price: component.price,
       compatibility_information: component.specifications?.Compatibility || '',
       category_id: categoryId,
-      // You might want to add retailer_id if you have retailers set up
     })
 
     return convertDbComponentToAppComponent(dbComponent)

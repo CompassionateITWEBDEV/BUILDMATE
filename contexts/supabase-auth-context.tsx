@@ -1,262 +1,171 @@
-"use client"
+"use client";
 
-import { createContext, useContext, useState, useEffect, type ReactNode } from "react"
-import { supabase } from "@/lib/supabase"
-import bcrypt from 'bcryptjs'
+import { createContext, useContext, useState, useEffect, ReactNode } from "react";
+import { supabase } from "@/lib/supabase";
+import bcrypt from "bcryptjs";
 
-// Custom user interface based on your users table
 interface CustomUser {
-  user_id: number
-  user_name: string
-  email: string
-  user_type: 'admin' | 'user' | 'moderator'
-  created_at: string
+  user_id: number;
+  user_name: string;
+  email: string;
+  user_type: "admin" | "user" | "moderator";
+  created_at: string;
+  avatar_url: string;
+  supabase_id: string;
 }
 
 interface AuthContextType {
-  user: CustomUser | null
-  login: (email: string, password: string) => Promise<{ success: boolean; error?: string }>
-  register: (username: string, email: string, password: string) => Promise<boolean>
-  logout: () => Promise<void>
-  isLoading: boolean
+  user: CustomUser | null;
+  login: (email: string, password: string) => Promise<{ success: boolean; error?: string }>;
+  register: (username: string, email: string, password: string) => Promise<{ success: boolean; error?: string }>;
+  logout: () => Promise<void>;
+  isLoading: boolean;
 }
 
-const AuthContext = createContext<AuthContextType | undefined>(undefined)
+const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export function SupabaseAuthProvider({ children }: { children: ReactNode }) {
-  const [user, setUser] = useState<CustomUser | null>(null)
-  const [isLoading, setIsLoading] = useState(true)
+  const [user, setUser] = useState<CustomUser | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
 
-  // Safe state setter to prevent React error boundary from catching errors
-  const safeSetIsLoading = (value: boolean) => {
-    try {
-      console.log('Setting isLoading to:', value)
-      setIsLoading(value)
-    } catch (error) {
-      console.error('Error setting loading state:', error)
-    }
-  }
-
-  const safeSetUser = (value: CustomUser | null) => {
-    try {
-      console.log('Setting user to:', value ? 'present' : 'null')
-      setUser(value)
-    } catch (error) {
-      console.error('Error setting user state:', error)
-    }
-  }
-
+  // --------------------------
+  // Load session on startup
+  // --------------------------
   useEffect(() => {
-    // Check for stored user session in localStorage
-    const getInitialSession = async () => {
-      try {
-        console.log('Getting initial session from localStorage...')
-        const storedUser = localStorage.getItem('buildmate-user')
-        
-        if (storedUser) {
-          console.log('Found stored user, verifying...')
-          const userData = JSON.parse(storedUser)
-          
-          // Verify user still exists in database
-          const { data: userProfile, error: profileError } = await supabase
-            .from('users')
-            .select('*')
-            .eq('email', userData.email)
-            .single()
+    const init = async () => {
+      const { data: { session } } = await supabase.auth.getSession();
 
-          if (profileError || !userProfile) {
-            console.log('Stored user no longer exists in database, clearing...')
-            localStorage.removeItem('buildmate-user')
-            safeSetUser(null)
-          } else {
-            console.log('Stored user verified, setting user...')
-            safeSetUser(userProfile)
-          }
-        } else {
-          console.log('No stored user found')
-          safeSetUser(null)
-        }
-        
-        safeSetIsLoading(false)
-      } catch (error) {
-        console.error('Error getting initial session:', error)
-        localStorage.removeItem('buildmate-user')
-        safeSetUser(null)
-        safeSetIsLoading(false)
+      if (session) {
+        const supabaseUser = session.user;
+        const { data: profile } = await supabase
+          .from("users")
+          .select("*")
+          .eq("supabase_id", supabaseUser.id)
+          .single();
+
+        if (profile) setUser(profile as CustomUser);
       }
-    }
 
-    getInitialSession()
-  }, [])
+      setIsLoading(false);
+    };
 
-  const login = async (email: string, password: string): Promise<{ success: boolean; error?: string }> => {
+    init();
+
+    const { data: listener } = supabase.auth.onAuthStateChange((_event, session) => {
+      if (session?.user) {
+        supabase
+          .from("users")
+          .select("*")
+          .eq("supabase_id", session.user.id)
+          .single()
+          .then(({ data }) => setUser(data as CustomUser));
+      } else {
+        setUser(null);
+      }
+    });
+
+    return () => listener.subscription.unsubscribe();
+  }, []);
+
+  // --------------------------
+  // REGISTER USER
+  // --------------------------
+  const register = async (username: string, email: string, password: string) => {
     try {
-      console.log('Starting login process for:', email)
-      safeSetIsLoading(true)
-      
-      // Validate input
-      if (!email || !password) {
-        return { success: false, error: 'Email and password are required' }
+      const { data: authData, error: authError } = await supabase.auth.signUp({
+        email: email.trim().toLowerCase(),
+        password: password
+      });
+
+      if (authError) {
+        console.error("SUPABASE SIGNUP ERROR:", authError);
+        return { success: false, error: authError.message };
       }
 
-      // Validate email format
-      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
-      if (!emailRegex.test(email)) {
-        return { success: false, error: 'Please enter a valid email address' }
-      }
+      const supabaseId = authData.user?.id;
+      if (!supabaseId) return { success: false, error: "Supabase user missing!" };
 
-      // Get user from custom users table
-      console.log('Fetching user from custom users table...')
-      const { data: userProfile, error: userError } = await supabase
-        .from('users')
-        .select('*')
-        .eq('email', email.trim().toLowerCase())
-        .single()
+      // Hash password for your custom users table
+      const hashedPassword = await bcrypt.hash(password, 12);
 
-      if (userError) {
-        // Check if it's a "not found" error
-        if (userError.code === 'PGRST116') {
-          console.error('User not found in database')
-          return { success: false, error: 'Invalid email or password. Please check your credentials and try again.' }
-        }
-        console.error('Database error:', userError.message)
-        return { success: false, error: 'Unable to connect to server. Please try again later.' }
-      }
-
-      if (!userProfile) {
-        console.error('User not found in database')
-        return { success: false, error: 'Invalid email or password. Please check your credentials and try again.' }
-      }
-
-      console.log('User found in database, verifying password...')
-      
-      // Verify password using bcrypt
-      const isPasswordValid = await bcrypt.compare(password, userProfile.password)
-      
-      if (!isPasswordValid) {
-        console.error('Invalid password')
-        return { success: false, error: 'Invalid email or password. Please check your credentials and try again.' }
-      }
-
-      console.log('Password verified, logging in user...')
-      
-      // Store user in localStorage and set state
-      localStorage.setItem('buildmate-user', JSON.stringify(userProfile))
-      safeSetUser(userProfile)
-      
-      console.log('Login successful')
-      return { success: true }
-    } catch (error: any) {
-      console.error('Login error:', error)
-      
-      // Handle specific error types
-      if (error.message?.includes('network') || error.message?.includes('fetch')) {
-        return { success: false, error: 'Network error. Please check your internet connection and try again.' }
-      }
-      
-      return { success: false, error: 'An unexpected error occurred. Please try again later.' }
-    } finally {
-      console.log('Setting loading to false')
-      safeSetIsLoading(false)
-    }
-  }
-
-  const register = async (username: string, email: string, password: string): Promise<boolean> => {
-    try {
-      console.log('Starting registration process for:', email)
-      safeSetIsLoading(true)
-      
-      // Check if user already exists
-      console.log('Checking if user already exists...')
-      const { data: existingUser, error: checkError } = await supabase
-        .from('users')
-        .select('email')
-        .eq('email', email)
-        .single()
-
-      if (existingUser) {
-        console.error('User already exists in database')
-        return false
-      }
-
-      console.log('User does not exist, hashing password...')
-      
-      // Hash password using bcrypt
-      const hashedPassword = await bcrypt.hash(password, 12)
-      
-      console.log('Creating user in custom users table...')
-      
-      // Create user in custom users table
-      const { data: userData, error: insertError } = await supabase
-        .from('users')
+      // Insert into your database
+      const { error: insertError } = await supabase
+        .from("users")
         .insert({
           user_name: username,
-          email: email,
+          email: email.trim().toLowerCase(),
           password: hashedPassword,
-          user_type: 'user'
-        })
-        .select()
+          user_type: "user",
+          avatar_url: "",
+          supabase_id: supabaseId
+        });
 
       if (insertError) {
-        console.error('Error creating user:', insertError.message)
-        return false
+        return { success: false, error: insertError.message };
       }
+      // DO NOT auto-login
+      return {
+        success: true,
+        message: "A verification email has been sent. Please verify your email before logging in."
+      };
 
-      console.log('User created successfully:', userData)
-      
-      // Store user in localStorage and set state
-      if (userData && userData[0]) {
-        localStorage.setItem('buildmate-user', JSON.stringify(userData[0]))
-        safeSetUser(userData[0])
-      }
-      
-      console.log('Registration successful')
-      return true
-    } catch (error) {
-      console.error('Registration error:', error)
-      return false
-    } finally {
-      safeSetIsLoading(false)
+    } catch (err: any) {
+      return { success: false, error: err.message };
     }
-  }
+  };
 
-  const logout = async (): Promise<void> => {
+
+  // --------------------------
+  // LOGIN USER
+  // --------------------------
+  const login = async (email: string, password: string) => {
+    setIsLoading(true);
+
     try {
-      console.log('Logging out user...')
-      safeSetIsLoading(true)
-      
-      // Clear localStorage and user state
-      localStorage.removeItem('buildmate-user')
-      safeSetUser(null)
-      
-      console.log('Logout successful')
-    } catch (error) {
-      console.error('Logout error:', error)
+      const { data: authData, error } = await supabase.auth.signInWithPassword({
+        email,
+        password
+      });
+
+      if (error) return { success: false, error: error.message };
+
+      const supabaseId = authData.user.id;
+
+      const { data: profile } = await supabase
+        .from("users")
+        .select("*")
+        .eq("supabase_id", supabaseId)
+        .single();
+
+      if (!profile) return { success: false, error: "Profile not found" };
+
+      setUser(profile as CustomUser);
+      return { success: true };
+
     } finally {
-      safeSetIsLoading(false)
+      setIsLoading(false);
     }
-  }
+  };
+
+  // --------------------------
+  // LOGOUT
+  // --------------------------
+  const logout = async () => {
+    setIsLoading(true);
+    await supabase.auth.signOut();
+    setUser(null);
+    setIsLoading(false);
+  };
 
   return (
     <AuthContext.Provider value={{ user, login, register, logout, isLoading }}>
       {children}
     </AuthContext.Provider>
-  )
+  );
 }
 
 export function useAuth() {
-  const context = useContext(AuthContext)
-  if (context === undefined) {
-    throw new Error("useAuth must be used within a SupabaseAuthProvider")
-  }
-  return context
+  const context = useContext(AuthContext);
+  if (!context) throw new Error("useAuth must be used within SupabaseAuthProvider");
+  return context;
 }
-
-export function useSupabaseAuth() {
-  const context = useContext(AuthContext)
-  if (context === undefined) {
-    throw new Error("useSupabaseAuth must be used within a SupabaseAuthProvider")
-  }
-  return context
-}
-

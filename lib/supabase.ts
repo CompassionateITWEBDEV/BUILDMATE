@@ -1,4 +1,5 @@
 import { createClient } from '@supabase/supabase-js'
+import { UUID } from 'crypto'
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || 'https://sldiqjjgddegffbzjqma.supabase.co'
 const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNsZGlxampnZGRlZ2ZmYnpqcW1hIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTc1MjA1MDMsImV4cCI6MjA3MzA5NjUwM30.wir0lfBKEo0NimhsPjLmJvXexFjyQTmyHzGsE40xDmA'
@@ -36,6 +37,8 @@ export interface Database {
           password: string
           user_type: 'admin' | 'user' | 'moderator'
           created_at: string
+          avatar_url: string
+          supabase_id: UUID
         }
         Insert: {
           user_id?: number
@@ -44,6 +47,8 @@ export interface Database {
           password: string
           user_type?: 'admin' | 'user' | 'moderator'
           created_at?: string
+          avatar_url?: string
+          supabase_i?: UUID
         }
         Update: {
           user_id?: number
@@ -52,6 +57,8 @@ export interface Database {
           password?: string
           user_type?: 'admin' | 'user' | 'moderator'
           created_at?: string
+          avatar_url?: string
+          supabase_id?: UUID
         }
       }
       build_types: {
@@ -78,6 +85,10 @@ export interface Database {
           build_type_id: number
           build_name: string
           date_created: string
+          total_price: number
+          likes: number
+          comments: number
+          views: number
         }
         Insert: {
           build_id?: number
@@ -85,6 +96,10 @@ export interface Database {
           build_type_id: number
           build_name: string
           date_created?: string
+          total_price: number
+          likes: number
+          comments: number
+          views: number
         }
         Update: {
           build_id?: number
@@ -92,6 +107,10 @@ export interface Database {
           build_type_id?: number
           build_name?: string
           date_created?: string
+          total_price: number
+          likes?: number
+          comments?: number
+          views?: number
         }
       }
       component_categories: {
@@ -203,27 +222,53 @@ export interface Database {
           changed_at?: string
         }
       }
-      comments: {
+      build_comments: {
         Row: {
           comment_id: number
-          bhistory_id: number
+          build_id: number
           user_id: number
-          comment_text: string
-          commented_at: string
+          content: string
+          likes: number
+          created_at: string
+          updated_at: string
         }
         Insert: {
           comment_id?: number
-          bhistory_id: number
+          build_id: number
           user_id: number
-          comment_text: string
-          commented_at?: string
+          content: string
+          likes?: number
+          created_at?: string
+          updated_at?: string
         }
         Update: {
           comment_id?: number
-          bhistory_id?: number
+          build_id?: number
           user_id?: number
-          comment_text?: string
-          commented_at?: string
+          content?: string
+          likes?: number
+          created_at?: string
+          updated_at?: string
+        }
+      }
+      build_views: {
+        Row: {
+          view_id: number
+          build_id: number
+          user_id: number
+          created_at: string
+        }
+        Insert: {
+          view_id?: number
+          build_id: number
+          user_id: number
+          created_at?: string
+        }
+        Update: {
+          view_id?: number
+          build_id?: number
+          user_id?: number
+          created_at?: string
         }
       }
     }

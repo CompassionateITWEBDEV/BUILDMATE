@@ -216,7 +216,6 @@ def run_graph():
         # Fetch all components from Supabase
         all_components = graph_db.fetch_all_components()
         recommendations = generate_upgrade_recommendations(current_build, all_components)
-
         return jsonify({"recommendations": recommendations})
     except Exception as e:
         logging.error("Error running graph algorithm: %s", e, exc_info=True)

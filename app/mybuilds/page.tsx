@@ -9,7 +9,7 @@ import { Input } from "@/components/ui/input"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Navigation } from "@/components/navigation"
-import { Cpu, Heart, MessageCircle, Share, Search, Monitor, Users, Eye, BarChart3 } from "lucide-react"
+import { Cpu, Heart, MessageCircle, Share, Search, Monitor, Users, Eye, BarChart3, AlertTriangle } from "lucide-react"
 import { buildService, buildComponentService } from "@/lib/database"
 import { formatCurrency, PRICE_RANGES } from "@/lib/currency"
 import { useAuth } from "@/contexts/supabase-auth-context"
@@ -25,7 +25,6 @@ interface BuildWithDetails {
     user_id: number
     user_name: string
     email: string
-    avatar_url: string
   }
   build_types: {
     build_type_id: number
@@ -41,7 +40,11 @@ interface BuildWithDetails {
 export default function BuildsPage() {
   const { user } = useAuth()
   const [builds, setBuilds] = useState<BuildWithDetails[]>([])
-  const [statistics, setStatistics] = useState({ totalBuilders: 0, totalBuilds: 0, totalLikes: 0 })
+  const [statistics, setStatistics] = useState({
+    totalBuilders: 0,
+    totalBuilds: 0,
+    totalLikes: 0
+  })
   const [searchTerm, setSearchTerm] = useState("")
   const [sortBy, setSortBy] = useState("popular")
   const [priceFilter, setPriceFilter] = useState("all")
@@ -54,12 +57,16 @@ export default function BuildsPage() {
     fetchBuilds()
     fetchStatistics()
     
+    // Set up real-time subscription for builds
     const buildsChannel = supabase
       .channel('builds-changes')
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'builds' }, () => {
-        fetchBuilds()
-        fetchStatistics()
-      })
+      .on('postgres_changes', 
+        { event: '*', schema: 'public', table: 'builds' },
+        () => {
+          fetchBuilds()
+          fetchStatistics()
+        }
+      )
       .subscribe()
 
     return () => {
@@ -67,138 +74,131 @@ export default function BuildsPage() {
     }
   }, [])
 
-  // Fetch user's liked builds
-  useEffect(() => {
-    if (!user) return;
-    const fetchLiked = async () => {
-      const { data, error } = await supabase
-        .from("build_likes")
-        .select("build_id")
-        .eq("user_id", user.user_id)
-      if (!error && data) setLikedBuilds(data.map((r) => r.build_id))
-    }
-    fetchLiked()
-  }, [user])
-
   const fetchBuilds = async () => {
+    if (!user) return;
+
     try {
-      setLoading(true)
-      setError(null)
-      const allBuilds = await buildService.getAll()
-      const buildsWithDetails = await Promise.all(
-        allBuilds.map(async (build) => {
-          try {
-            const components = await buildComponentService.getBuildComponents(build.build_id)
-            const totalPrice = components.reduce((sum, bc: any) => sum + (Number(bc.components?.component_price) || 0), 0)
-            const { count: commentsCount } = await supabase
-              .from('build_comments')
-              .select('*', { count: 'exact', head: true })
-              .eq('build_id', build.build_id)
-            return {
-              ...build,
-              components,
-              totalPrice,
-              comments: commentsCount || build.comments || 0,
-              likes: build.likes || 0,
-              views: build.views || 0
-            }
-          } catch (err) {
-            console.error(err)
-            return { ...build, components: [], totalPrice: 0, comments: 0, likes: 0, views: 0 }
-          }
-        })
-      )
-      setBuilds(buildsWithDetails)
+      setLoading(true);
+      setError(null);
+
+      // Fetch only builds by the current user
+      const { data: userBuilds, error } = await supabase
+        .from("builds")
+        .select(`
+          *,
+          build_components(*, components(*)),
+          users(*),
+          build_types(*)
+        `)
+        .eq("user_id", user.user_id) // <-- filter by current user
+        .order("date_created", { ascending: false });
+
+      if (error) {
+        console.error("Error fetching user builds:", error);
+        setError("Failed to fetch your builds");
+        return;
+      }
+
+      // Map components and totalPrice
+      const buildsWithDetails = (userBuilds || []).map((build: any) => {
+        const components = build.build_components || [];
+        const totalPrice = components.reduce(
+          (sum: number, bc: any) => sum + (Number(bc.components?.component_price) || 0),
+          0
+        );
+
+        return {
+          ...build,
+          components,
+          totalPrice,
+          likes: Math.floor(Math.random() * 200) + 10,
+          views: Math.floor(Math.random() * 2000) + 100,
+          comments: components.length, // placeholder
+        };
+      });
+
+      setBuilds(buildsWithDetails);
     } catch (err: any) {
-      console.error(err)
-      setError(err.message || 'Failed to load builds')
+      console.error("Error fetching builds:", err);
+      setError(err.message || "Failed to load builds");
     } finally {
-      setLoading(false)
+      setLoading(false);
     }
-  }
+  };
+
 
   const fetchStatistics = async () => {
-    try { const stats = await buildService.getStatistics(); setStatistics(stats) }
-    catch (err) { console.error(err) }
-  }
-
-  const handleLike = async (build: BuildWithDetails) => {
-    if (!user) return
-    const isLiked = likedBuilds.includes(build.build_id)
-
-    if (build.users?.user_id === user.user_id) {
-      alert("You cannot like your own build.")
-      return
-    }
-
-    if (isLiked) {
-      const { error: deleteLikeError } = await supabase
-        .from("build_likes")
-        .delete()
-        .eq("build_id", build.build_id)
-        .eq("user_id", user.user_id)
-      if (!deleteLikeError) {
-        const { error: updateError } = await supabase
-          .from("builds")
-          .update({ likes: build.likes - 1 })
-          .eq("build_id", build.build_id)
-        if (!updateError) {
-          setLikedBuilds(prev => prev.filter(id => id !== build.build_id))
-          setBuilds(prev => prev.map(b => b.build_id === build.build_id ? { ...b, likes: (b.likes || 0) - 1 } : b))
-        }
-      }
-    } else {
-      const { error: insertLikeError } = await supabase
-        .from("build_likes")
-        .insert({ build_id: build.build_id, user_id: user.user_id })
-      if (!insertLikeError) {
-        const { error: updateError } = await supabase
-          .from("builds")
-          .update({ likes: build.likes + 1 })
-          .eq("build_id", build.build_id)
-        if (!updateError) {
-          setLikedBuilds(prev => [...prev, build.build_id])
-          setBuilds(prev => prev.map(b => b.build_id === build.build_id ? { ...b, likes: (b.likes || 0) + 1 } : b))
-        }
-      }
+    try {
+      const stats = await buildService.getStatistics()
+      setStatistics(stats)
+    } catch (err: any) {
+      console.error('Error fetching statistics:', err)
     }
   }
 
   const getFilteredBuilds = (): BuildWithDetails[] => {
     let filtered = builds.filter(
-      b => b.build_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-           b.build_types?.type_name.toLowerCase().includes(searchTerm.toLowerCase())
+      (build) =>
+        build.build_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        build.build_types?.type_name.toLowerCase().includes(searchTerm.toLowerCase())
     )
-    if (priceFilter !== "all") {
-      filtered = filtered.filter(build => {
+
+    // Price filtering
+    if (priceFilter !== "all" && filtered.length > 0) {
+      filtered = filtered.filter((build) => {
         const price = build.totalPrice || 0
         switch (priceFilter) {
-          case "budget": return price < PRICE_RANGES.budget.max
-          case "mid": return price >= PRICE_RANGES.mid.min && price < PRICE_RANGES.mid.max
-          case "high": return price >= PRICE_RANGES.high.min
-          default: return true
+          case "budget":
+            return price < PRICE_RANGES.budget.max
+          case "mid":
+            return price >= PRICE_RANGES.mid.min && price < PRICE_RANGES.mid.max
+          case "high":
+            return price >= PRICE_RANGES.high.min
+          default:
+            return true
         }
       })
     }
+
+    // Sorting
     switch (sortBy) {
-      case "recent": return filtered.sort((a, b) => new Date(b.date_created).getTime() - new Date(a.date_created).getTime())
-      case "price-low": return filtered.sort((a, b) => (a.totalPrice || 0) - (b.totalPrice || 0))
-      case "price-high": return filtered.sort((a, b) => (b.totalPrice || 0) - (a.totalPrice || 0))
-      case "likes": return filtered.sort((a, b) => (b.likes || 0) - (a.likes || 0))
-      default: return filtered.sort((a, b) => (b.likes || 0) - (a.likes || 0))
+      case "recent":
+        return filtered.sort((a, b) => new Date(b.date_created).getTime() - new Date(a.date_created).getTime())
+      case "price-low":
+        return filtered.sort((a, b) => (a.totalPrice || 0) - (b.totalPrice || 0))
+      case "price-high":
+        return filtered.sort((a, b) => (b.totalPrice || 0) - (a.totalPrice || 0))
+      case "likes":
+        return filtered.sort((a, b) => (b.likes || 0) - (a.likes || 0))
+      default:
+        return filtered.sort((a, b) => (b.likes || 0) - (a.likes || 0))
     }
   }
 
+  const handleLike = (buildId: number) => {
+    setLikedBuilds((prev) => 
+      prev.includes(buildId) 
+        ? prev.filter((id) => id !== buildId) 
+        : [...prev, buildId]
+    )
+  }
+
   const filteredBuilds = getFilteredBuilds()
-  const formatNumber = (num: number) => num.toLocaleString()
+
+  // Format numbers with commas
+  const formatNumber = (num: number) => {
+    return num.toLocaleString()
+  }
 
   if (loading && builds.length === 0) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 dark:from-slate-900 dark:to-slate-800">
         <Navigation />
-        <div className="container mx-auto px-4 py-20 text-center">
-          <Cpu className="h-12 w-12 text-blue-600 mx-auto mb-4 animate-pulse" />
-          <p className="text-slate-600 dark:text-slate-400">Loading builds...</p>
+        <div className="container mx-auto px-4 py-20">
+          <div className="text-center">
+            <Cpu className="h-12 w-12 text-blue-600 mx-auto mb-4 animate-pulse" />
+            <p className="text-slate-600 dark:text-slate-400">Loading builds...</p>
+          </div>
         </div>
       </div>
     )
@@ -213,8 +213,8 @@ export default function BuildsPage() {
         <div className="container mx-auto px-4 py-4">
           <div className="flex items-center justify-between">
             <div>
-              <h1 className="text-2xl font-bold text-slate-900 dark:text-white">Community Builds</h1>
-              <p className="text-slate-600 dark:text-slate-400">Discover amazing PC builds from our community</p>
+              <h1 className="text-2xl font-bold text-slate-900 dark:text-white">My Builds</h1>
+              <p className="text-slate-600 dark:text-slate-400">View and manage all the PC builds you’ve created</p>
             </div>
             <div className="flex gap-2">
               <Button asChild>
@@ -311,16 +311,10 @@ export default function BuildsPage() {
                       </CardTitle>
                       <div className="flex items-center gap-2 mt-2">
                         <Avatar className="h-6 w-6">
-                          <Avatar className="h-6 w-6">
-                            <AvatarImage src={creator?.avatar_url || "/placeholder.svg"} />
-                            <AvatarFallback className="text-xs">
-                              {creator?.user_name?.charAt(0).toUpperCase() || "U"}
-                            </AvatarFallback>
-                          </Avatar>
-                          <span className="text-sm text-slate-600 dark:text-slate-400">
-                            {creator?.user_name || "Unknown"}
-                          </span>
-
+                          <AvatarImage src="/placeholder.svg" />
+                          <AvatarFallback className="text-xs">
+                            {creator?.user_name?.charAt(0).toUpperCase() || "U"}
+                          </AvatarFallback>
                         </Avatar>
                         <span className="text-sm text-slate-600 dark:text-slate-400">
                           {creator?.user_name || "Unknown"}
@@ -378,10 +372,10 @@ export default function BuildsPage() {
                         className={`flex items-center gap-1 text-sm transition-colors ${
                           isLiked ? "text-red-500 hover:text-red-600" : "text-slate-500 hover:text-red-500"
                         }`}
-                        onClick={() => handleLike(build)}
+                        onClick={() => handleLike(build.build_id)}
                       >
                         <Heart className={`h-4 w-4 ${isLiked ? "fill-current" : ""}`} />
-                        <span>{build.likes}</span>
+                        <span>{(build.likes || 0) + (isLiked ? 1 : 0)}</span>
                       </button>
                       <button className="flex items-center gap-1 text-sm text-slate-500 hover:text-blue-500 transition-colors">
                         <MessageCircle className="h-4 w-4" />

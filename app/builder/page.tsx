@@ -11,6 +11,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { supabase } from "@/lib/supabase"
 import {
   Dialog,
   DialogContent,
@@ -51,6 +52,7 @@ import { DuplicateCheckDialog } from "@/components/duplicate-warning"
 import { formatCurrency } from "@/lib/currency"
 import { getCSPRecommendations, getUpgradeRecommendations, type CSPSolution } from "@/lib/algorithm-service"
 import { getSupabaseComponents, getSupabaseComponentsByCategory } from "@/lib/supabase-components"
+import { useAuth } from "@/contexts/supabase-auth-context"
 
 const categoryIcons = {
   cpu: Cpu,
@@ -75,7 +77,7 @@ const categoryNames = {
 }
 
 export default function BuilderPage() {
-  const user = { id: "1", username: "PC Builder", email: "builder@example.com" }
+  const { user } = useAuth()
   const router = useRouter()
 
   const [selectedComponents, setSelectedComponents] = useState<Record<ComponentCategory, Component | null>>({
@@ -95,6 +97,7 @@ export default function BuilderPage() {
   const [activeCategory, setActiveCategory] = useState<ComponentCategory>("cpu")
   const [searchTerm, setSearchTerm] = useState("")
   const [buildName, setBuildName] = useState("My Custom Build")
+  const [buildType, setBuildType] = useState<string>("4")
   const [isSaveDialogOpen, setIsSaveDialogOpen] = useState(false)
   const [performanceCategory, setPerformanceCategory] = useState<PerformanceCategory>("all")
   const [budget, setBudget] = useState<number>(0)
@@ -361,11 +364,62 @@ export default function BuilderPage() {
       router.push("/login")
       return
     }
+
     const canProceed = await checkForDuplicates()
     if (!canProceed) return
-    console.log("Saving build:", { name: buildName, components: selectedComponents, totalPrice })
+
     setIsSaveDialogOpen(false)
+
+    // 1. Insert a row into builds table
+    const { data: buildData, error: buildError } = await supabase
+      .from("builds")
+      .insert({
+        build_name: buildName,
+        user_id: user.user_id,
+        total_price: totalPrice,
+        build_type_id: parseInt(buildType),
+      })
+      .select("build_id")          // <-- NOT "id"
+      .single()
+
+    if (buildError || !buildData) {
+      console.error("Error creating build:", buildError)
+      setAlgorithmError("Failed to save build")
+      return
+    }
+
+    const buildId = buildData.build_id
+
+    console.log("Selected components:", selectedComponents)
+
+    // 2. Prepare build_components rows
+    const rowsToInsert = Object.values(selectedComponents)
+      .filter((comp): comp is Component => comp !== null)
+      .map((comp) => {
+        const numericId = Number(String(comp.id).replace("component-", ""));
+        return {
+          build_id: buildId,
+          component_id: numericId,
+        };
+      });
+
+
+    console.log("Rows to insert into build_components:", rowsToInsert)
+    // 3. Insert into build_components table
+    const { data: bcData, error: bcError } = await supabase
+      .from("build_components")
+      .insert(rowsToInsert)
+
+    if (bcError) {
+      console.error("Error inserting build_components:", bcError)
+      setAlgorithmError("Failed to save build components")
+      return
+    }
+
+    console.log("Build saved successfully:", { buildId, bcData })
+    // Optionally show a toast/snackbar to the user
   }
+
 
   const handleProceedAnyway = () => {
     console.log("Saving build despite duplicates:", { name: buildName, components: selectedComponents, totalPrice })
@@ -393,6 +447,7 @@ export default function BuilderPage() {
         
         if (dbComponents.length > 0) {
           setComponents(dbComponents)
+          console.log("Fetched components from database:", dbComponents)
           console.log(`Loaded ${dbComponents.length} components from database`)
         } else {
           // Fallback to mock data if database is empty
@@ -464,6 +519,24 @@ export default function BuilderPage() {
                         placeholder="Enter build name"
                       />
                     </div>
+                    <div>
+                      <Label htmlFor="buildType">Build Type</Label>
+                      <Select
+                        value={buildType}
+                        onValueChange={(value) => setBuildType(value)}
+                      >
+                        <SelectTrigger className="w-full">
+                          <SelectValue placeholder="Select build type" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="1">Academic</SelectItem>
+                          <SelectItem value="2">Office</SelectItem>
+                          <SelectItem value="3">Gaming</SelectItem>
+                          <SelectItem value="4">Custom</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+
                     <div className="flex justify-end gap-2">
                       <Button variant="outline" onClick={() => setIsSaveDialogOpen(false)}>
                         Cancel

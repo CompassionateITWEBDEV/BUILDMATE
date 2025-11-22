@@ -15,17 +15,20 @@ import { ProtectedRoute } from "@/components/protected-route"
 import { useAuth } from "@/contexts/supabase-auth-context"
 import { ArrowLeft, Camera, Save, Calendar, MapPin, LinkIcon, Bell, Shield } from "lucide-react"
 
+import { useEffect } from "react";
+import { supabase } from "@/lib/supabase";
+import Cropper from "react-easy-crop";
+import { getCroppedImg } from "@/lib/crop";
+
 export default function ProfilePage() {
-  const { user } = useAuth()
-  
+  const { user } = useAuth()   
   // Use actual user data or fallback to mock data
-  const userData = user || { 
-    user_id: 1, 
-    user_name: "PC Builder", 
-    email: "builder@example.com",
-    created_at: new Date("2024-01-15").toISOString()
-  }
-  
+  const userData = user;
+  const [userBuilds, setUserBuilds] = useState<any[]>([]);
+  const [loadingBuilds, setLoadingBuilds] = useState(true);
+  const [uploading, setUploading] = useState(false);
+  const [avatarUrl, setAvatarUrl] = useState(user?.avatar_url || "");
+
   const [isEditing, setIsEditing] = useState(false)
   const [profileData, setProfileData] = useState({
     username: userData?.user_name || "",
@@ -51,11 +54,119 @@ export default function ProfilePage() {
     showEmail: false,
   })
 
+  const [imageSrc, setImageSrc] = useState<string | null>(null);
+  const [crop, setCrop] = useState({ x: 0, y: 0 });
+  const [zoom, setZoom] = useState(1);
+  const [croppedAreaPixels, setCroppedAreaPixels] = useState<any>(null);
+
+  // When file is selected
+  const handleFileChange = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    if (!event.target.files || event.target.files.length === 0) return;
+
+    const file = event.target.files[0];
+    const reader = new FileReader();
+    reader.readAsDataURL(file);
+    reader.onload = () => {
+      setImageSrc(reader.result as string);
+    };
+  };
+
+  // Called when crop is done
+  const onCropComplete = (_croppedArea: any, croppedPixels: any) => {
+    setCroppedAreaPixels(croppedPixels);
+  };
+
+  // Upload cropped image
+  const handleUpload = async () => {
+    if (!imageSrc || !user?.supabase_id) return;
+
+    const croppedBlob = await getCroppedImg(imageSrc, croppedAreaPixels);
+
+    const fileExt = "png"; // or extract from original file
+    const fileName = `${user.supabase_id}-${Date.now()}.${fileExt}`;
+    const filePath = `avatars/${fileName}`;
+
+    try {
+      // Delete old avatar if exists
+      if (user.avatar_url) {
+        const oldFileName = user.avatar_url.split("/").pop();
+        if (oldFileName) {
+          await supabase.storage.from("profile_pictures").remove([`avatars/${oldFileName}`]);
+        }
+      }
+
+      // Upload new avatar
+      const { data: uploadData, error: uploadError } = await supabase.storage
+        .from("profile_pictures")
+        .upload(filePath, croppedBlob, {
+          cacheControl: "3600",
+          upsert: true,
+        });
+
+      if (uploadError) throw uploadError;
+
+      // Get public URL
+      const { data: urlData } = supabase.storage.from("profile_pictures").getPublicUrl(filePath);
+      setAvatarUrl(urlData.publicUrl);
+
+      // Update user table
+      await supabase.from("users").update({ avatar_url: urlData.publicUrl }).eq("user_id", user.user_id);
+
+      // Clear crop state
+      setImageSrc(null);
+      setCrop({ x: 0, y: 0 });
+      setZoom(1);
+      setCroppedAreaPixels(null);
+
+      console.log("Avatar updated successfully!");
+    } catch (err) {
+      console.error("Upload error:", err);
+    }
+  };
+
+
+
+
+  useEffect(() => {
+    const fetchUserBuilds = async () => {
+      if (!user) return;
+
+      setLoadingBuilds(true);
+
+      const { data, error } = await supabase
+        .from("builds")
+        .select("*")
+        .eq("user_id", user.user_id)
+        .order("date_created", { ascending: false });
+
+      if (!error && data) {
+        setUserBuilds(data);
+      }
+
+      setLoadingBuilds(false);
+    };
+
+    fetchUserBuilds();
+  }, [user]);
+
   const handleSave = () => {
     // In a real app, this would save to the backend
     console.log("Saving profile:", profileData)
     setIsEditing(false)
   }
+
+  useEffect(() => {
+    if (!user) return;
+
+    setAvatarUrl(user.avatar_url || "");
+    setProfileData((prev) => ({
+      ...prev,
+      username: user.user_name || "",
+      email: user.email || "",
+      joinDate: user.created_at ? new Date(user.created_at) : new Date(),
+    }));
+  }, [user]);
+
 
   if (!user) {
     return (
@@ -97,13 +208,55 @@ export default function ProfilePage() {
             <CardHeader className="text-center">
               <div className="relative mx-auto mb-4">
                 <Avatar className="h-24 w-24">
-                  <AvatarImage src="/placeholder.svg" />
-                  <AvatarFallback className="text-2xl">{userData.user_name.charAt(0).toUpperCase()}</AvatarFallback>
+                  <AvatarImage src={avatarUrl || "/placeholder.svg"} />
+                  <AvatarFallback className="text-2xl">
+                    {userData.user_name.charAt(0).toUpperCase()}
+                  </AvatarFallback>
                 </Avatar>
-                <Button size="sm" className="absolute -bottom-2 -right-2 rounded-full p-2">
+
+                <label className="absolute -bottom-2 -right-2 rounded-full p-2 bg-white dark:bg-slate-800 shadow cursor-pointer">
                   <Camera className="h-4 w-4" />
-                </Button>
+                  <input 
+                    type="file" 
+                    accept="image/*"
+                    className="hidden"
+                    onChange={handleFileChange} // <-- use this
+                  />
+                </label>
+                {imageSrc && (
+                  <div
+                    className="fixed inset-0 z-50 flex items-center justify-center bg-black/50"
+                  >
+                    <div className="relative w-80 h-auto bg-white rounded shadow-lg p-4 flex flex-col items-center">
+                      <div className="w-full h-64 relative">
+                        <Cropper
+                          image={imageSrc}
+                          crop={crop}
+                          zoom={zoom}
+                          aspect={1}
+                          onCropChange={setCrop}
+                          onZoomChange={setZoom}
+                          onCropComplete={onCropComplete}
+                        />
+                      </div>
+
+                      {/* Buttons outside cropper area */}
+                      <div className="mt-4 flex gap-2">
+                        <Button
+                          variant="outline"
+                          onClick={() => setImageSrc(null)} // Cancel cropping
+                        >
+                          Cancel
+                        </Button>
+                        <Button onClick={handleUpload}>Upload</Button>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+
               </div>
+
               <CardTitle>{profileData.username}</CardTitle>
               <CardDescription>{profileData.email}</CardDescription>
             </CardHeader>
@@ -135,7 +288,7 @@ export default function ProfilePage() {
 
               <div className="grid grid-cols-3 gap-4 text-center">
                 <div>
-                  <p className="text-lg font-bold text-slate-900 dark:text-white">12</p>
+                  <p className="text-lg font-bold text-slate-900 dark:text-white">{loadingBuilds ? "..." : userBuilds.length}</p>
                   <p className="text-xs text-slate-600 dark:text-slate-400">Builds</p>
                 </div>
                 <div>

@@ -312,17 +312,24 @@ export const buildService = {
     
     if (buildsError) throw buildsError
 
-    // Get total comments count (as a proxy for engagement/likes for now)
     const { count: commentsCount, error: commentsError } = await supabase
-      .from('comments')
+      .from('build_comments')
       .select('*', { count: 'exact', head: true })
     
     if (commentsError) throw commentsError
 
+    const { count: likesCount, error: likesError } = await supabase
+      .from('builds_likes')
+      .select('*', { count: 'exact', head: true })
+    
+    if (likesError) throw commentsError
+
+
     return {
       totalBuilders: buildersCount || 0,
       totalBuilds: buildsCount || 0,
-      totalLikes: commentsCount || 0 // Using comments as proxy for now
+      totalLikes: likesCount || 0, // Using comments as proxy for now
+      totalComments: commentsCount || 0
     }
   }
 }
@@ -493,4 +500,14 @@ export const retailerService = {
     if (error) throw error
     return data
   }
+}
+
+export type { 
+  User, 
+  Build, 
+  Component, 
+  ComponentCategory, 
+  BuildType, 
+  Retailer, 
+  BuildComponent 
 }

@@ -65,14 +65,14 @@ export function Navigation({ variant = "default" }: NavigationProps) {
   const userNavItems = [
     { href: "/dashboard", label: "Dashboard", icon: Home },
     { href: "/profile", label: "Profile", icon: User },
-    { href: "/builds", label: "My Builds", icon: Wrench },
+    { href: "/mybuilds", label: "My Builds", icon: Wrench },
     { href: "/builds?liked=true", label: "Liked Builds", icon: Heart },
   ]
 
   const handleLogout = async () => {
     await logout()
     setIsMobileMenuOpen(false)
-    router.push("/")
+    router.push("./")
     router.refresh()
   }
 
@@ -91,8 +91,12 @@ export function Navigation({ variant = "default" }: NavigationProps) {
                   <DropdownMenuTrigger asChild>
                     <Button variant="ghost" className="relative h-8 w-8 rounded-full">
                       <Avatar className="h-8 w-8">
-                        <AvatarImage src="/placeholder.svg" />
-                        <AvatarFallback>{(user.user_name || user.email || "U").charAt(0).toUpperCase()}</AvatarFallback>
+                        <Avatar>
+                          <AvatarImage src={user.avatar_url || "/placeholder.svg"} />
+                          <AvatarFallback>
+                            {(user.user_name || user.email || "U").charAt(0).toUpperCase()}
+                          </AvatarFallback>
+                        </Avatar>
                       </Avatar>
                     </Button>
                   </DropdownMenuTrigger>
@@ -179,9 +183,11 @@ export function Navigation({ variant = "default" }: NavigationProps) {
                   <DropdownMenu>
                     <DropdownMenuTrigger asChild>
                       <Button variant="ghost" className="relative h-8 w-8 rounded-full">
-                        <Avatar className="h-8 w-8">
-                          <AvatarImage src="/placeholder.svg" />
-                          <AvatarFallback>{user.user_name.charAt(0).toUpperCase()}</AvatarFallback>
+                        <Avatar>
+                          <AvatarImage src={user.avatar_url || "/placeholder.svg"} />
+                          <AvatarFallback>
+                            {(user.user_name || user.email || "U").charAt(0).toUpperCase()}
+                          </AvatarFallback>
                         </Avatar>
                       </Button>
                     </DropdownMenuTrigger>
@@ -267,8 +273,12 @@ export function Navigation({ variant = "default" }: NavigationProps) {
                   <DropdownMenuTrigger asChild>
                     <Button variant="ghost" className="relative h-8 w-8 rounded-full">
                       <Avatar className="h-8 w-8">
-                        <AvatarImage src="/placeholder.svg" />
-                        <AvatarFallback>{(user.user_name || user.email || "U").charAt(0).toUpperCase()}</AvatarFallback>
+                        <Avatar>
+                          <AvatarImage src={user.avatar_url || "/placeholder.svg"} />
+                          <AvatarFallback>
+                            {(user.user_name || user.email || "U").charAt(0).toUpperCase()}
+                          </AvatarFallback>
+                        </Avatar>
                       </Avatar>
                     </Button>
                   </DropdownMenuTrigger>
