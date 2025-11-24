@@ -319,7 +319,7 @@ export const buildService = {
     if (commentsError) throw commentsError
 
     const { count: likesCount, error: likesError } = await supabase
-      .from('builds_likes')
+      .from('build_likes')
       .select('*', { count: 'exact', head: true })
     
     if (likesError) throw commentsError
@@ -501,6 +501,8 @@ export const retailerService = {
     return data
   }
 }
+
+
 
 export type { 
   User, 

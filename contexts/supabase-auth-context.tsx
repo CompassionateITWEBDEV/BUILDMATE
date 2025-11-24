@@ -12,6 +12,9 @@ interface CustomUser {
   created_at: string;
   avatar_url: string;
   supabase_id: string;
+  bio: string;
+  website: string;
+  location: string;
 }
 
 interface AuthContextType {

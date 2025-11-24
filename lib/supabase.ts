@@ -39,6 +39,9 @@ export interface Database {
           created_at: string
           avatar_url: string
           supabase_id: UUID
+          bio: string | null
+          location: string | null
+          website: string | null
         }
         Insert: {
           user_id?: number
@@ -49,6 +52,9 @@ export interface Database {
           created_at?: string
           avatar_url?: string
           supabase_i?: UUID
+          bio?: string | null
+          location?: string | null
+          website?: string | null
         }
         Update: {
           user_id?: number
@@ -59,6 +65,9 @@ export interface Database {
           created_at?: string
           avatar_url?: string
           supabase_id?: UUID
+          bio?: string | null
+          location?: string | null
+          website?: string | null          
         }
       }
       build_types: {
@@ -89,6 +98,7 @@ export interface Database {
           likes: number
           comments: number
           views: number
+          description: string
         }
         Insert: {
           build_id?: number
@@ -100,6 +110,7 @@ export interface Database {
           likes: number
           comments: number
           views: number
+          description?: string
         }
         Update: {
           build_id?: number
@@ -111,6 +122,7 @@ export interface Database {
           likes?: number
           comments?: number
           views?: number
+          description?: string
         }
       }
       component_categories: {
@@ -268,6 +280,26 @@ export interface Database {
           view_id?: number
           build_id?: number
           user_id?: number
+          created_at?: string
+        }
+      }
+      build_likes: {
+        Row: {
+          build_likes_id: number
+          user_id: number
+          build_id: number
+          created_at: string
+        }
+        Insert: {
+          build_likes_id?: number
+          user_id: number
+          build_id: number
+          created_at?: string
+        }
+        Update: {
+          build_likes_id?: number
+          user_id?: number
+          build_id?: number
           created_at?: string
         }
       }

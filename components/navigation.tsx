@@ -66,7 +66,7 @@ export function Navigation({ variant = "default" }: NavigationProps) {
     { href: "/dashboard", label: "Dashboard", icon: Home },
     { href: "/profile", label: "Profile", icon: User },
     { href: "/mybuilds", label: "My Builds", icon: Wrench },
-    { href: "/builds?liked=true", label: "Liked Builds", icon: Heart },
+    { href: "/likedbuilds", label: "Liked Builds", icon: Heart },
   ]
 
   const handleLogout = async () => {

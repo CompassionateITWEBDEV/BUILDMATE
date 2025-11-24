@@ -530,7 +530,7 @@ export default function DashboardPage() {
                 </CardHeader>
                 <CardContent>
                   <div className="space-y-4">
-                    {recentActivity.map((activity) => (
+                    {recentActivity.slice(0, 5).map((activity) => (
                       <div key={activity.id} className="flex items-start gap-3">
                         <activity.icon className="h-4 w-4 text-slate-500 mt-1" />
                         <div className="flex-1">
@@ -541,6 +541,7 @@ export default function DashboardPage() {
                     ))}
                   </div>
                 </CardContent>
+
               </Card>
             </div>
           </TabsContent>
@@ -603,7 +604,7 @@ export default function DashboardPage() {
                               </div>
                               <div className="flex items-center gap-1">
                                 <Eye className="h-4 w-4" />
-                                1.2k
+                                {build.views}
                               </div>
                               <div className="flex items-center gap-1">
                                 <Calendar className="h-4 w-4" />
@@ -649,7 +650,9 @@ export default function DashboardPage() {
                 {likedBuilds.length === 0 ? (
                   <div className="text-center py-12">
                     <Heart className="h-12 w-12 text-slate-400 mx-auto mb-4" />
-                    <h3 className="text-lg font-medium text-slate-900 dark:text-white mb-2">No liked builds yet</h3>
+                    <h3 className="text-lg font-medium text-slate-900 dark:text-white mb-2">
+                      No liked builds yet
+                    </h3>
                     <p className="text-slate-600 dark:text-slate-400 mb-4">
                       Explore the community and like builds that inspire you
                     </p>
@@ -658,44 +661,74 @@ export default function DashboardPage() {
                     </Button>
                   </div>
                 ) : (
-                  <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
-                    {likedBuilds.map((row: any) => (
-                      <Card key={row.build.build_id} className="border-slate-200 dark:border-slate-700">
-                        <CardHeader className="pb-3">
-                          <CardTitle className="text-base">{row.build.build_name}</CardTitle>
-                          <CardDescription className="text-sm">
-                            ${row.build.total_price.toLocaleString()}
-                          </CardDescription>
-                        </CardHeader>
-                        <CardContent>
-                          <div className="flex flex-wrap gap-1 mb-2">
-                            {row.build.build_types?.type_name && (
-                              <Badge variant="outline" className="text-xs">
-                                {row.build.build_types.type_name}
-                              </Badge>
-                            )}
-                          </div>
-                          <div className="flex items-center justify-between text-sm text-slate-600 dark:text-slate-400">
-                            <div className="flex items-center gap-2">
-                              <Heart className="h-4 w-4 text-red-500" />
-                              {row.build.likes || 0}
+                  <div className="grid md:grid-cols-2 gap-6">
+                    {likedBuilds.map((row: any) => {
+                      const build = row.build;
+                      return (
+                        <Card key={build.build_id} className="border-slate-200 dark:border-slate-700">
+                          <CardHeader className="pb-3">
+                            <div className="flex items-start justify-between">
+                              <div>
+                                <CardTitle className="text-lg">{build.build_name}</CardTitle>
+                                <CardDescription className="mt-1">{build.description}</CardDescription>
+                              </div>
+                              <Badge variant="secondary">${build.total_price?.toLocaleString()}</Badge>
                             </div>
-                            <div className="flex items-center gap-1">
-                              <Calendar className="h-4 w-4" />
-                              {row.liked_at ? new Date(row.liked_at).toLocaleDateString() : "-"}
+                          </CardHeader>
+                          <CardContent className="space-y-4">
+                            <div className="flex flex-wrap gap-1">
+                              {build.build_types?.type_name && (
+                                <Badge variant="outline" className="text-xs">
+                                  {build.build_types.type_name}
+                                </Badge>
+                              )}
                             </div>
-                            <Button size="sm" variant="outline" asChild>
-                              <Link href={`/builds/${row.build.build_id}`}>View</Link>
-                            </Button>
-                          </div>
-                        </CardContent>
-                      </Card>
-                    ))}
+
+                            <div className="flex items-center justify-between text-sm text-slate-600 dark:text-slate-400">
+                              <div className="flex items-center gap-4">
+                                <div className="flex items-center gap-1">
+                                  <Heart className="h-4 w-4 text-red-500" />
+                                  {build.likes || 0}
+                                </div>
+                                <div className="flex items-center gap-1">
+                                  <Eye className="h-4 w-4" />
+                                  {build.views || 0}
+                                </div>
+                                <div className="flex items-center gap-1">
+                                  <Calendar className="h-4 w-4" />
+                                  {row.liked_at ? new Date(row.liked_at).toLocaleDateString() : "-"}
+                                </div>
+                              </div>
+                            </div>
+
+                            <div className="flex gap-2">
+                              <Button size="sm" variant="outline" asChild className="flex-1 bg-transparent">
+                                <Link href={`/builds/${build.build_id}`}>
+                                  <Eye className="h-4 w-4 mr-2" />
+                                  View
+                                </Link>
+                              </Button>
+                              <Button size="sm" variant="outline" asChild className="flex-1 bg-transparent">
+                                <Link href={`/builder?clone=${build.build_id}`}>
+                                  <Edit className="h-4 w-4 mr-2" />
+                                  Clone
+                                </Link>
+                              </Button>
+                              <Button size="sm" variant="outline">
+                                <Share className="h-4 w-4 mr-2" />
+                                Share
+                              </Button>
+                            </div>
+                          </CardContent>
+                        </Card>
+                      )
+                    })}
                   </div>
                 )}
               </CardContent>
             </Card>
           </TabsContent>
+
 
           <TabsContent value="achievements" className="space-y-6">
             <Card>

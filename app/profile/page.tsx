@@ -33,11 +33,12 @@ export default function ProfilePage() {
   const [profileData, setProfileData] = useState({
     username: userData?.user_name || "",
     email: userData?.email || "",
-    bio: "PC building enthusiast and tech lover. Always looking for the latest components and sharing knowledge with the community.",
-    location: "San Francisco, CA",
-    website: "https://myportfolio.com",
+    bio: userData?.bio || "",
+    location: userData?.location || "",
+    website: userData?.website || "",
     joinDate: userData?.created_at ? new Date(userData.created_at) : new Date(),
-  })
+  });
+
 
   const [notifications, setNotifications] = useState({
     emailUpdates: true,
@@ -58,6 +59,9 @@ export default function ProfilePage() {
   const [crop, setCrop] = useState({ x: 0, y: 0 });
   const [zoom, setZoom] = useState(1);
   const [croppedAreaPixels, setCroppedAreaPixels] = useState<any>(null);
+  const [followers, setFollowers] = useState(0);
+  const [following, setFollowing] = useState(0);
+
 
   // When file is selected
   const handleFileChange = async (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -124,7 +128,32 @@ export default function ProfilePage() {
     }
   };
 
+  const fetchFollowerStats = async (profileUserId: number) => {
+    // Count Followers (people who follow YOU)
+    const { count: followersCount, error: followersError } = await supabase
+      .from("followers")
+      .select("*", { count: "exact", head: true })
+      .eq("user_id", profileUserId);
 
+    // Count Following (people YOU follow)
+    const { count: followingCount, error: followingError } = await supabase
+      .from("followers")
+      .select("*", { count: "exact", head: true })
+      .eq("follower_user_id", profileUserId);
+
+    if (followersError || followingError) {
+      console.error("Failed to fetch follower stats:", followersError || followingError);
+    }
+
+    setFollowers(followersCount || 0);
+    setFollowing(followingCount || 0);
+  };
+
+  useEffect(() => {
+    if (!user) return;
+
+    fetchFollowerStats(user.user_id);
+  }, [user]);
 
 
   useEffect(() => {
@@ -147,13 +176,55 @@ export default function ProfilePage() {
     };
 
     fetchUserBuilds();
+
   }, [user]);
 
-  const handleSave = () => {
-    // In a real app, this would save to the backend
-    console.log("Saving profile:", profileData)
-    setIsEditing(false)
-  }
+  useEffect(() => {
+    if (!user) return;
+
+    setAvatarUrl(user.avatar_url || "");
+    setProfileData({
+      username: user.user_name || "",
+      email: user.email || "",
+      bio: user.bio || "",
+      location: user.location || "",
+      website: user.website || "",
+      joinDate: user.created_at ? new Date(user.created_at) : new Date(),
+    });
+  }, [user]);
+
+
+  const handleSave = async () => {
+    if (!user) return;
+
+    // Update auth email (only if changed)
+    if (profileData.email !== user.email) {
+      await supabase.auth.updateUser({
+        email: profileData.email,
+      });
+    }
+
+    // Update user table
+    const { error } = await supabase
+      .from("users")
+      .update({
+        user_name: profileData.username,
+        bio: profileData.bio,
+        location: profileData.location,
+        website: profileData.website,
+       // email: profileData.email,
+      })
+      .eq("user_id", user.user_id);
+
+    if (error) {
+      console.error("Failed to update profile:", error);
+    } else {
+      console.log("Profile updated successfully!");
+    }
+
+    setIsEditing(false);
+  };
+
 
   useEffect(() => {
     if (!user) return;
@@ -292,11 +363,16 @@ export default function ProfilePage() {
                   <p className="text-xs text-slate-600 dark:text-slate-400">Builds</p>
                 </div>
                 <div>
-                  <p className="text-lg font-bold text-slate-900 dark:text-white">234</p>
+                  <p className="text-lg font-bold text-slate-900 dark:text-white">
+                    {followers}
+                  </p>
                   <p className="text-xs text-slate-600 dark:text-slate-400">Followers</p>
                 </div>
+
                 <div>
-                  <p className="text-lg font-bold text-slate-900 dark:text-white">156</p>
+                  <p className="text-lg font-bold text-slate-900 dark:text-white">
+                    {following}
+                  </p>
                   <p className="text-xs text-slate-600 dark:text-slate-400">Following</p>
                 </div>
               </div>
@@ -339,6 +415,7 @@ export default function ProfilePage() {
                       disabled={!isEditing}
                     />
                   </div>
+                  {/* 
                   <div>
                     <Label htmlFor="email">Email</Label>
                     <Input
@@ -349,6 +426,7 @@ export default function ProfilePage() {
                       disabled={!isEditing}
                     />
                   </div>
+                  */}
                 </div>
 
                 <div>

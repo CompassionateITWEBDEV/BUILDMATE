@@ -53,6 +53,7 @@ import { formatCurrency } from "@/lib/currency"
 import { getCSPRecommendations, getUpgradeRecommendations, type CSPSolution } from "@/lib/algorithm-service"
 import { getSupabaseComponents, getSupabaseComponentsByCategory } from "@/lib/supabase-components"
 import { useAuth } from "@/contexts/supabase-auth-context"
+import { Textarea } from "@/components/ui/textarea"
 
 const categoryIcons = {
   cpu: Cpu,
@@ -113,6 +114,7 @@ export default function BuilderPage() {
   const [isLoadingUpgrades, setIsLoadingUpgrades] = useState(false)
   const [showUpgradeDialog, setShowUpgradeDialog] = useState(false)
   const [algorithmError, setAlgorithmError] = useState<string | null>(null)
+  const [buildDescription, setBuildDescription] = useState("");
 
   const [cspPage, setCspPage] = useState(0)
   const SOLUTIONS_PER_PAGE = 2
@@ -378,8 +380,9 @@ export default function BuilderPage() {
         user_id: user.user_id,
         total_price: totalPrice,
         build_type_id: parseInt(buildType),
+        description: buildDescription,
       })
-      .select("build_id")          // <-- NOT "id"
+      .select("build_id")       
       .single()
 
     if (buildError || !buildData) {
@@ -517,6 +520,17 @@ export default function BuilderPage() {
                         value={buildName}
                         onChange={(e) => setBuildName(e.target.value)}
                         placeholder="Enter build name"
+                      />
+                    </div>
+                    <div>
+                      <Label htmlFor="buildDescription">Build Description</Label>
+                      <Textarea
+                        id="buildDescription"
+                        value={buildDescription}
+                        onChange={(e) => setBuildDescription(e.target.value)}
+                        placeholder="Enter a description for your build"
+                        className="w-full"
+                        rows={3}
                       />
                     </div>
                     <div>

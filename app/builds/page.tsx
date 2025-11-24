@@ -36,6 +36,7 @@ interface BuildWithDetails {
   likes?: number
   comments?: number
   views?: number
+  description?: string
 }
 
 export default function BuildsPage() {
@@ -341,7 +342,7 @@ export default function BuildsPage() {
 
                 <CardContent className="space-y-4">
                   <p className="text-sm text-slate-600 dark:text-slate-400 line-clamp-2">
-                    {build.build_types?.type_name || 'PC Build'}
+                    {build?.description || 'PC Build'}
                   </p>
 
                   {/* Build tags */}

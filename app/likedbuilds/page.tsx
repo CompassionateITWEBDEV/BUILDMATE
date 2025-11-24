@@ -36,7 +36,7 @@ interface BuildWithDetails {
   likes?: number
   comments?: number
   views?: number
-  description?: string
+  description: string
 }
 
 export default function BuildsPage() {
@@ -84,83 +84,132 @@ export default function BuildsPage() {
   const fetchBuilds = async () => {
     if (!user) return;
     try {
-      setLoading(true);
-      setError(null);
+        setLoading(true);
+        setError(null);
 
-      // Fetch only builds for the current user
-      const userBuilds = await buildService.getByUserId(user.user_id);
+        // 1️⃣ Get liked build IDs
+        const { data: likedData, error: likedError } = await supabase
+        .from("build_likes")
+        .select("build_id")
+        .eq("user_id", user.user_id);
 
-      const buildsWithDetails = await Promise.all(
-        userBuilds.map(async (build) => {
-          try {
+        if (likedError) throw likedError;
+        const likedIds = likedData?.map((r) => r.build_id) || [];
+
+        if (likedIds.length === 0) {
+        setBuilds([]);
+        return;
+        }
+
+        // 2️⃣ Fetch builds by these IDs
+        const { data: buildsData, error: buildsError } = await supabase
+        .from("builds")
+        .select(`
+            *,
+            users:user_id (
+            user_id,
+            user_name,
+            email,
+            avatar_url
+            ),
+            build_types:build_type_id (
+            build_type_id,
+            type_name
+            )
+        `)
+        .in("build_id", likedIds);
+
+
+        if (buildsError) throw buildsError;
+
+        // 3️⃣ Add components, total price, comments
+        const buildsWithDetails = await Promise.all(
+        buildsData.map(async (build: any) => {
+            try {
             const components = await buildComponentService.getBuildComponents(build.build_id);
             const totalPrice = components.reduce(
-              (sum, bc: any) => sum + (Number(bc.components?.component_price) || 0),
-              0
+                (sum, bc: any) => sum + (Number(bc.components?.component_price) || 0),
+                0
             );
 
             const { count: commentsCount } = await supabase
-              .from('build_comments')
-              .select('*', { count: 'exact', head: true })
-              .eq('build_id', build.build_id);
+                .from('build_comments')
+                .select('*', { count: 'exact', head: true })
+                .eq('build_id', build.build_id);
 
             return {
-              ...build,
-              components,
-              totalPrice,
-              comments: commentsCount || build.comments || 0,
-              likes: build.likes || 0,
-              views: build.views || 0
+                ...build,
+                components,
+                totalPrice,
+                comments: commentsCount || build.comments || 0,
+                likes: build.likes || 0,
+                views: build.views || 0
             };
-          } catch (err) {
+            } catch (err) {
             console.error(err);
             return { ...build, components: [], totalPrice: 0, comments: 0, likes: 0, views: 0 };
-          }
+            }
         })
-      );
+        );
 
-      setBuilds(buildsWithDetails);
+        setBuilds(buildsWithDetails);
     } catch (err: any) {
-      console.error(err);
-      setError(err.message || 'Failed to load builds');
+        console.error(err);
+        setError(err.message || 'Failed to load builds');
     } finally {
-      setLoading(false);
+        setLoading(false);
     }
-  };
+    };
 
 
-  const fetchStatistics = async () => {
+
+    const fetchStatistics = async () => {
     try {
-      if (!user) return;
+        if (!user) return;
 
-      // 1️⃣ Count total builds by the current user
-      const { count: totalBuilds } = await supabase
-        .from('builds')
-        .select('*', { count: 'exact', head: true })
-        .eq('user_id', user.user_id);
+        // 1️⃣ Get IDs of builds the user liked
+        const { data: likedData, error: likedError } = await supabase
+        .from("build_likes")
+        .select("build_id")
+        .eq("user_id", user.user_id);
 
-      // 2️⃣ Sum likes of user's builds
-      const { data: likesData, error: likesError } = await supabase
-        .from('builds')
-        .select('likes', { count: 'exact' })
-        .eq('user_id', user.user_id);
+        if (likedError) throw likedError;
 
-      if (likesError) throw likesError;
+        const likedIds = likedData?.map((r) => r.build_id) || [];
 
-      const totalLikes = likesData?.reduce((sum, b) => sum + (b.likes || 0), 0) || 0;
+        if (likedIds.length === 0) {
+        setStatistics({ totalBuilders: 0, totalBuilds: 0, totalLikes: 0 });
+        return;
+        }
 
-      // 3️⃣ Keep totalBuilders as from buildService
-      const stats = await buildService.getStatistics();
+        // 2️⃣ Fetch builds that the user liked
+        const { data: buildsData, error: buildsError } = await supabase
+        .from("builds")
+        .select("user_id, likes")
+        .in("build_id", likedIds);
 
-      setStatistics({
-        ...stats,
-        totalBuilds: totalBuilds || 0,
-        totalLikes: totalLikes
-      });
+        if (buildsError) throw buildsError;
+
+        // 3️⃣ Total builds you liked
+        const totalBuilds = buildsData.length;
+
+        // 4️⃣ Sum of likes of all liked builds
+        const totalLikes = buildsData.reduce((sum, b) => sum + (b.likes || 0), 0);
+
+        // 5️⃣ Total unique builders of liked builds
+        const uniqueBuilders = new Set(buildsData.map((b) => b.user_id));
+        const totalBuilders = uniqueBuilders.size;
+
+        setStatistics({
+        totalBuilders,
+        totalBuilds,
+        totalLikes
+        });
     } catch (err) {
-      console.error(err);
+        console.error(err);
+        setStatistics({ totalBuilders: 0, totalBuilds: 0, totalLikes: 0 });
     }
-  };
+    };
 
 
 
@@ -255,8 +304,8 @@ export default function BuildsPage() {
         <div className="container mx-auto px-4 py-4">
           <div className="flex items-center justify-between">
             <div>
-              <h1 className="text-2xl font-bold text-slate-900 dark:text-white">Your Builds</h1>
-              <p className="text-slate-600 dark:text-slate-400">These are all the PC builds you've created</p>
+              <h1 className="text-2xl font-bold text-slate-900 dark:text-white">Liked Builds</h1>
+              <p className="text-slate-600 dark:text-slate-400">These are the PC builds you've liked from the community</p>
             </div>
             <div className="flex gap-2">
               <Button asChild>
@@ -277,6 +326,10 @@ export default function BuildsPage() {
         {/* Stats */}
         <div className="mb-8">
           <div className="flex items-center gap-6 text-sm text-slate-600 dark:text-slate-400">
+            <div className="flex items-center gap-1">
+              <Users className="h-4 w-4" />
+              <span>{formatNumber(statistics.totalBuilders)} builders</span>
+            </div>
             <div className="flex items-center gap-1">
               <Cpu className="h-4 w-4" />
               <span>{formatNumber(statistics.totalBuilds)} builds</span>
@@ -450,11 +503,8 @@ export default function BuildsPage() {
         {filteredBuilds.length === 0 && !loading && (
           <div className="text-center py-12">
             <Cpu className="h-12 w-12 text-slate-400 mx-auto mb-4" />
-            <h3 className="text-lg font-medium text-slate-900 dark:text-white mb-2">No builds found</h3>
+            <h3 className="text-lg font-medium text-slate-900 dark:text-white mb-2">No liked builds found</h3>
             <p className="text-slate-600 dark:text-slate-400 mb-4">Try adjusting your search terms or filters</p>
-            <Button asChild>
-              <Link href="/builder">Create your first build</Link>
-            </Button>
           </div>
         )}
       </div>
