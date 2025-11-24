@@ -3,6 +3,8 @@ import type { Metadata } from "next"
 import { GeistSans } from "geist/font/sans"
 import { GeistMono } from "geist/font/mono"
 import { SupabaseAuthProvider } from "@/contexts/supabase-auth-context"
+import { LoadingProvider } from "@/contexts/loading-context"
+import { GlobalLoading } from "@/components/global-loading"
 import { Suspense } from "react"
 import "./globals.css"
 
@@ -21,7 +23,12 @@ export default function RootLayout({
     <html lang="en">
       <body className={`font-sans ${GeistSans.variable} ${GeistMono.variable}`}>
         <Suspense fallback={null}>
-          <SupabaseAuthProvider>{children}</SupabaseAuthProvider>
+          <SupabaseAuthProvider>
+            <LoadingProvider>
+              <GlobalLoading />
+              {children}
+            </LoadingProvider>
+          </SupabaseAuthProvider>
         </Suspense>
       </body>
     </html>

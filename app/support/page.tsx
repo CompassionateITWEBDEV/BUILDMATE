@@ -1,7 +1,8 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import Link from "next/link"
+import { useLoading } from "@/contexts/loading-context"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
@@ -11,7 +12,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Badge } from "@/components/ui/badge"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { Navigation } from "@/components/navigation"
+import { useAuth } from "@/contexts/supabase-auth-context"
 import {
   Cpu,
   ArrowLeft,
@@ -97,11 +98,36 @@ const statusOptions = [
 ]
 
 export default function SupportPage() {
+  const { user } = useAuth()
   const [activeTab, setActiveTab] = useState("create")
   const [searchTerm, setSearchTerm] = useState("")
   const [statusFilter, setStatusFilter] = useState("all")
   const [typeFilter, setTypeFilter] = useState("all")
-  const [tickets] = useState(mockTickets)
+  const { startLoading } = useLoading()
+
+  // Load tickets from localStorage or use mock data
+  const loadTickets = () => {
+    if (typeof window !== 'undefined') {
+      const savedTickets = localStorage.getItem('buildmate-support-tickets')
+      if (savedTickets) {
+        try {
+          return JSON.parse(savedTickets)
+        } catch (e) {
+          console.error('Error loading tickets from localStorage:', e)
+        }
+      }
+    }
+    return mockTickets
+  }
+
+  const [tickets, setTickets] = useState(() => loadTickets())
+
+  // Save tickets to localStorage whenever they change
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('buildmate-support-tickets', JSON.stringify(tickets))
+    }
+  }, [tickets])
 
   // New ticket form state
   const [newTicket, setNewTicket] = useState({
@@ -122,7 +148,30 @@ export default function SupportPage() {
     // Simulate API call
     await new Promise(resolve => setTimeout(resolve, 1000))
 
-    console.log("Creating support ticket:", newTicket)
+    // Generate ticket ID
+    const ticketId = `TKT-${String(tickets.length + 1).padStart(3, '0')}`
+    const today = new Date().toISOString().split('T')[0]
+
+    // Create new ticket
+    const createdTicket = {
+      id: ticketId,
+      title: newTicket.title,
+      type: newTicket.type,
+      priority: newTicket.priority,
+      status: "open",
+      createdAt: today,
+      updatedAt: today,
+      description: newTicket.description,
+      assignedTo: "Tech Support",
+      replies: 0,
+      buildId: newTicket.buildId || null,
+      userId: user?.user_id || null,
+    }
+
+    // Add ticket to the list
+    setTickets(prevTickets => [createdTicket, ...prevTickets])
+    
+    console.log("Creating support ticket:", createdTicket)
     setSubmitSuccess(true)
     setIsSubmitting(false)
 
@@ -135,8 +184,11 @@ export default function SupportPage() {
       buildId: "",
     })
 
-    // Hide success message after 3 seconds
-    setTimeout(() => setSubmitSuccess(false), 3000)
+    // Switch to tickets tab to show the new ticket
+    setTimeout(() => {
+      setActiveTab("tickets")
+      setSubmitSuccess(false)
+    }, 2000)
   }
 
   const filteredTickets = tickets.filter(ticket => {
@@ -170,8 +222,6 @@ export default function SupportPage() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 dark:from-slate-900 dark:to-slate-800">
-      <Navigation />
-      
       {/* Page Header */}
       <div className="border-b bg-white/80 backdrop-blur-sm dark:bg-slate-900/80">
         <div className="container mx-auto px-4 py-4">
@@ -497,9 +547,11 @@ export default function SupportPage() {
                                 </div>
                               </div>
                             </div>
-                            <Button variant="outline" size="sm">
-                              View Details
-                            </Button>
+                            <Link href={`/support/${ticket.id}`} onClick={() => startLoading("Loading ticket details...")}>
+                              <Button variant="outline" size="sm">
+                                View Details
+                              </Button>
+                            </Link>
                           </div>
                         </CardContent>
                       </Card>

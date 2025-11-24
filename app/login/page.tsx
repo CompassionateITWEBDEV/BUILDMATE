@@ -9,7 +9,6 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Alert, AlertDescription } from "@/components/ui/alert"
-import { Navigation } from "@/components/navigation"
 import { useAuth } from "@/contexts/supabase-auth-context"
 import { Cpu, Eye, EyeOff, Loader2 } from "lucide-react"
 
@@ -17,6 +16,7 @@ export default function LoginPage() {
   const [email, setEmail] = useState("")
   const [password, setPassword] = useState("")
   const [showPassword, setShowPassword] = useState(false)
+  const [rememberMe, setRememberMe] = useState(false)
   const [error, setError] = useState("")
   const router = useRouter()
   const { login, isLoading } = useAuth()
@@ -45,7 +45,7 @@ export default function LoginPage() {
     }
 
     try {
-      const result = await login(email, password)
+      const result = await login(email, password, rememberMe)
       
       if (result.success) {
         console.log("Login successful, redirecting to dashboard...")
@@ -62,12 +62,19 @@ export default function LoginPage() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 dark:from-slate-900 dark:to-slate-800">
-      <Navigation variant="minimal" />
-      <div className="flex items-center justify-center p-4 min-h-[calc(100vh-80px)]">
+      <div className="flex items-center justify-center p-4 min-h-screen">
         <div className="w-full max-w-md">
+          {/* BuildMate Logo - Centered */}
+          <div className="text-center mb-8">
+            <Link href="/" className="inline-flex items-center justify-center gap-3 mb-6">
+              <Cpu className="h-12 w-12 text-blue-600 dark:text-blue-400" />
+              <h1 className="text-4xl font-bold text-slate-900 dark:text-white">BuildMate</h1>
+            </Link>
+          </div>
+
           {/* Header */}
           <div className="text-center mb-8">
-            <h1 className="text-3xl font-bold text-slate-900 dark:text-white mb-2">Welcome Back</h1>
+            <h2 className="text-3xl font-bold text-slate-900 dark:text-white mb-2">Welcome Back</h2>
             <p className="text-slate-600 dark:text-slate-400">Sign in to continue building your dream PC</p>
           </div>
 
@@ -129,9 +136,11 @@ export default function LoginPage() {
                   <input
                     id="remember"
                     type="checkbox"
+                    checked={rememberMe}
+                    onChange={(e) => setRememberMe(e.target.checked)}
                     className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
                   />
-                  <Label htmlFor="remember" className="text-sm">
+                  <Label htmlFor="remember" className="text-sm cursor-pointer">
                     Remember me
                   </Label>
                 </div>

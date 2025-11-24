@@ -10,7 +10,6 @@ import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { Separator } from "@/components/ui/separator"
 import { Switch } from "@/components/ui/switch"
-import { Navigation } from "@/components/navigation"
 import { ProtectedRoute } from "@/components/protected-route"
 import { useAuth } from "@/contexts/supabase-auth-context"
 import { ArrowLeft, Camera, Save, Calendar, MapPin, LinkIcon, Bell, Shield } from "lucide-react"
@@ -255,7 +254,6 @@ export default function ProfilePage() {
   return (
     <ProtectedRoute>
       <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 dark:from-slate-900 dark:to-slate-800">
-        <Navigation variant="dashboard" />
         
         {/* Page Header */}
         <div className="border-b bg-white/80 backdrop-blur-sm dark:bg-slate-900/80">

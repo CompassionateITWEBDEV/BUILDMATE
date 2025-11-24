@@ -19,8 +19,10 @@ interface CustomUser {
 
 interface AuthContextType {
   user: CustomUser | null;
-  login: (email: string, password: string) => Promise<{ success: boolean; error?: string }>;
-  register: (username: string, email: string, password: string) => Promise<{ success: boolean; error?: string }>;
+  login: (email: string, password: string, rememberMe?: boolean) => Promise<{ success: boolean; error?: string }>;
+  register: (username: string, email: string, password: string, verificationToken: string) => Promise<{ success: boolean; error?: string }>;
+  sendVerificationCode: (email: string) => Promise<{ success: boolean; error?: string }>;
+  verifyCode: (email: string, code: string) => Promise<{ success: boolean; token?: string; error?: string }>;
   logout: () => Promise<void>;
   isLoading: boolean;
 }
@@ -71,10 +73,106 @@ export function SupabaseAuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   // --------------------------
+  // SEND VERIFICATION CODE
+  // --------------------------
+  const sendVerificationCode = async (email: string) => {
+    try {
+      const response = await fetch('/api/auth/send-verification-code', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email }),
+      })
+
+      // Check if response is OK and has content
+      if (!response.ok) {
+        const errorText = await response.text()
+        try {
+          const errorData = JSON.parse(errorText)
+          return { success: false, error: errorData.error || errorData.message || 'Failed to send verification code' }
+        } catch {
+          return { success: false, error: errorText || `Server error: ${response.status}` }
+        }
+      }
+
+      // Check if response has content before parsing
+      const contentType = response.headers.get('content-type')
+      if (!contentType || !contentType.includes('application/json')) {
+        const text = await response.text()
+        return { success: false, error: text || 'Invalid response from server' }
+      }
+
+      const data = await response.json()
+      return data
+    } catch (err: any) {
+      console.error('Send verification code error:', err)
+      return { success: false, error: err.message || 'Failed to send verification code. Please try again.' }
+    }
+  }
+
+  // --------------------------
+  // VERIFY CODE
+  // --------------------------
+  const verifyCode = async (email: string, code: string) => {
+    try {
+      const response = await fetch('/api/auth/verify-code', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, code }),
+      })
+
+      // Check if response is OK and has content
+      if (!response.ok) {
+        const errorText = await response.text()
+        try {
+          const errorData = JSON.parse(errorText)
+          return { success: false, error: errorData.error || errorData.message || 'Invalid verification code' }
+        } catch {
+          return { success: false, error: errorText || `Server error: ${response.status}` }
+        }
+      }
+
+      // Check if response has content before parsing
+      const contentType = response.headers.get('content-type')
+      if (!contentType || !contentType.includes('application/json')) {
+        const text = await response.text()
+        return { success: false, error: text || 'Invalid response from server' }
+      }
+
+      const data = await response.json()
+      return data
+    } catch (err: any) {
+      console.error('Verify code error:', err)
+      return { success: false, error: err.message || 'Failed to verify code. Please try again.' }
+    }
+  }
+
+  // --------------------------
   // REGISTER USER
   // --------------------------
-  const register = async (username: string, email: string, password: string) => {
+  const register = async (username: string, email: string, password: string, verificationToken: string) => {
     try {
+      // Verify token first by checking with the verification API
+      const verifyResponse = await fetch('/api/auth/verify-token', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, token: verificationToken }),
+      })
+
+      // Check if response has valid JSON
+      const contentType = verifyResponse.headers.get('content-type')
+      let verifyData
+      
+      if (contentType && contentType.includes('application/json')) {
+        verifyData = await verifyResponse.json()
+      } else {
+        const text = await verifyResponse.text()
+        return { success: false, error: text || 'Failed to verify token' }
+      }
+
+      if (!verifyData.success) {
+        return { success: false, error: verifyData.error || 'Email verification required. Please verify your email first.' }
+      }
+
       const { data: authData, error: authError } = await supabase.auth.signUp({
         email: email.trim().toLowerCase(),
         password: password
@@ -109,7 +207,7 @@ export function SupabaseAuthProvider({ children }: { children: ReactNode }) {
       // DO NOT auto-login
       return {
         success: true,
-        message: "A verification email has been sent. Please verify your email before logging in."
+        message: "Account created successfully! You can now login."
       };
 
     } catch (err: any) {
@@ -121,7 +219,7 @@ export function SupabaseAuthProvider({ children }: { children: ReactNode }) {
   // --------------------------
   // LOGIN USER
   // --------------------------
-  const login = async (email: string, password: string) => {
+  const login = async (email: string, password: string, rememberMe: boolean = false) => {
     setIsLoading(true);
 
     try {
@@ -143,6 +241,23 @@ export function SupabaseAuthProvider({ children }: { children: ReactNode }) {
       if (!profile) return { success: false, error: "Profile not found" };
 
       setUser(profile as CustomUser);
+
+      // Store remember me preference in localStorage
+      if (rememberMe) {
+        localStorage.setItem('buildmate-remember-me', 'true')
+        // Store session expiration preference (30 days for remember me)
+        const expirationDate = new Date()
+        expirationDate.setDate(expirationDate.getDate() + 30)
+        localStorage.setItem('buildmate-session-expires', expirationDate.toISOString())
+        console.log('✅ Remember me enabled - session will persist for 30 days')
+      } else {
+        localStorage.setItem('buildmate-remember-me', 'false')
+        // For non-remember me, we'll check session on next page load
+        // Supabase handles session storage automatically
+        localStorage.removeItem('buildmate-session-expires')
+        console.log('✅ Remember me disabled - session will expire when browser closes')
+      }
+
       return { success: true };
 
     } finally {
@@ -157,11 +272,14 @@ export function SupabaseAuthProvider({ children }: { children: ReactNode }) {
     setIsLoading(true);
     await supabase.auth.signOut();
     setUser(null);
+    // Clear remember me preferences
+    localStorage.removeItem('buildmate-remember-me')
+    localStorage.removeItem('buildmate-session-expires')
     setIsLoading(false);
   };
 
   return (
-    <AuthContext.Provider value={{ user, login, register, logout, isLoading }}>
+    <AuthContext.Provider value={{ user, login, register, sendVerificationCode, verifyCode, logout, isLoading }}>
       {children}
     </AuthContext.Provider>
   );

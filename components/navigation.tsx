@@ -39,8 +39,10 @@ import {
   Eye,
   Plus,
   Search,
+  LogIn,
 } from "lucide-react"
 import { useAuth } from "@/contexts/supabase-auth-context"
+import { useLoading } from "@/contexts/loading-context"
 
 interface NavigationProps {
   variant?: "default" | "minimal" | "dashboard"
@@ -51,8 +53,15 @@ export function Navigation({ variant = "default" }: NavigationProps) {
   const { user, logout } = useAuth()
   const pathname = usePathname()
   const router = useRouter()
+  const { startLoading, stopLoading } = useLoading()
 
   const isActive = (path: string) => pathname === path
+
+  const handleLinkClick = (href: string, label: string) => {
+    if (pathname !== href) {
+      startLoading(`Loading ${label.toLowerCase()}...`)
+    }
+  }
 
   const mainNavItems = [
     { href: "/builder", label: "PC Builder", icon: Wrench },
@@ -109,13 +118,13 @@ export function Navigation({ variant = "default" }: NavigationProps) {
                     </DropdownMenuLabel>
                     <DropdownMenuSeparator />
                     <DropdownMenuItem asChild>
-                      <Link href="/dashboard">
+                      <Link href="/dashboard" onClick={() => handleLinkClick("/dashboard", "Dashboard")}>
                         <Home className="mr-2 h-4 w-4" />
                         Dashboard
                       </Link>
                     </DropdownMenuItem>
                     <DropdownMenuItem asChild>
-                      <Link href="/profile">
+                      <Link href="/profile" onClick={() => handleLinkClick("/profile", "Profile")}>
                         <User className="mr-2 h-4 w-4" />
                         Profile
                       </Link>
@@ -128,14 +137,28 @@ export function Navigation({ variant = "default" }: NavigationProps) {
                   </DropdownMenuContent>
                 </DropdownMenu>
               ) : (
-                <>
-                  <Button variant="outline" asChild>
-                    <Link href="/login">Login</Link>
-                  </Button>
-                  <Button asChild>
-                    <Link href="/register">Sign Up</Link>
-                  </Button>
-                </>
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button variant="outline">
+                      <User className="mr-2 h-4 w-4" />
+                      Account
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent className="w-48" align="end" forceMount>
+                    <DropdownMenuItem asChild>
+                      <Link href="/login" onClick={() => handleLinkClick("/login", "Login")}>
+                        <LogIn className="mr-2 h-4 w-4" />
+                        Login
+                      </Link>
+                    </DropdownMenuItem>
+                    <DropdownMenuItem asChild>
+                      <Link href="/register" onClick={() => handleLinkClick("/register", "Sign Up")}>
+                        <Plus className="mr-2 h-4 w-4" />
+                        Sign Up
+                      </Link>
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
               )}
             </div>
           </div>
@@ -159,6 +182,7 @@ export function Navigation({ variant = "default" }: NavigationProps) {
                   <Link
                     key={item.href}
                     href={item.href}
+                    onClick={() => handleLinkClick(item.href, item.label)}
                     className={`flex items-center gap-2 text-sm font-medium transition-colors hover:text-slate-900 dark:hover:text-white ${
                       isActive(item.href)
                         ? "text-slate-900 dark:text-white"
@@ -175,7 +199,7 @@ export function Navigation({ variant = "default" }: NavigationProps) {
               {user ? (
                 <div className="flex items-center gap-3">
                   <Button variant="outline" size="sm" asChild>
-                    <Link href="/builder">
+                    <Link href="/builder" onClick={() => handleLinkClick("/builder", "PC Builder")}>
                       <Plus className="h-4 w-4 mr-2" />
                       New Build
                     </Link>
@@ -201,7 +225,7 @@ export function Navigation({ variant = "default" }: NavigationProps) {
                       <DropdownMenuSeparator />
                       {userNavItems.map((item) => (
                         <DropdownMenuItem key={item.href} asChild>
-                          <Link href={item.href}>
+                          <Link href={item.href} onClick={() => handleLinkClick(item.href, item.label)}>
                             <item.icon className="mr-2 h-4 w-4" />
                             {item.label}
                           </Link>
@@ -216,14 +240,28 @@ export function Navigation({ variant = "default" }: NavigationProps) {
                   </DropdownMenu>
                 </div>
               ) : (
-                <>
-                  <Button variant="outline" asChild>
-                    <Link href="/login">Login</Link>
-                  </Button>
-                  <Button asChild>
-                    <Link href="/register">Sign Up</Link>
-                  </Button>
-                </>
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button variant="outline">
+                      <User className="mr-2 h-4 w-4" />
+                      Account
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent className="w-48" align="end" forceMount>
+                    <DropdownMenuItem asChild>
+                      <Link href="/login" onClick={() => handleLinkClick("/login", "Login")}>
+                        <LogIn className="mr-2 h-4 w-4" />
+                        Login
+                      </Link>
+                    </DropdownMenuItem>
+                    <DropdownMenuItem asChild>
+                      <Link href="/register" onClick={() => handleLinkClick("/register", "Sign Up")}>
+                        <Plus className="mr-2 h-4 w-4" />
+                        Sign Up
+                      </Link>
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
               )}
             </div>
           </div>
@@ -248,6 +286,7 @@ export function Navigation({ variant = "default" }: NavigationProps) {
               <Link
                 key={item.href}
                 href={item.href}
+                onClick={() => handleLinkClick(item.href, item.label)}
                 className={`flex items-center gap-2 text-sm font-medium transition-colors hover:text-slate-900 dark:hover:text-white ${
                   isActive(item.href)
                     ? "text-slate-900 dark:text-white"
@@ -264,7 +303,7 @@ export function Navigation({ variant = "default" }: NavigationProps) {
             {user ? (
               <div className="flex items-center gap-3">
                 <Button variant="outline" size="sm" asChild>
-                  <Link href="/builder">
+                  <Link href="/builder" onClick={() => handleLinkClick("/builder", "PC Builder")}>
                     <Plus className="h-4 w-4 mr-2" />
                     New Build
                   </Link>
@@ -292,7 +331,7 @@ export function Navigation({ variant = "default" }: NavigationProps) {
                     <DropdownMenuSeparator />
                     {userNavItems.map((item) => (
                       <DropdownMenuItem key={item.href} asChild>
-                        <Link href={item.href}>
+                        <Link href={item.href} onClick={() => handleLinkClick(item.href, item.label)}>
                           <item.icon className="mr-2 h-4 w-4" />
                           {item.label}
                         </Link>
@@ -307,14 +346,28 @@ export function Navigation({ variant = "default" }: NavigationProps) {
                 </DropdownMenu>
               </div>
             ) : (
-              <>
-                <Button variant="outline" asChild>
-                  <Link href="/login">Login</Link>
-                </Button>
-                <Button asChild>
-                  <Link href="/register">Sign Up</Link>
-                </Button>
-              </>
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="outline">
+                    <User className="mr-2 h-4 w-4" />
+                    Account
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent className="w-48" align="end" forceMount>
+                  <DropdownMenuItem asChild>
+                    <Link href="/login" onClick={() => handleLinkClick("/login", "Login")}>
+                      <LogIn className="mr-2 h-4 w-4" />
+                      Login
+                    </Link>
+                  </DropdownMenuItem>
+                  <DropdownMenuItem asChild>
+                    <Link href="/register" onClick={() => handleLinkClick("/register", "Sign Up")}>
+                      <Plus className="mr-2 h-4 w-4" />
+                      Sign Up
+                    </Link>
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
             )}
 
             {/* Mobile Menu */}
@@ -347,7 +400,10 @@ export function Navigation({ variant = "default" }: NavigationProps) {
                             ? "bg-blue-50 text-blue-700 dark:bg-blue-900/20 dark:text-blue-300"
                             : "text-slate-700 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-800"
                         }`}
-                        onClick={() => setIsMobileMenuOpen(false)}
+                        onClick={() => {
+                          handleLinkClick(item.href, item.label)
+                          setIsMobileMenuOpen(false)
+                        }}
                       >
                         <item.icon className="h-4 w-4" />
                         {item.label}
@@ -368,7 +424,10 @@ export function Navigation({ variant = "default" }: NavigationProps) {
                               ? "bg-blue-50 text-blue-700 dark:bg-blue-900/20 dark:text-blue-300"
                               : "text-slate-700 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-800"
                           }`}
-                          onClick={() => setIsMobileMenuOpen(false)}
+                          onClick={() => {
+                            handleLinkClick(item.href, item.label)
+                            setIsMobileMenuOpen(false)
+                          }}
                         >
                           <item.icon className="h-4 w-4" />
                           {item.label}

@@ -7,7 +7,6 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Badge } from "@/components/ui/badge"
 import { Input } from "@/components/ui/input"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Navigation } from "@/components/navigation"
 import { Cpu, BookOpen, Play, Clock, Users, Wrench, Zap, Shield, Search, Star, CheckCircle } from "lucide-react"
 import { formatCurrency } from "@/lib/currency"
 import { type PerformanceCategory, performanceCategories } from "@/lib/mock-data"
@@ -224,7 +223,6 @@ export default function GuidesPage() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 dark:from-slate-900 dark:to-slate-800">
-      <Navigation />
 
       <div className="container mx-auto px-4 py-8">
         {/* Page Header */}

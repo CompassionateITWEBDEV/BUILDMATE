@@ -8,7 +8,6 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Badge } from "@/components/ui/badge"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { Navigation } from "@/components/navigation"
 import {
   Cpu,
   Plus,
@@ -367,8 +366,6 @@ export default function DashboardPage() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 dark:from-slate-900 dark:to-slate-800">
-      <Navigation variant="dashboard" />
-
       <div className="container mx-auto px-4 py-8">
         <div className="mb-8">
           <div className="flex items-center justify-between mb-6">
@@ -513,7 +510,7 @@ export default function DashboardPage() {
                             <Star className="h-8 w-8 text-yellow-600" />
                             <div>
                               <h3 className="font-medium">Recommendations</h3>
-                              <p className="text-sm text-slate-600 dark:text-slate-400">AI-powered suggestions</p>
+                              <p className="text-sm text-slate-600 dark:text-slate-400">Graph-Based Matching Algorithm and CSP with Backtracking and Pruning</p>
                             </div>
                           </div>
                         </CardContent>

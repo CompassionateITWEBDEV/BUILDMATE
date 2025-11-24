@@ -20,7 +20,6 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog"
-import { Navigation } from "@/components/navigation"
 import {
   Cpu,
   HardDrive,
@@ -100,6 +99,8 @@ export default function BuilderPage() {
   const [buildName, setBuildName] = useState("My Custom Build")
   const [buildType, setBuildType] = useState<string>("4")
   const [isSaveDialogOpen, setIsSaveDialogOpen] = useState(false)
+  const [savedBuildId, setSavedBuildId] = useState<number | null>(null)
+  const [showSuccessDialog, setShowSuccessDialog] = useState(false)
   const [performanceCategory, setPerformanceCategory] = useState<PerformanceCategory>("all")
   const [budget, setBudget] = useState<number>(0)
   const [budgetEnabled, setBudgetEnabled] = useState(false)
@@ -420,7 +421,8 @@ export default function BuilderPage() {
     }
 
     console.log("Build saved successfully:", { buildId, bcData })
-    // Optionally show a toast/snackbar to the user
+    setSavedBuildId(buildId)
+    setShowSuccessDialog(true)
   }
 
 
@@ -475,8 +477,6 @@ export default function BuilderPage() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 dark:from-slate-900 dark:to-slate-800">
-      <Navigation />
-      
       {/* Builder Header */}
       <div className="border-b bg-white/80 backdrop-blur-sm dark:bg-slate-900/80">
         <div className="container mx-auto px-4 py-4">
@@ -560,6 +560,52 @@ export default function BuilderPage() {
                   </div>
                 </DialogContent>
               </Dialog>
+
+              {/* Success Dialog after saving */}
+              <Dialog open={showSuccessDialog} onOpenChange={setShowSuccessDialog}>
+                <DialogContent>
+                  <DialogHeader>
+                    <DialogTitle className="flex items-center gap-2">
+                      <CheckCircle2 className="h-5 w-5 text-green-600" />
+                      Build Saved Successfully!
+                    </DialogTitle>
+                    <DialogDescription>
+                      Your build has been saved. You can now view details and proceed to purchase.
+                    </DialogDescription>
+                  </DialogHeader>
+                  <div className="space-y-4">
+                    <div className="flex flex-col gap-2">
+                      <Button
+                        onClick={() => {
+                          setShowSuccessDialog(false)
+                          router.push(`/purchase/${savedBuildId}`)
+                        }}
+                        className="w-full"
+                      >
+                        View Purchase Details
+                      </Button>
+                      <Button
+                        variant="outline"
+                        onClick={() => {
+                          setShowSuccessDialog(false)
+                          router.push(`/mybuilds/${savedBuildId}`)
+                        }}
+                        className="w-full"
+                      >
+                        View Build Details
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        onClick={() => setShowSuccessDialog(false)}
+                        className="w-full"
+                      >
+                        Continue Building
+                      </Button>
+                    </div>
+                  </div>
+                </DialogContent>
+              </Dialog>
+
               <Button variant="outline" size="sm">
                 <Share className="h-4 w-4 mr-2" />
                 Share

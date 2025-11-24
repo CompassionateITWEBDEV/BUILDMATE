@@ -8,7 +8,6 @@ import { Badge } from "@/components/ui/badge"
 import { Input } from "@/components/ui/input"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
-import { Navigation } from "@/components/navigation"
 import { Cpu, Heart, MessageCircle, Share, Search, Monitor, Users, Eye, BarChart3 } from "lucide-react"
 import { buildService, buildComponentService } from "@/lib/database"
 import { formatCurrency, PRICE_RANGES } from "@/lib/currency"
@@ -237,7 +236,6 @@ export default function BuildsPage() {
   if (loading && builds.length === 0) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 dark:from-slate-900 dark:to-slate-800">
-        <Navigation />
         <div className="container mx-auto px-4 py-20 text-center">
           <Cpu className="h-12 w-12 text-blue-600 mx-auto mb-4 animate-pulse" />
           <p className="text-slate-600 dark:text-slate-400">Loading builds...</p>
@@ -248,7 +246,6 @@ export default function BuildsPage() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 dark:from-slate-900 dark:to-slate-800">
-      <Navigation />
       
       {/* Page Header */}
       <div className="border-b bg-white/80 backdrop-blur-sm dark:bg-slate-900/80">
