@@ -22,21 +22,35 @@ This guide will help you deploy BUILDMATE on Render.com.
    - Render will automatically use the `render.yaml` configuration
    - Make sure the file is in the root of your repository
 
-3. **Set Environment Variables**
+3. **Set Environment Variables** ⚠️ CRITICAL FOR EMAIL VERIFICATION
    - In the Render dashboard, go to your service
    - Navigate to "Environment" tab
    - Add the following environment variables:
      ```
+     # Supabase Configuration
      NEXT_PUBLIC_SUPABASE_URL=your_supabase_url
      NEXT_PUBLIC_SUPABASE_ANON_KEY=your_supabase_anon_key
      SUPABASE_SERVICE_ROLE_KEY=your_service_role_key
+     
+     # SMTP Configuration (REQUIRED for email verification codes)
      SMTP_HOST=smtp.gmail.com
      SMTP_PORT=587
-     SMTP_USER=your_email@gmail.com
-     SMTP_PASSWORD=your_app_password
-     SMTP_FROM_EMAIL=BUILDMATE <your_email@gmail.com>
+     SMTP_USER=dummy.dumm.acc001@gmail.com
+     SMTP_PASSWORD=your_16_character_gmail_app_password
+     SMTP_FROM_EMAIL=BUILDMATE <dummy.dumm.acc001@gmail.com>
+     SMTP_FROM_NAME=BUILDMATE
+     
+     # Other
+     NODE_ENV=production
+     PORT=3000
      PYTHON_API_URL=your_python_api_url (if separate)
      ```
+   
+   **⚠️ IMPORTANT:** 
+   - Get Gmail App Password from: https://myaccount.google.com/apppasswords
+   - Use the 16-character App Password (not your regular Gmail password)
+   - Without SMTP configuration, verification codes will NOT be sent!
+   - See `RENDER_ENV_SETUP.md` for detailed instructions
 
 4. **Deploy**
    - Click "Manual Deploy" → "Deploy latest commit"
@@ -59,6 +73,21 @@ If `render.yaml` doesn't work, configure manually:
 
 3. **Environment Variables**
    - Add all the variables listed in Option 1
+
+## Important: Service Type
+
+**Your Next.js app MUST be deployed as a Web Service, NOT a Static Site.**
+
+- ✅ **Web Service**: Runs a Node.js server (required for API routes, Supabase, etc.)
+- ❌ **Static Site**: Only serves static files (won't work with your app)
+
+If you accidentally created a Static Site:
+1. Delete the Static Site service
+2. Create a new Web Service
+3. Connect your repository
+4. Render will auto-detect `render.yaml` and configure it correctly
+
+**For Web Services, there is NO publish directory** - the server runs directly.
 
 ## Troubleshooting
 

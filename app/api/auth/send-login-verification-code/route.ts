@@ -25,9 +25,24 @@ const createTransporter = () => {
   const smtpFromEmail = process.env.SMTP_FROM_EMAIL || 'BUILDMATE <noreply@buildmate.com>'
   const smtpFromName = process.env.SMTP_FROM_NAME || 'BUILDMATE'
 
-  if (!smtpHost || !smtpUser || !smtpPassword) {
-    throw new Error('SMTP credentials are missing in environment variables.')
+  // Check for placeholders
+  if (smtpHost === 'your_smtp_host' || smtpUser === 'your_smtp_user' || smtpPassword === 'your_smtp_password') {
+    throw new Error('SMTP credentials in environment variables are still placeholders. Please configure them in Render/Vercel dashboard.')
   }
+
+  if (!smtpHost || !smtpUser || !smtpPassword) {
+    console.error('❌ SMTP Configuration Missing:')
+    console.error('   SMTP_HOST:', smtpHost ? '✅ Set' : '❌ Missing')
+    console.error('   SMTP_USER:', smtpUser ? '✅ Set' : '❌ Missing')
+    console.error('   SMTP_PASSWORD:', smtpPassword ? '✅ Set' : '❌ Missing')
+    throw new Error('SMTP credentials are missing in environment variables. Please configure SMTP_HOST, SMTP_USER, and SMTP_PASSWORD in Render/Vercel dashboard.')
+  }
+
+  console.log('📧 SMTP Configuration:')
+  console.log('   Host:', smtpHost)
+  console.log('   Port:', smtpPort)
+  console.log('   User:', smtpUser)
+  console.log('   From:', smtpFromEmail)
 
   return nodemailer.createTransport({
     host: smtpHost,
@@ -147,7 +162,11 @@ export async function POST(request: NextRequest) {
     `
 
     try {
-      await transporter.sendMail({
+      // Verify SMTP connection first
+      await transporter.verify()
+      console.log('✅ SMTP connection verified')
+
+      const emailInfo = await transporter.sendMail({
         from: `${fromName} <${fromEmail}>`,
         to: email.trim().toLowerCase(),
         subject: `BUILDMATE Login Verification Code: ${code}`,
@@ -155,6 +174,7 @@ export async function POST(request: NextRequest) {
       })
 
       console.log('✅ Login verification code sent to:', email.trim().toLowerCase())
+      console.log('   Message ID:', emailInfo.messageId)
 
       return NextResponse.json({
         success: true,
@@ -162,8 +182,25 @@ export async function POST(request: NextRequest) {
       })
     } catch (emailError: any) {
       console.error('❌ Error sending login verification email:', emailError)
+      console.error('   Error details:', {
+        code: emailError.code,
+        command: emailError.command,
+        response: emailError.response,
+        responseCode: emailError.responseCode
+      })
+      
+      // Provide more helpful error messages
+      let errorMessage = 'Failed to send verification code email'
+      if (emailError.code === 'EAUTH') {
+        errorMessage = 'SMTP authentication failed. Please check SMTP_USER and SMTP_PASSWORD in environment variables.'
+      } else if (emailError.code === 'ECONNECTION') {
+        errorMessage = 'Cannot connect to SMTP server. Please check SMTP_HOST and SMTP_PORT in environment variables.'
+      } else if (emailError.message) {
+        errorMessage = `Email sending failed: ${emailError.message}`
+      }
+      
       return NextResponse.json(
-        { error: 'Failed to send verification code email' },
+        { error: errorMessage },
         { status: 500 }
       )
     }
