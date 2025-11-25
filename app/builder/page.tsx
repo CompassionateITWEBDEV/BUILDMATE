@@ -225,45 +225,25 @@ export default function BuilderPage() {
 
 
   const handleApplyCSPSolution = (solution: CSPSolution) => {
-    // Map solution categories from Python backend to ComponentCategory keys
-    const categoryMap: Record<string, ComponentCategory> = {
-      'CPU': 'cpu',
-      'Motherboard': 'motherboard',
-      'Memory': 'memory',
-      'RAM': 'memory',
-      'Storage': 'storage',
-      'Video Card': 'gpu',
-      'GPU': 'gpu',
-      'Power Supply': 'psu',
-      'PSU': 'psu',
-      'Case': 'case',
-      'CPU Cooler': 'cooling',
-      'Cooling': 'cooling',
-      'Cooler': 'cooling',
-    }
-
+    // Map solution categories to ComponentCategory keys
     const newSelected: Record<ComponentCategory, Component | null> = { ...selectedComponents }
 
     Object.entries(solution).forEach(([category, comp]: [string, any]) => {
-      // Convert the solution category string to ComponentCategory key
-      const key = categoryMap[category] || category.toLowerCase() as ComponentCategory
-      
-      // Only add if it's a valid category
-      if (key && ['cpu', 'motherboard', 'memory', 'storage', 'gpu', 'psu', 'case', 'cooling'].includes(key)) {
-        newSelected[key as ComponentCategory] = {
+      // Convert the solution category string to your ComponentCategory keys if needed
+      const key = category.toLowerCase() as ComponentCategory
+        newSelected[key] = {
           id: comp.id,
           name: comp.name,
           brand: comp.brand || "",
           price: comp.price,
-          category: key as ComponentCategory,
+          category: key,
           image: comp.image || "",
           rating: comp.rating || 0,
           reviews: comp.reviews || 0,
           specifications: comp.specifications || {},
-          compatibility: comp.compatibility || {},
+          compatibility: comp.compatibility || {}, // << add this
           performanceTags: comp.performanceTags || ['all'] as PerformanceCategory[],
         }
-      }
     })
 
     setSelectedComponents(newSelected)
@@ -500,31 +480,33 @@ export default function BuilderPage() {
       {/* Builder Header */}
       <div className="border-b bg-white/80 backdrop-blur-sm dark:bg-slate-900/80">
         <div className="container mx-auto px-4 py-4">
-            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-              <div className="flex items-center gap-4">
-                <Button variant="ghost" size="sm" asChild>
-                  <Link href={user ? "/dashboard" : "/"}>
-                    <ArrowLeft className="h-4 w-4 mr-2" />
-                    <span className="hidden sm:inline">Back</span>
-                  </Link>
-                </Button>
-                <div className="flex items-center gap-2">
-                  <Cpu className="h-6 w-6 text-blue-600" />
-                  <h1 className="text-xl font-bold text-slate-900 dark:text-white">PC Builder</h1>
-                </div>
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+            <div className="flex items-center gap-2 sm:gap-4">
+              <Button variant="ghost" size="sm" asChild>
+                <Link href={user ? "/dashboard" : "/"}>
+                  <ArrowLeft className="h-4 w-4 sm:mr-2" />
+                  <span className="hidden sm:inline">Back</span>
+                </Link>
+              </Button>
+              <div className="flex items-center gap-2">
+                <Cpu className="h-5 w-5 sm:h-6 sm:w-6 text-blue-600" />
+                <h1 className="text-lg sm:text-xl font-bold text-slate-900 dark:text-white">PC Builder</h1>
               </div>
-              <div className="flex items-center gap-2 w-full sm:w-auto">
-              <Button variant="outline" size="sm" asChild>
+            </div>
+            <div className="flex items-center gap-2 flex-wrap">
+              <Button variant="outline" size="sm" asChild className="text-xs sm:text-sm">
                 <Link href="/support">
-                  <MessageSquare className="h-4 w-4 mr-2" />
-                  Get Help
+                  <MessageSquare className="h-4 w-4 sm:mr-2" />
+                  <span className="hidden sm:inline">Get Help</span>
+                  <span className="sm:hidden">Help</span>
                 </Link>
               </Button>
               <Dialog open={isSaveDialogOpen} onOpenChange={setIsSaveDialogOpen}>
                 <DialogTrigger asChild>
-                  <Button variant="outline" size="sm">
-                    <Save className="h-4 w-4 mr-2" />
-                    Save Build
+                  <Button variant="outline" size="sm" className="text-xs sm:text-sm">
+                    <Save className="h-4 w-4 sm:mr-2" />
+                    <span className="hidden sm:inline">Save Build</span>
+                    <span className="sm:hidden">Save</span>
                   </Button>
                 </DialogTrigger>
                 <DialogContent>
@@ -626,9 +608,9 @@ export default function BuilderPage() {
                 </DialogContent>
               </Dialog>
 
-              <Button variant="outline" size="sm">
-                <Share className="h-4 w-4 mr-2" />
-                Share
+              <Button variant="outline" size="sm" className="text-xs sm:text-sm">
+                <Share className="h-4 w-4 sm:mr-2" />
+                <span className="hidden sm:inline">Share</span>
               </Button>
             </div>
           </div>
@@ -636,14 +618,14 @@ export default function BuilderPage() {
       </div>
 
       <div className="container mx-auto px-4 py-6">
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <div className="grid lg:grid-cols-3 gap-6">
           {/* Component Selection */}
-          <div className="lg:col-span-2 order-1 lg:order-1">
+          <div className="lg:col-span-2">
             <Card className="border-slate-200 dark:border-slate-700">
               <CardHeader>
                 <div className="space-y-4">
-                  <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-                    <CardTitle>Select Components</CardTitle>
+                  <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+                    <CardTitle className="text-lg sm:text-xl">Select Components</CardTitle>
                     <div className="flex items-center gap-2 w-full sm:w-auto">
                       <Search className="h-4 w-4 text-slate-400" />
                       <Input
@@ -656,7 +638,7 @@ export default function BuilderPage() {
                   </div>
                   
                   {/* Performance Category Selector */}
-                  <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4">
+                  <div className="flex flex-col sm:flex-row sm:items-center gap-4">
                     <Label htmlFor="performance-category" className="text-sm font-medium whitespace-nowrap">
                       Performance Category:
                     </Label>
@@ -683,8 +665,8 @@ export default function BuilderPage() {
                   </div>
 
                   {/* Budget Controls */}
-                  <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4 p-4 bg-slate-50 dark:bg-slate-800 rounded-lg">
-                    <div className="flex items-center gap-2 w-full sm:w-auto">
+                  <div className="flex flex-col sm:flex-row sm:items-center gap-4 p-4 bg-slate-50 dark:bg-slate-800 rounded-lg">
+                    <div className="flex items-center gap-2">
                       <input
                         type="checkbox"
                         id="budget-enabled"
@@ -698,7 +680,7 @@ export default function BuilderPage() {
                     </div>
                     {budgetEnabled && (
                       <>
-                        <div className="flex items-center gap-2 w-full sm:w-auto">
+                        <div className="flex items-center gap-2">
                           <span className="text-sm text-slate-600 dark:text-slate-400">₱</span>
                           <Input
                             type="number"
@@ -710,16 +692,16 @@ export default function BuilderPage() {
                             step="1000"
                           />
                         </div>
-                        <div className="flex items-center gap-2 text-sm w-full sm:w-auto">
+                        <div className="flex flex-col sm:flex-row sm:items-center gap-2 text-sm">
                           <span className={`font-medium ${isOverBudget ? 'text-red-600' : 'text-slate-600 dark:text-slate-400'}`}>
                             Spent: {formatCurrency(totalPrice)}
                           </span>
-                          <span className="text-slate-400">|</span>
+                          <span className="hidden sm:inline text-slate-400">|</span>
                           <span className={`font-medium ${isOverBudget ? 'text-red-600' : 'text-green-600'}`}>
                             {isOverBudget ? `Over by ${formatCurrency(Math.abs(remainingBudget))}` : `Remaining: ${formatCurrency(remainingBudget)}`}
                           </span>
                         </div>
-                        <div className="flex-1">
+                        <div className="flex-1 w-full sm:w-auto">
                           <div className="w-full bg-slate-200 dark:bg-slate-700 rounded-full h-2">
                             <div
                               className={`h-2 rounded-full transition-all duration-300 ${
@@ -734,24 +716,26 @@ export default function BuilderPage() {
                   </div>
 
                   {/* Algorithm Buttons */}
-                  <div className="flex items-center gap-2 pt-2 border-t border-slate-200 dark:border-slate-700">
+                  <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 pt-2 border-t border-slate-200 dark:border-slate-700">
                     <Button
                       variant="outline"
                       size="sm"
                       onClick={handleGetCSPRecommendations}
                       disabled={!budgetEnabled || budget < 10000 || isLoadingCSP}
-                      className="flex items-center gap-2"
+                      className="flex items-center justify-center gap-2 w-full sm:w-auto"
                       title={budgetEnabled && budget < 10000 ? "CSP requires minimum budget of ₱10,000" : ""}
                     >
                       {isLoadingCSP ? (
                         <>
                           <Loader2 className="h-4 w-4 animate-spin" />
-                          Finding solutions... (may take up to 5 min)
+                          <span className="hidden sm:inline">Finding solutions... (may take up to 5 min)</span>
+                          <span className="sm:hidden">Finding solutions...</span>
                         </>
                       ) : (
                         <>
                           <CheckCircle2 className="h-4 w-4" />
-                          CSP Recommendation Checker
+                          <span className="hidden sm:inline">CSP Recommendation Checker</span>
+                          <span className="sm:hidden">CSP Checker</span>
                         </>
                       )}
                     </Button>
@@ -760,7 +744,7 @@ export default function BuilderPage() {
                       size="sm"
                       onClick={handleGetUpgradeRecommendations}
                       disabled={Object.values(selectedComponents).filter(Boolean).length === 0 || isLoadingUpgrades}
-                      className="flex items-center gap-2"
+                      className="flex items-center justify-center gap-2 w-full sm:w-auto"
                     >
                       {isLoadingUpgrades ? (
                         <>
@@ -770,7 +754,8 @@ export default function BuilderPage() {
                       ) : (
                         <>
                           <TrendingUp className="h-4 w-4" />
-                          Get Upgrade Suggestions
+                          <span className="hidden sm:inline">Get Upgrade Suggestions</span>
+                          <span className="sm:hidden">Upgrade Suggestions</span>
                         </>
                       )}
                     </Button>
@@ -784,11 +769,11 @@ export default function BuilderPage() {
               </CardHeader>
               <CardContent>
                 <Tabs value={activeCategory} onValueChange={(value) => setActiveCategory(value as ComponentCategory)}>
-                  <TabsList className="grid grid-cols-4 lg:grid-cols-8 mb-6 overflow-x-auto">
+                  <TabsList className="grid grid-cols-4 lg:grid-cols-8 mb-6 gap-1">
                     {Object.entries(categoryIcons).map(([category, Icon]) => (
-                      <TabsTrigger key={category} value={category} className="flex flex-col gap-1 p-2">
-                        <Icon className="h-4 w-4" />
-                        <span className="text-xs hidden sm:block">{categoryNames[category as ComponentCategory]}</span>
+                      <TabsTrigger key={category} value={category} className="flex flex-col gap-1 p-2 text-xs">
+                        <Icon className="h-4 w-4 sm:h-5 sm:w-5" />
+                        <span className="text-[10px] sm:text-xs hidden xs:block">{categoryNames[category as ComponentCategory]}</span>
                       </TabsTrigger>
                     ))}
                   </TabsList>
@@ -823,15 +808,15 @@ export default function BuilderPage() {
                                 }`}
                                 onClick={() => handleComponentSelect(component)}
                               >
-                                <CardContent className="p-4">
-                                  <div className="flex items-start gap-4">
+                                <CardContent className="p-3 sm:p-4">
+                                  <div className="flex items-start gap-3 sm:gap-4">
                                     <img
                                       src={component.image || "/placeholder.svg"}
                                       alt={component.name}
-                                      className="w-16 h-16 object-cover rounded-lg bg-slate-100 dark:bg-slate-800"
+                                      className="w-12 h-12 sm:w-16 sm:h-16 object-cover rounded-lg bg-slate-100 dark:bg-slate-800 flex-shrink-0"
                                     />
-                                    <div className="flex-1">
-                                      <div className="flex items-start justify-between">
+                                    <div className="flex-1 min-w-0">
+                                      <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-2">
                                         <div>
                                           <h3 className="font-semibold text-slate-900 dark:text-white">{component.name}</h3>
                                           <p className="text-sm text-slate-600 dark:text-slate-400 mb-2">{component.brand}</p>
@@ -859,8 +844,8 @@ export default function BuilderPage() {
                                           .filter(([key]) => key !== 'Compatibility') // Exclude Compatibility description
                                           .slice(0, 4)
                                           .map(([key, value]) => (
-                                            <div key={key}>
-                                              <span className="font-medium">{key}:</span> {value}
+                                            <div key={key} className="truncate">
+                                              <span className="font-medium">{key}:</span> <span className="truncate">{String(value)}</span>
                                             </div>
                                           ))}
                                       </div>
@@ -881,7 +866,7 @@ export default function BuilderPage() {
           </div>
 
           {/* Build Summary */}
-          <div className="space-y-6 order-2 lg:order-2">
+          <div className="space-y-6">
             <Card className="border-slate-200 dark:border-slate-700">
               <CardHeader className="pb-3">
                 <CardTitle className="text-lg flex items-center gap-2">
