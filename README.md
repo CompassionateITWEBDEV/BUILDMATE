@@ -34,36 +34,6 @@ Buildmate can be deployed to a DigitalOcean droplet running both the Next.js app
 
 For complete setup instructions, see [DIGITALOCEAN_DEPLOYMENT.md](./DIGITALOCEAN_DEPLOYMENT.md).
 
-## Python Backend (Required for CSP Recommendations)
-
-The Python backend is required for CSP (Constraint Satisfaction Problem) recommendations and upgrade suggestions.
-
-### Quick Start
-
-**Windows:**
-```bash
-start-python-backend.bat
-```
-
-**Linux/Mac:**
-```bash
-chmod +x start-python-backend.sh
-./start-python-backend.sh
-```
-
-**Manual Start:**
-```bash
-cd Algorithm/python-backend
-pip install -r requirements.txt
-python api.py
-```
-
-The backend will run on `http://localhost:5000`
-
-**Note:** Make sure `PYTHON_API_URL=http://localhost:5000` is set in your `.env.local` file.
-
-For more details, see [README_ALGORITHMS.md](./README_ALGORITHMS.md).
-
 ## Build your app
 
 Continue building your app on:
