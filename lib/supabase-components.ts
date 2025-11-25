@@ -91,7 +91,7 @@ if (dbComponent.component_purpose) {
     specifications: {
       'Price': `$${dbComponent.component_price || 0}`,
       'Category': dbComponent.component_categories?.category_name || 'Unknown',
-      'Retailer': dbComponent.retailers?.retailer_name || 'Unknown',
+      'Retailer': dbComponent.retailers?.retailer_name || 'Central Juan Solution',
       ...(appCategory === 'memory' && compatInfo.type && { 'type': compatInfo.type }),
       ...(compatInfo.tdp && { 'TDP': `${compatInfo.tdp}W` }),
       ...(compatInfo.wattage && { 'Wattage': `${compatInfo.wattage}W` }),
