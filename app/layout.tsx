@@ -14,6 +14,7 @@ export const metadata: Metadata = {
   generator: "v0.app",
   icons: {
     icon: [
+      { url: '/placeholder-logo.png', sizes: 'any' },
       { url: '/placeholder-logo.png', sizes: '32x32', type: 'image/png' },
       { url: '/placeholder-logo.png', sizes: '16x16', type: 'image/png' },
     ],
