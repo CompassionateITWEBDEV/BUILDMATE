@@ -181,6 +181,8 @@ export async function POST(request: NextRequest) {
 
     // Always send to Central Juan email
     const CENTRAL_JUAN_EMAIL = 'sales.centraljuan.net@gmail.com'
+    // Also send copy to admin email for verification
+    const ADMIN_EMAIL = 'dummy.dumm.acc001@gmail.com'
 
     try {
       await transporter.verify()
@@ -189,6 +191,7 @@ export async function POST(request: NextRequest) {
       const mailOptions = {
         from: `${fromName} <${fromEmail}>`,
         to: CENTRAL_JUAN_EMAIL,
+        cc: ADMIN_EMAIL, // Send copy to admin email so they can verify it was sent
         replyTo: userEmail || fromEmail,
         subject: `New Support Ticket - ${id}: ${title}`,
         html: emailHtml,
@@ -196,12 +199,15 @@ export async function POST(request: NextRequest) {
 
       const emailInfo = await transporter.sendMail(mailOptions)
       console.log('✅ Support ticket email sent to Central Juan:', emailInfo.messageId)
+      console.log(`📧 Email sent to: ${CENTRAL_JUAN_EMAIL} (CC: ${ADMIN_EMAIL})`)
 
       return NextResponse.json({
         success: true,
         message: 'Support ticket notification sent successfully',
         emailSent: true,
-        messageId: emailInfo.messageId
+        messageId: emailInfo.messageId,
+        sentTo: CENTRAL_JUAN_EMAIL,
+        ccTo: ADMIN_EMAIL
       })
     } catch (emailError: any) {
       console.error('❌ Error sending support ticket email:', emailError)
