@@ -40,7 +40,8 @@ import {
   MessageSquare,
   TrendingUp,
   Loader2,
-  CheckCircle2
+  CheckCircle2,
+  ShoppingCart
 } from "lucide-react"
 
 import { mockComponents, type Component, type ComponentCategory, type PerformanceCategory, performanceCategories } from "@/lib/mock-data"
@@ -115,7 +116,8 @@ export default function BuilderPage() {
   const [isLoadingUpgrades, setIsLoadingUpgrades] = useState(false)
   const [showUpgradeDialog, setShowUpgradeDialog] = useState(false)
   const [algorithmError, setAlgorithmError] = useState<string | null>(null)
-  const [buildDescription, setBuildDescription] = useState("");
+  const [buildDescription, setBuildDescription] = useState("")
+  const [showPurchasePreview, setShowPurchasePreview] = useState(false)
 
   const [cspPage, setCspPage] = useState(0)
   const SOLUTIONS_PER_PAGE = 2
@@ -501,6 +503,136 @@ export default function BuilderPage() {
                   <span className="sm:hidden">Help</span>
                 </Link>
               </Button>
+              <Dialog open={showPurchasePreview} onOpenChange={setShowPurchasePreview}>
+                <DialogTrigger asChild>
+                  <Button variant="outline" size="sm" className="text-xs sm:text-sm" disabled={totalPrice === 0}>
+                    <ShoppingCart className="h-4 w-4 sm:mr-2" />
+                    <span className="hidden sm:inline">Preview Purchase</span>
+                    <span className="sm:hidden">Purchase</span>
+                  </Button>
+                </DialogTrigger>
+                <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+                  <DialogHeader>
+                    <DialogTitle>Purchase Details Preview</DialogTitle>
+                    <DialogDescription>
+                      Review your build components and purchase information before saving
+                    </DialogDescription>
+                  </DialogHeader>
+                  <div className="space-y-6">
+                    {/* Build Summary */}
+                    <Card>
+                      <CardHeader>
+                        <CardTitle>{buildName}</CardTitle>
+                        <CardDescription>
+                          Build Type: {buildType === "1" ? "Academic" : buildType === "2" ? "Office" : buildType === "3" ? "Gaming" : "Custom"}
+                        </CardDescription>
+                      </CardHeader>
+                      <CardContent>
+                        <div className="space-y-4">
+                          {Object.entries(selectedComponents)
+                            .filter(([_, component]) => component !== null)
+                            .map(([category, component]) => {
+                              const categoryName = categoryNames[category as ComponentCategory]
+                              const Icon = categoryIcons[category as ComponentCategory]
+                              
+                              return (
+                                <div
+                                  key={category}
+                                  className="border rounded-lg p-4 space-y-3"
+                                >
+                                  <div className="flex items-start justify-between">
+                                    <div className="flex items-start gap-3 flex-1">
+                                      {Icon && (
+                                        <Icon className="h-5 w-5 text-slate-500 mt-1" />
+                                      )}
+                                      <div className="flex-1">
+                                        <h3 className="font-semibold text-slate-900 dark:text-white">
+                                          {component!.name}
+                                        </h3>
+                                        <Badge variant="secondary" className="mt-1">
+                                          {categoryName}
+                                        </Badge>
+                                        {component!.brand && (
+                                          <p className="text-sm text-slate-600 dark:text-slate-400 mt-1">
+                                            Brand: {component!.brand}
+                                          </p>
+                                        )}
+                                      </div>
+                                    </div>
+                                    <div className="text-right">
+                                      <p className="font-semibold text-slate-900 dark:text-white">
+                                        {formatCurrency(component!.price)}
+                                      </p>
+                                    </div>
+                                  </div>
+                                  
+                                  {component!.specifications && Object.keys(component!.specifications).length > 0 && (
+                                    <div className="pt-3 border-t">
+                                      <p className="text-xs font-medium text-slate-600 dark:text-slate-400 mb-2">Specifications:</p>
+                                      <div className="text-xs text-slate-500 dark:text-slate-400 space-y-1">
+                                        {Object.entries(component!.specifications)
+                                          .filter(([key]) => key !== 'Compatibility')
+                                          .slice(0, 3)
+                                          .map(([key, value]) => (
+                                            <p key={key}>
+                                              <span className="font-medium">{key}:</span> {String(value)}
+                                            </p>
+                                          ))}
+                                      </div>
+                                    </div>
+                                  )}
+                                </div>
+                              )
+                            })}
+                        </div>
+                      </CardContent>
+                    </Card>
+
+                    {/* Order Summary */}
+                    <Card>
+                      <CardHeader>
+                        <CardTitle>Order Summary</CardTitle>
+                      </CardHeader>
+                      <CardContent className="space-y-4">
+                        <div className="space-y-2">
+                          <div className="flex justify-between text-sm">
+                            <span className="text-slate-600 dark:text-slate-400">
+                              Components ({Object.values(selectedComponents).filter(Boolean).length})
+                            </span>
+                            <span className="text-slate-900 dark:text-white">
+                              {formatCurrency(totalPrice)}
+                            </span>
+                          </div>
+                          <div className="border-t pt-2">
+                            <div className="flex justify-between font-semibold text-lg">
+                              <span>Total</span>
+                              <span className="text-blue-600">
+                                {formatCurrency(totalPrice)}
+                              </span>
+                            </div>
+                          </div>
+                        </div>
+
+                        <div className="pt-4 border-t space-y-2">
+                          <Button
+                            onClick={() => {
+                              setShowPurchasePreview(false)
+                              setIsSaveDialogOpen(true)
+                            }}
+                            className="w-full"
+                          >
+                            <Save className="h-4 w-4 mr-2" />
+                            Save Build to Purchase
+                          </Button>
+                          <p className="text-xs text-slate-500 dark:text-slate-400 text-center">
+                            Save your build first to access full purchase features and send purchase details to retailers
+                          </p>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  </div>
+                </DialogContent>
+              </Dialog>
               <Dialog open={isSaveDialogOpen} onOpenChange={setIsSaveDialogOpen}>
                 <DialogTrigger asChild>
                   <Button variant="outline" size="sm" className="text-xs sm:text-sm">
