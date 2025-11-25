@@ -1,6 +1,9 @@
 "use client"
 
 import React, { useState, useEffect } from "react"
+
+// ISR configuration - revalidate every hour
+export const revalidate = 3600
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"

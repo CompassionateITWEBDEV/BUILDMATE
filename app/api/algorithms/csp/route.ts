@@ -2,6 +2,10 @@ import { NextRequest, NextResponse } from 'next/server'
 
 const PYTHON_API_URL = process.env.PYTHON_API_URL || 'http://localhost:5000'
 
+// API route configuration - dynamic for POST requests
+export const dynamic = 'force-dynamic'
+export const runtime = 'nodejs'
+
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json()
@@ -78,7 +82,14 @@ export async function POST(request: NextRequest) {
       }
 
       const data = await response.json()
-      return NextResponse.json(data, { status: 200 })
+      return NextResponse.json(data, { 
+        status: 200,
+        headers: {
+          'Cache-Control': 'no-store, no-cache, must-revalidate, proxy-revalidate',
+          'Pragma': 'no-cache',
+          'Expires': '0'
+        }
+      })
     } catch (fetchError: any) {
       clearTimeout(timeoutId)
       

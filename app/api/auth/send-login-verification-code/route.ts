@@ -2,6 +2,10 @@ import { NextRequest, NextResponse } from 'next/server'
 import { supabase } from '@/lib/supabase'
 import nodemailer from 'nodemailer'
 
+// API route configuration - dynamic for POST requests
+export const dynamic = 'force-dynamic'
+export const runtime = 'nodejs'
+
 // Store login verification codes temporarily (in-memory)
 // In production, use Redis or a database
 const loginVerificationCodes = new Map<string, { code: string; expiresAt: number; email: string }>()

@@ -2,6 +2,10 @@ import { NextRequest, NextResponse } from 'next/server'
 import { supabase } from '@/lib/supabase'
 import { userService } from '@/lib/database'
 
+// API route configuration - dynamic for authenticated requests
+export const dynamic = 'force-dynamic'
+export const runtime = 'nodejs'
+
 export async function GET(request: NextRequest) {
   try {
     // Check if Supabase is properly configured
@@ -49,7 +53,14 @@ export async function GET(request: NextRequest) {
           last_sign_in: user.last_sign_in_at,
           email_confirmed: user.email_confirmed_at !== null
         }
-      }, { status: 200 })
+      }, { 
+        status: 200,
+        headers: {
+          'Cache-Control': 'private, no-cache, no-store, must-revalidate',
+          'Pragma': 'no-cache',
+          'Expires': '0'
+        }
+      })
 
     } catch (dbError) {
       console.error('Database error:', dbError)

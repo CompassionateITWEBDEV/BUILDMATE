@@ -2,6 +2,10 @@ import { NextRequest, NextResponse } from 'next/server'
 import { supabase } from '@/lib/supabase'
 import nodemailer from 'nodemailer'
 
+// API route configuration - dynamic for POST requests
+export const dynamic = 'force-dynamic'
+export const runtime = 'nodejs'
+
 // Initialize nodemailer transporter with Supabase SMTP configuration
 const createTransporter = () => {
   const smtpHost = process.env.SMTP_HOST
