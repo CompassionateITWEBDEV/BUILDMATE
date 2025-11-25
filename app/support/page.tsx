@@ -150,9 +150,6 @@ export default function SupportPage() {
     e.preventDefault()
     setIsSubmitting(true)
 
-    // Simulate API call
-    await new Promise(resolve => setTimeout(resolve, 1000))
-
     // Generate ticket ID
     const ticketId = `TKT-${String(tickets.length + 1).padStart(3, '0')}`
     const today = new Date().toISOString().split('T')[0]
@@ -177,6 +174,33 @@ export default function SupportPage() {
     setTickets(prevTickets => [createdTicket, ...prevTickets])
     
     console.log("Creating support ticket:", createdTicket)
+
+    // Send email notification to sales.centraljuan.net@gmail.com
+    try {
+      const emailResponse = await fetch("/api/support/send-ticket-email", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          ...createdTicket,
+          userName: user?.user_name || null,
+          userEmail: user?.email || null,
+        }),
+      })
+
+      const emailData = await emailResponse.json()
+      if (emailResponse.ok) {
+        console.log("✅ Support ticket email sent successfully:", emailData)
+      } else {
+        console.error("⚠️ Failed to send support ticket email:", emailData.error)
+        // Don't fail the ticket creation if email fails
+      }
+    } catch (emailError) {
+      console.error("⚠️ Error sending support ticket email:", emailError)
+      // Don't fail the ticket creation if email fails
+    }
+
     setSubmitSuccess(true)
     setIsSubmitting(false)
 
