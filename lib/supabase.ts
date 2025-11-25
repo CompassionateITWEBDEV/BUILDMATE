@@ -20,9 +20,19 @@ if (!supabaseUrl || !supabaseAnonKey) {
 }
 
 // Create Supabase client with fallback for missing environment variables
+// Configure for better session persistence
 export const supabase = createClient(
   supabaseUrl || 'https://placeholder.supabase.co',
-  supabaseAnonKey || 'placeholder-key'
+  supabaseAnonKey || 'placeholder-key',
+  {
+    auth: {
+      persistSession: true,
+      autoRefreshToken: true,
+      detectSessionInUrl: true,
+      storage: typeof window !== 'undefined' ? window.localStorage : undefined,
+      storageKey: 'buildmate-supabase-auth-token',
+    }
+  }
 )
 
 // Database Types based on your schema

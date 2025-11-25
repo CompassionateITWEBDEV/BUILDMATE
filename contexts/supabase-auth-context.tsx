@@ -40,35 +40,69 @@ export function SupabaseAuthProvider({ children }: { children: ReactNode }) {
   // --------------------------
   useEffect(() => {
     const init = async () => {
-      const { data: { session } } = await supabase.auth.getSession();
+      try {
+        const { data: { session }, error } = await supabase.auth.getSession();
 
-      if (session) {
-        const supabaseUser = session.user;
-        const { data: profile } = await supabase
-          .from("users")
-          .select("*")
-          .eq("supabase_id", supabaseUser.id)
-          .single();
+        if (error) {
+          console.error('Error getting session:', error);
+          setIsLoading(false);
+          return;
+        }
 
-        if (profile) setUser(profile as CustomUser);
+        if (session) {
+          const supabaseUser = session.user;
+          const { data: profile, error: profileError } = await supabase
+            .from("users")
+            .select("*")
+            .eq("supabase_id", supabaseUser.id)
+            .single();
+
+          if (profileError) {
+            console.error('Error fetching profile:', profileError);
+          } else if (profile) {
+            setUser(profile as CustomUser);
+            console.log('✅ Session restored - user logged in:', profile.user_name);
+          }
+        } else {
+          console.log('ℹ️ No active session found');
+        }
+      } catch (err) {
+        console.error('Session initialization error:', err);
+      } finally {
+        setIsLoading(false);
       }
-
-      setIsLoading(false);
     };
 
     init();
 
-    const { data: listener } = supabase.auth.onAuthStateChange((_event, session) => {
-      if (session?.user) {
-        supabase
+    // Listen for auth state changes, but only clear user on explicit sign out
+    const { data: listener } = supabase.auth.onAuthStateChange(async (event, session) => {
+      console.log('Auth state changed:', event, session ? 'session exists' : 'no session');
+      
+      if (event === 'SIGNED_OUT') {
+        // Only clear user on explicit sign out
+        console.log('🔴 User signed out - clearing session');
+        setUser(null);
+        localStorage.removeItem('buildmate-remember-me');
+        localStorage.removeItem('buildmate-session-expires');
+      } else if (session?.user) {
+        // User signed in or session refreshed - load profile
+        const { data: profile } = await supabase
           .from("users")
           .select("*")
           .eq("supabase_id", session.user.id)
-          .single()
-          .then(({ data }) => setUser(data as CustomUser));
-      } else {
-        setUser(null);
+          .single();
+        
+        if (profile) {
+          setUser(profile as CustomUser);
+          console.log('✅ User session active:', profile.user_name);
+        }
+      } else if (event === 'TOKEN_REFRESHED') {
+        // Token refreshed - keep user logged in
+        console.log('🔄 Session token refreshed - keeping user logged in');
+        // Don't clear user on token refresh
       }
+      // Don't clear user on other events (like SIGNED_IN, USER_UPDATED, etc.)
     });
 
     return () => listener.subscription.unsubscribe();
@@ -352,12 +386,23 @@ export function SupabaseAuthProvider({ children }: { children: ReactNode }) {
   // --------------------------
   const logout = async () => {
     setIsLoading(true);
-    await supabase.auth.signOut();
-    setUser(null);
-    // Clear remember me preferences
-    localStorage.removeItem('buildmate-remember-me')
-    localStorage.removeItem('buildmate-session-expires')
-    setIsLoading(false);
+    try {
+      console.log('🔴 Logging out user...');
+      await supabase.auth.signOut();
+      setUser(null);
+      // Clear remember me preferences
+      localStorage.removeItem('buildmate-remember-me');
+      localStorage.removeItem('buildmate-session-expires');
+      console.log('✅ User logged out successfully');
+    } catch (error) {
+      console.error('Logout error:', error);
+      // Still clear local state even if signOut fails
+      setUser(null);
+      localStorage.removeItem('buildmate-remember-me');
+      localStorage.removeItem('buildmate-session-expires');
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   return (
