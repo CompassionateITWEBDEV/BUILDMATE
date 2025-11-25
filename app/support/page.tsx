@@ -111,7 +111,12 @@ export default function SupportPage() {
       const savedTickets = localStorage.getItem('buildmate-support-tickets')
       if (savedTickets) {
         try {
-          return JSON.parse(savedTickets)
+          const tickets = JSON.parse(savedTickets)
+          // Normalize replies: if it's an array, convert to count; if missing, set to 0
+          return tickets.map((ticket: any) => ({
+            ...ticket,
+            replies: Array.isArray(ticket.replies) ? ticket.replies.length : (typeof ticket.replies === 'number' ? ticket.replies : 0)
+          }))
         } catch (e) {
           console.error('Error loading tickets from localStorage:', e)
         }
@@ -543,7 +548,7 @@ export default function SupportPage() {
                                 </div>
                                 <div className="flex items-center gap-1">
                                   <MessageSquare className="h-3 w-3" />
-                                  {ticket.replies} replies
+                                  {Array.isArray(ticket.replies) ? ticket.replies.length : (typeof ticket.replies === 'number' ? ticket.replies : 0)} replies
                                 </div>
                               </div>
                             </div>
