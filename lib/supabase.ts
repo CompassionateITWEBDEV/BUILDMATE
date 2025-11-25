@@ -146,7 +146,9 @@ export interface Database {
         Row: {
           component_id: number
           component_name: string
+          component_brand: string | null
           component_price: number | null
+          component_description: string | null
           compatibility_information: string | null
           category_id: number
           retailer_id: number | null
@@ -154,7 +156,9 @@ export interface Database {
         Insert: {
           component_id?: number
           component_name: string
+          component_brand?: string | null
           component_price?: number | null
+          component_description?: string | null
           compatibility_information?: string | null
           category_id: number
           retailer_id?: number | null
@@ -162,7 +166,9 @@ export interface Database {
         Update: {
           component_id?: number
           component_name?: string
+          component_brand?: string | null
           component_price?: number | null
+          component_description?: string | null
           compatibility_information?: string | null
           category_id?: number
           retailer_id?: number | null
@@ -232,6 +238,38 @@ export interface Database {
           build_id?: number
           change_description?: string | null
           changed_at?: string
+        }
+      }
+      build_guides: {
+        Row: {
+          build_guide_id: number
+          build_id: number
+          build_guide_name: string
+          guide_steps: string
+          build_guide_thumbnail: string | null
+          description: string | null
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          build_guide_id?: number
+          build_id: number
+          build_guide_name: string
+          guide_steps: string
+          build_guide_thumbnail?: string | null
+          description?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          build_guide_id?: number
+          build_id?: number
+          build_guide_name?: string
+          guide_steps?: string
+          build_guide_thumbnail?: string | null
+          description?: string | null
+          created_at?: string
+          updated_at?: string
         }
       }
       build_comments: {

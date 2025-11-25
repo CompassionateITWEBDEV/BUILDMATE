@@ -12,9 +12,27 @@ Any changes you make to your deployed app will be automatically pushed to this r
 
 ## Deployment
 
+### Vercel Deployment
+
 Your project is live at:
 
 **[https://vercel.com/brians-projects-58f72137/v0-build-mate-pc-builder](https://vercel.com/brians-projects-58f72137/v0-build-mate-pc-builder)**
+
+### DigitalOcean Deployment
+
+Buildmate can be deployed to a DigitalOcean droplet running both the Next.js application and PostgreSQL database on a single droplet.
+
+**Quick Start:**
+1. See [DIGITALOCEAN_DEPLOYMENT.md](./DIGITALOCEAN_DEPLOYMENT.md) for detailed instructions
+2. Run the deployment script: `bash deploy.sh`
+3. Or use Docker Compose: `docker compose up -d`
+
+**Requirements:**
+- DigitalOcean droplet (2 vCPU, 4GB RAM minimum, 8GB recommended)
+- Ubuntu 22.04 (LTS)
+- Docker and Docker Compose installed
+
+For complete setup instructions, see [DIGITALOCEAN_DEPLOYMENT.md](./DIGITALOCEAN_DEPLOYMENT.md).
 
 ## Build your app
 

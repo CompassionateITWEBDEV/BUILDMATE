@@ -40,6 +40,7 @@ import {
   Plus,
   Search,
   LogIn,
+  Shield,
 } from "lucide-react"
 import { useAuth } from "@/contexts/supabase-auth-context"
 import { useLoading } from "@/contexts/loading-context"
@@ -76,6 +77,7 @@ export function Navigation({ variant = "default" }: NavigationProps) {
     { href: "/profile", label: "Profile", icon: User },
     { href: "/mybuilds", label: "My Builds", icon: Wrench },
     { href: "/likedbuilds", label: "Liked Builds", icon: Heart },
+    ...(user?.user_type === 'admin' ? [{ href: "/admin", label: "Admin Dashboard", icon: Shield }] : []),
   ]
 
   const handleLogout = async () => {

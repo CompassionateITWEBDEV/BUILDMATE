@@ -29,6 +29,7 @@ import { useAuth } from "@/contexts/supabase-auth-context"
 import { mockBuilds } from "@/lib/mock-data"
 import { supabase } from "@/lib/supabase"
 import { time } from "console"
+import { Navigation } from "@/components/navigation"
 
 export default function DashboardPage() {
   const { user, logout, isLoading } = useAuth()
@@ -366,21 +367,16 @@ export default function DashboardPage() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 dark:from-slate-900 dark:to-slate-800">
+      <Navigation variant="dashboard" />
       <div className="container mx-auto px-4 py-8">
         <div className="mb-8">
-          <div className="flex items-center justify-between mb-6">
+          <div className="mb-6">
             <div>
               <h2 className="text-3xl font-bold text-slate-900 dark:text-white mb-2">Dashboard</h2>
               <p className="text-slate-600 dark:text-slate-400">
                 Manage your builds, track your progress, and connect with the community.
               </p>
             </div>
-            <Button size="lg" asChild>
-              <Link href="/builder">
-                <Plus className="h-5 w-5 mr-2" />
-                New Build
-              </Link>
-            </Button>
           </div>
 
           {/* User Stats Cards */}

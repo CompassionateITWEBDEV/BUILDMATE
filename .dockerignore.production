@@ -1,0 +1,42 @@
+# Production .dockerignore
+# This file is used when building production Docker images
+
+# Development files
+*.md
+!README.md
+.git
+.gitignore
+.vscode
+.idea
+
+# Test files
+**/__tests__/**
+**/*.test.*
+**/*.spec.*
+
+# Documentation
+docs/
+*.md
+!README.md
+
+# Environment files (will be provided at runtime)
+.env
+.env.local
+.env.development
+.env.test
+
+# Build artifacts
+.next/cache
+node_modules/.cache
+
+# Logs
+*.log
+npm-debug.log*
+pnpm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# OS files
+.DS_Store
+Thumbs.db
+

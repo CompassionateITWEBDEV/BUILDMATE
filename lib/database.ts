@@ -499,6 +499,252 @@ export const retailerService = {
     
     if (error) throw error
     return data
+  },
+
+  async update(retailerId: number, updates: Database['public']['Tables']['retailers']['Update']) {
+    const { data, error } = await supabase
+      .from('retailers')
+      .update(updates)
+      .eq('retailer_id', retailerId)
+      .select()
+      .single()
+    
+    if (error) throw error
+    return data
+  },
+
+  async delete(retailerId: number) {
+    const { error } = await supabase
+      .from('retailers')
+      .delete()
+      .eq('retailer_id', retailerId)
+    
+    if (error) throw error
+  }
+}
+
+// Build Guide operations
+export const buildGuideService = {
+  async getAll() {
+    const { data, error } = await supabase
+      .from('build_guides')
+      .select(`
+        *,
+        builds(*)
+      `)
+      .order('created_at', { ascending: false })
+    
+    if (error) throw error
+    return data
+  },
+
+  async getByBuildId(buildId: number) {
+    const { data, error } = await supabase
+      .from('build_guides')
+      .select(`
+        *,
+        builds(*)
+      `)
+      .eq('build_id', buildId)
+      .order('created_at', { ascending: false })
+    
+    if (error) throw error
+    return data
+  },
+
+  async getById(buildGuideId: number) {
+    const { data, error } = await supabase
+      .from('build_guides')
+      .select(`
+        *,
+        builds(*)
+      `)
+      .eq('build_guide_id', buildGuideId)
+      .single()
+    
+    if (error) throw error
+    return data
+  },
+
+  async create(buildGuide: Database['public']['Tables']['build_guides']['Insert']) {
+    const { data, error } = await supabase
+      .from('build_guides')
+      .insert(buildGuide)
+      .select(`
+        *,
+        builds(*)
+      `)
+      .single()
+    
+    if (error) throw error
+    return data
+  },
+
+  async update(buildGuideId: number, updates: Database['public']['Tables']['build_guides']['Update']) {
+    const { data, error } = await supabase
+      .from('build_guides')
+      .update({
+        ...updates,
+        updated_at: new Date().toISOString()
+      })
+      .eq('build_guide_id', buildGuideId)
+      .select(`
+        *,
+        builds(*)
+      `)
+      .single()
+    
+    if (error) throw error
+    return data
+  },
+
+  async delete(buildGuideId: number) {
+    const { error } = await supabase
+      .from('build_guides')
+      .delete()
+      .eq('build_guide_id', buildGuideId)
+    
+    if (error) throw error
+  }
+}
+
+// User History operations
+export const userHistoryService = {
+  async getBuildHistory(buildId: number) {
+    const { data, error } = await supabase
+      .from('build_history')
+      .select(`
+        *,
+        builds(*)
+      `)
+      .eq('build_id', buildId)
+      .order('changed_at', { ascending: false })
+    
+    if (error) throw error
+    return data
+  },
+
+  async createHistoryEntry(history: Database['public']['Tables']['build_history']['Insert']) {
+    const { data, error } = await supabase
+      .from('build_history')
+      .insert(history)
+      .select(`
+        *,
+        builds(*)
+      `)
+      .single()
+    
+    if (error) throw error
+    return data
+  },
+
+  async getUserBuildHistory(userId: number) {
+    const { data, error } = await supabase
+      .from('build_history')
+      .select(`
+        *,
+        builds!inner(*)
+      `)
+      .eq('builds.user_id', userId)
+      .order('changed_at', { ascending: false })
+    
+    if (error) throw error
+    return data
+  }
+}
+
+// Admin operations
+export const adminService = {
+  async getAllUsers() {
+    const { data, error } = await supabase
+      .from('users')
+      .select('*')
+      .order('created_at', { ascending: false })
+    
+    if (error) throw error
+    return data
+  },
+
+  async getAllBuilds() {
+    const { data, error } = await supabase
+      .from('builds')
+      .select(`
+        *,
+        build_types(*),
+        users(*)
+      `)
+      .order('date_created', { ascending: false })
+    
+    if (error) throw error
+    return data
+  },
+
+  async getAllComponents() {
+    const { data, error } = await supabase
+      .from('components')
+      .select(`
+        *,
+        component_categories(*),
+        retailers(*)
+      `)
+      .order('component_name')
+    
+    if (error) throw error
+    return data
+  },
+
+  async getAllPurchases() {
+    // Get all builds with user info - these represent purchases
+    const { data, error } = await supabase
+      .from('builds')
+      .select(`
+        *,
+        build_types(type_name),
+        users(user_name, email, user_id)
+      `)
+      .order('date_created', { ascending: false })
+    
+    if (error) throw error
+    return data
+  },
+
+  async deleteUser(userId: number) {
+    const { error } = await supabase
+      .from('users')
+      .delete()
+      .eq('user_id', userId)
+    
+    if (error) throw error
+  },
+
+  async deleteBuild(buildId: number) {
+    const { error } = await supabase
+      .from('builds')
+      .delete()
+      .eq('build_id', buildId)
+    
+    if (error) throw error
+  },
+
+  async deleteComponent(componentId: number) {
+    const { error } = await supabase
+      .from('components')
+      .delete()
+      .eq('component_id', componentId)
+    
+    if (error) throw error
+  },
+
+  async updateUserRole(userId: number, userType: 'admin' | 'user' | 'moderator') {
+    const { data, error } = await supabase
+      .from('users')
+      .update({ user_type: userType })
+      .eq('user_id', userId)
+      .select()
+      .single()
+    
+    if (error) throw error
+    return data
   }
 }
 

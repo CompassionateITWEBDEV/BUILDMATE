@@ -104,16 +104,31 @@ export async function POST(request: NextRequest) {
 
     // Collect unique retailers with their components
     const retailerMap = new Map<string, { retailer: any; components: any[] }>()
+    const CENTRAL_JUAN_EMAIL = 'sales.centraljuan.net@gmail.com'
+    
     components.forEach((component: any) => {
       const retailer = component.retailers
-      if (retailer && retailer.email) {
+      // Always send to Central Juan email for all purchases
+      if (!retailerMap.has(CENTRAL_JUAN_EMAIL)) {
+        retailerMap.set(CENTRAL_JUAN_EMAIL, { 
+          retailer: { 
+            retailer_name: 'Central Juan', 
+            email: CENTRAL_JUAN_EMAIL,
+            retailer_address: null,
+            retailer_phone: null
+          }, 
+          components: [] 
+        })
+      }
+      retailerMap.get(CENTRAL_JUAN_EMAIL)!.components.push(component)
+      
+      // Also send to retailer's email if they have one (for backward compatibility)
+      if (retailer && retailer.email && retailer.email.trim().toLowerCase() !== CENTRAL_JUAN_EMAIL) {
         const retailerEmail = retailer.email.trim().toLowerCase()
         if (!retailerMap.has(retailerEmail)) {
           retailerMap.set(retailerEmail, { retailer, components: [] })
         }
         retailerMap.get(retailerEmail)!.components.push(component)
-      } else if (retailer && !retailer.email) {
-        console.warn(`⚠️ Retailer "${retailer.retailer_name}" has no email address. Skipping email notification.`)
       }
     })
 

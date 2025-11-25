@@ -11,6 +11,7 @@ CREATE SEQUENCE IF NOT EXISTS retailers_retailer_id_seq;
 CREATE SEQUENCE IF NOT EXISTS build_components_build_component_id_seq;
 CREATE SEQUENCE IF NOT EXISTS build_history_bhistory_id_seq;
 CREATE SEQUENCE IF NOT EXISTS comments_comment_id_seq;
+CREATE SEQUENCE IF NOT EXISTS build_guides_build_guide_id_seq;
 
 -- Create tables
 CREATE TABLE IF NOT EXISTS public.users (
@@ -51,7 +52,9 @@ CREATE TABLE IF NOT EXISTS public.retailers (
 CREATE TABLE IF NOT EXISTS public.components (
   component_id integer NOT NULL DEFAULT nextval('components_component_id_seq'::regclass),
   component_name character varying NOT NULL,
+  component_brand character varying(255),
   component_price numeric,
+  component_description text,
   compatibility_information text,
   category_id integer NOT NULL,
   retailer_id integer,
@@ -100,6 +103,19 @@ CREATE TABLE IF NOT EXISTS public.comments (
   CONSTRAINT fk_comment_user FOREIGN KEY (user_id) REFERENCES public.users(user_id)
 );
 
+CREATE TABLE IF NOT EXISTS public.build_guides (
+  build_guide_id integer NOT NULL DEFAULT nextval('build_guides_build_guide_id_seq'::regclass),
+  build_id integer NOT NULL,
+  build_guide_name character varying(255) NOT NULL,
+  guide_steps text NOT NULL,
+  build_guide_thumbnail text,
+  description character varying(255),
+  created_at timestamp without time zone DEFAULT now(),
+  updated_at timestamp without time zone DEFAULT now(),
+  CONSTRAINT build_guides_pkey PRIMARY KEY (build_guide_id),
+  CONSTRAINT fk_build_guide_build FOREIGN KEY (build_id) REFERENCES public.builds(build_id) ON DELETE CASCADE
+);
+
 -- Insert initial data
 INSERT INTO public.component_categories (category_name, description) VALUES
 ('CPU', 'Central Processing Unit'),
@@ -127,6 +143,7 @@ ALTER TABLE public.builds ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.build_components ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.build_history ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.comments ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.build_guides ENABLE ROW LEVEL SECURITY;
 
 -- Create RLS policies
 -- Users can only see and modify their own data
@@ -217,6 +234,65 @@ CREATE POLICY "Users can create comments on own builds" ON public.comments
       JOIN public.builds ON builds.build_id = build_history.build_id
       WHERE build_history.bhistory_id = comments.bhistory_id 
       AND auth.uid()::text = builds.user_id::text
+    )
+  );
+
+-- Build guides policies
+CREATE POLICY "Public can view build guides" ON public.build_guides
+  FOR SELECT USING (true);
+
+CREATE POLICY "Users can create build guides for own builds" ON public.build_guides
+  FOR INSERT WITH CHECK (
+    EXISTS (
+      SELECT 1 FROM public.builds 
+      WHERE builds.build_id = build_guides.build_id 
+      AND auth.uid()::text = builds.user_id::text
+    )
+  );
+
+CREATE POLICY "Users can update own build guides" ON public.build_guides
+  FOR UPDATE USING (
+    EXISTS (
+      SELECT 1 FROM public.builds 
+      WHERE builds.build_id = build_guides.build_id 
+      AND auth.uid()::text = builds.user_id::text
+    )
+  );
+
+CREATE POLICY "Users can delete own build guides" ON public.build_guides
+  FOR DELETE USING (
+    EXISTS (
+      SELECT 1 FROM public.builds 
+      WHERE builds.build_id = build_guides.build_id 
+      AND auth.uid()::text = builds.user_id::text
+    )
+  );
+
+-- Admin policies (allow admins to manage all data)
+CREATE POLICY "Admins can manage all users" ON public.users
+  FOR ALL USING (
+    EXISTS (
+      SELECT 1 FROM public.users 
+      WHERE users.user_id::text = auth.uid()::text 
+      AND users.user_type = 'admin'
+    )
+  );
+
+CREATE POLICY "Admins can manage all builds" ON public.builds
+  FOR ALL USING (
+    EXISTS (
+      SELECT 1 FROM public.users 
+      WHERE users.user_id::text = auth.uid()::text 
+      AND users.user_type = 'admin'
+    )
+  );
+
+CREATE POLICY "Admins can manage all components" ON public.components
+  FOR ALL USING (
+    EXISTS (
+      SELECT 1 FROM public.users 
+      WHERE users.user_id::text = auth.uid()::text 
+      AND users.user_type = 'admin'
     )
   );
 
