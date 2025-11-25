@@ -19,7 +19,9 @@ interface CustomUser {
 
 interface AuthContextType {
   user: CustomUser | null;
-  login: (email: string, password: string, rememberMe?: boolean) => Promise<{ success: boolean; error?: string }>;
+  login: (email: string, password: string, rememberMe?: boolean, skipVerification?: boolean) => Promise<{ success: boolean; error?: string; requiresVerification?: boolean; userId?: number }>;
+  sendLoginVerificationCode: (email: string, userId: number) => Promise<{ success: boolean; error?: string }>;
+  verifyLoginCode: (email: string, code: string) => Promise<{ success: boolean; error?: string }>;
   register: (username: string, email: string, password: string, verificationToken: string) => Promise<{ success: boolean; error?: string }>;
   sendVerificationCode: (email: string) => Promise<{ success: boolean; error?: string }>;
   verifyCode: (email: string, code: string) => Promise<{ success: boolean; token?: string; error?: string }>;
@@ -217,9 +219,79 @@ export function SupabaseAuthProvider({ children }: { children: ReactNode }) {
 
 
   // --------------------------
+  // SEND LOGIN VERIFICATION CODE
+  // --------------------------
+  const sendLoginVerificationCode = async (email: string, userId: number) => {
+    try {
+      const response = await fetch('/api/auth/send-login-verification-code', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, userId }),
+      })
+
+      if (!response.ok) {
+        const errorText = await response.text()
+        try {
+          const errorData = JSON.parse(errorText)
+          return { success: false, error: errorData.error || 'Failed to send verification code' }
+        } catch {
+          return { success: false, error: errorText || `Server error: ${response.status}` }
+        }
+      }
+
+      const contentType = response.headers.get('content-type')
+      if (!contentType || !contentType.includes('application/json')) {
+        const text = await response.text()
+        return { success: false, error: text || 'Invalid response from server' }
+      }
+
+      const data = await response.json()
+      return data
+    } catch (err: any) {
+      console.error('Send login verification code error:', err)
+      return { success: false, error: err.message || 'Failed to send verification code. Please try again.' }
+    }
+  }
+
+  // --------------------------
+  // VERIFY LOGIN CODE
+  // --------------------------
+  const verifyLoginCode = async (email: string, code: string) => {
+    try {
+      const response = await fetch('/api/auth/verify-login-code', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, code }),
+      })
+
+      if (!response.ok) {
+        const errorText = await response.text()
+        try {
+          const errorData = JSON.parse(errorText)
+          return { success: false, error: errorData.error || 'Invalid verification code' }
+        } catch {
+          return { success: false, error: errorText || `Server error: ${response.status}` }
+        }
+      }
+
+      const contentType = response.headers.get('content-type')
+      if (!contentType || !contentType.includes('application/json')) {
+        const text = await response.text()
+        return { success: false, error: text || 'Invalid response from server' }
+      }
+
+      const data = await response.json()
+      return data
+    } catch (err: any) {
+      console.error('Verify login code error:', err)
+      return { success: false, error: err.message || 'Failed to verify code. Please try again.' }
+    }
+  }
+
+  // --------------------------
   // LOGIN USER
   // --------------------------
-  const login = async (email: string, password: string, rememberMe: boolean = false) => {
+  const login = async (email: string, password: string, rememberMe: boolean = false, skipVerification: boolean = false) => {
     setIsLoading(true);
 
     try {
@@ -240,20 +312,30 @@ export function SupabaseAuthProvider({ children }: { children: ReactNode }) {
 
       if (!profile) return { success: false, error: "Profile not found" };
 
+      // If verification is required and not skipped, sign out and require verification
+      if (!skipVerification) {
+        // Sign out to prevent access until verification
+        await supabase.auth.signOut()
+        
+        return { 
+          success: true, 
+          requiresVerification: true,
+          userId: profile.user_id
+        };
+      }
+
+      // Verification skipped or completed - set user and complete login
       setUser(profile as CustomUser);
 
       // Store remember me preference in localStorage
       if (rememberMe) {
         localStorage.setItem('buildmate-remember-me', 'true')
-        // Store session expiration preference (30 days for remember me)
         const expirationDate = new Date()
         expirationDate.setDate(expirationDate.getDate() + 30)
         localStorage.setItem('buildmate-session-expires', expirationDate.toISOString())
         console.log('✅ Remember me enabled - session will persist for 30 days')
       } else {
         localStorage.setItem('buildmate-remember-me', 'false')
-        // For non-remember me, we'll check session on next page load
-        // Supabase handles session storage automatically
         localStorage.removeItem('buildmate-session-expires')
         console.log('✅ Remember me disabled - session will expire when browser closes')
       }
@@ -279,7 +361,17 @@ export function SupabaseAuthProvider({ children }: { children: ReactNode }) {
   };
 
   return (
-    <AuthContext.Provider value={{ user, login, register, sendVerificationCode, verifyCode, logout, isLoading }}>
+    <AuthContext.Provider value={{ 
+      user, 
+      login, 
+      sendLoginVerificationCode, 
+      verifyLoginCode, 
+      register, 
+      sendVerificationCode, 
+      verifyCode, 
+      logout, 
+      isLoading 
+    }}>
       {children}
     </AuthContext.Provider>
   );

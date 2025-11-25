@@ -18,8 +18,13 @@ export default function LoginPage() {
   const [showPassword, setShowPassword] = useState(false)
   const [rememberMe, setRememberMe] = useState(false)
   const [error, setError] = useState("")
+  const [step, setStep] = useState<'login' | 'verify'>('login')
+  const [verificationCode, setVerificationCode] = useState("")
+  const [userId, setUserId] = useState<number | null>(null)
+  const [isSendingCode, setIsSendingCode] = useState(false)
+  const [isVerifying, setIsVerifying] = useState(false)
   const router = useRouter()
-  const { login, isLoading } = useAuth()
+  const { login, sendLoginVerificationCode, verifyLoginCode, isLoading } = useAuth()
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -47,16 +52,81 @@ export default function LoginPage() {
     try {
       const result = await login(email, password, rememberMe)
       
-      if (result.success) {
-        console.log("Login successful, redirecting to dashboard...")
+      if (result.success && result.requiresVerification && result.userId) {
+        // Credentials are valid, now send verification code
+        setUserId(result.userId)
+        setIsSendingCode(true)
+        
+        const codeResult = await sendLoginVerificationCode(email, result.userId)
+        setIsSendingCode(false)
+        
+        if (codeResult.success) {
+          setStep('verify')
+        } else {
+          setError(codeResult.error || "Failed to send verification code")
+        }
+      } else if (result.success) {
+        // No verification needed (shouldn't happen with new flow)
         router.push("/dashboard")
       } else {
-        // Display the specific error message from the login function
         setError(result.error || "Invalid email or password. Please try again.")
       }
     } catch (err: any) {
       console.error("Login error:", err)
       setError(err.message || "Login failed. Please try again.")
+    }
+  }
+
+  const handleVerifyCode = async (e: React.FormEvent) => {
+    e.preventDefault()
+    setError("")
+
+    if (!verificationCode || verificationCode.length !== 6) {
+      setError("Please enter the 6-digit verification code")
+      return
+    }
+
+    setIsVerifying(true)
+    try {
+      const verifyResult = await verifyLoginCode(email, verificationCode)
+      
+      if (verifyResult.success) {
+        // Verification successful, now complete login (skip verification this time)
+        const loginResult = await login(email, password, rememberMe, true)
+        
+        if (loginResult.success) {
+          router.push("/dashboard")
+        } else {
+          setError(loginResult.error || "Login verification successful but failed to complete login. Please try again.")
+        }
+      } else {
+        setError(verifyResult.error || "Invalid verification code")
+      }
+    } catch (err: any) {
+      console.error("Verify code error:", err)
+      setError(err.message || "Failed to verify code")
+    } finally {
+      setIsVerifying(false)
+    }
+  }
+
+  const handleResendCode = async () => {
+    if (!userId) return
+    
+    setError("")
+    setIsSendingCode(true)
+    
+    try {
+      const codeResult = await sendLoginVerificationCode(email, userId)
+      if (codeResult.success) {
+        setError("") // Clear any previous errors
+      } else {
+        setError(codeResult.error || "Failed to resend verification code")
+      }
+    } catch (err: any) {
+      setError(err.message || "Failed to resend code")
+    } finally {
+      setIsSendingCode(false)
     }
   }
 
@@ -78,13 +148,19 @@ export default function LoginPage() {
             <p className="text-slate-600 dark:text-slate-400">Sign in to continue building your dream PC</p>
           </div>
 
-        {/* Login Form */}
+        {/* Login Form or Verification Form */}
         <Card className="border-slate-200 dark:border-slate-700">
           <CardHeader>
-            <CardTitle>Sign In</CardTitle>
-            <CardDescription>Enter your credentials to access your account</CardDescription>
+            <CardTitle>{step === 'login' ? 'Sign In' : 'Verify Email'}</CardTitle>
+            <CardDescription>
+              {step === 'login' 
+                ? 'Enter your credentials to access your account'
+                : `Enter the 6-digit verification code sent to ${email}`
+              }
+            </CardDescription>
           </CardHeader>
           <CardContent>
+            {step === 'login' ? (
             <form onSubmit={handleSubmit} className="space-y-4">
               {error && (
                 <Alert variant="destructive">
@@ -149,17 +225,93 @@ export default function LoginPage() {
                 </Link>
               </div>
 
-              <Button type="submit" className="w-full" disabled={isLoading}>
-                {isLoading ? (
+              <Button type="submit" className="w-full" disabled={isLoading || isSendingCode}>
+                {isLoading || isSendingCode ? (
                   <>
                     <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    Signing in...
+                    {isSendingCode ? 'Sending verification code...' : 'Signing in...'}
                   </>
                 ) : (
                   "Sign In"
                 )}
               </Button>
             </form>
+            ) : (
+            <form onSubmit={handleVerifyCode} className="space-y-4">
+              {error && (
+                <Alert variant="destructive">
+                  <AlertDescription>{error}</AlertDescription>
+                </Alert>
+              )}
+
+              <div className="space-y-2">
+                <Label htmlFor="verificationCode">Verification Code</Label>
+                <Input
+                  id="verificationCode"
+                  type="text"
+                  placeholder="Enter 6-digit code"
+                  value={verificationCode}
+                  onChange={(e) => {
+                    const value = e.target.value.replace(/\D/g, '').slice(0, 6)
+                    setVerificationCode(value)
+                  }}
+                  maxLength={6}
+                  className="text-center text-2xl tracking-widest font-mono"
+                  required
+                />
+                <p className="text-xs text-slate-500 text-center">
+                  Check your email for the verification code
+                </p>
+              </div>
+
+              <Button type="submit" className="w-full" disabled={isVerifying || isLoading}>
+                {isVerifying || isLoading ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Verifying...
+                  </>
+                ) : (
+                  "Verify & Sign In"
+                )}
+              </Button>
+
+              <div className="text-center">
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  onClick={handleResendCode}
+                  disabled={isSendingCode}
+                  className="text-sm"
+                >
+                  {isSendingCode ? (
+                    <>
+                      <Loader2 className="mr-2 h-3 w-3 animate-spin" />
+                      Sending...
+                    </>
+                  ) : (
+                    "Resend Code"
+                  )}
+                </Button>
+              </div>
+
+              <div className="text-center">
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => {
+                    setStep('login')
+                    setVerificationCode("")
+                    setError("")
+                  }}
+                  className="text-sm"
+                >
+                  ← Back to Login
+                </Button>
+              </div>
+            </form>
+            )}
 
             <div className="mt-6 text-center">
               <p className="text-sm text-slate-600 dark:text-slate-400">
