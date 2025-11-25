@@ -14,14 +14,14 @@ export const metadata: Metadata = {
   generator: "v0.app",
   icons: {
     icon: [
-      { url: '/placeholder-logo.png', sizes: 'any' },
-      { url: '/placeholder-logo.png', sizes: '32x32', type: 'image/png' },
-      { url: '/placeholder-logo.png', sizes: '16x16', type: 'image/png' },
+      { url: '/buildmate-logo.svg', sizes: 'any', type: 'image/svg+xml' },
+      { url: '/icon.png', sizes: 'any', type: 'image/png' },
+      { url: '/favicon.ico', sizes: 'any', type: 'image/x-icon' },
     ],
     apple: [
-      { url: '/placeholder-logo.png', sizes: '180x180', type: 'image/png' },
+      { url: '/icon.png', sizes: '180x180', type: 'image/png' },
     ],
-    shortcut: '/placeholder-logo.png',
+    shortcut: '/buildmate-logo.svg',
   },
   openGraph: {
     title: "BuildMate - PC Builder & Compatibility Checker",
@@ -29,9 +29,9 @@ export const metadata: Metadata = {
     type: "website",
     images: [
       {
-        url: '/placeholder-logo.png',
-        width: 1200,
-        height: 630,
+        url: '/buildmate-logo.svg',
+        width: 512,
+        height: 512,
         alt: 'BuildMate Logo',
       },
     ],
@@ -40,7 +40,7 @@ export const metadata: Metadata = {
     card: 'summary_large_image',
     title: "BuildMate - PC Builder & Compatibility Checker",
     description: "Build your perfect PC with advanced compatibility checking and expert recommendations",
-    images: ['/placeholder-logo.png'],
+    images: ['/buildmate-logo.svg'],
   },
 }
 
