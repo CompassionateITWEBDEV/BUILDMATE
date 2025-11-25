@@ -12,6 +12,35 @@ export const metadata: Metadata = {
   title: "BuildMate - PC Builder & Compatibility Checker",
   description: "Build your perfect PC with advanced compatibility checking and expert recommendations",
   generator: "v0.app",
+  icons: {
+    icon: [
+      { url: '/placeholder-logo.png', sizes: '32x32', type: 'image/png' },
+      { url: '/placeholder-logo.png', sizes: '16x16', type: 'image/png' },
+    ],
+    apple: [
+      { url: '/placeholder-logo.png', sizes: '180x180', type: 'image/png' },
+    ],
+    shortcut: '/placeholder-logo.png',
+  },
+  openGraph: {
+    title: "BuildMate - PC Builder & Compatibility Checker",
+    description: "Build your perfect PC with advanced compatibility checking and expert recommendations",
+    type: "website",
+    images: [
+      {
+        url: '/placeholder-logo.png',
+        width: 1200,
+        height: 630,
+        alt: 'BuildMate Logo',
+      },
+    ],
+  },
+  twitter: {
+    card: 'summary_large_image',
+    title: "BuildMate - PC Builder & Compatibility Checker",
+    description: "Build your perfect PC with advanced compatibility checking and expert recommendations",
+    images: ['/placeholder-logo.png'],
+  },
 }
 
 export default function RootLayout({
