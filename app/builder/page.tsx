@@ -836,6 +836,7 @@ export default function BuilderPage() {
                                       {/* Component specifications */}
                                       <div className="grid grid-cols-2 gap-2 text-xs text-slate-600 dark:text-slate-400">
                                         {Object.entries(component.specifications || {})
+                                          .filter(([key]) => key !== 'Compatibility') // Exclude Compatibility description
                                           .slice(0, 4)
                                           .map(([key, value]) => (
                                             <div key={key}>
