@@ -608,6 +608,35 @@ export const buildGuideService = {
   }
 }
 
+// Price History operations
+export const priceHistoryService = {
+  async getByComponentId(componentId: number) {
+    const { data, error } = await supabase
+      .from('price_history')
+      .select('*')
+      .eq('component_id', componentId)
+      .order('changed_at', { ascending: false })
+      .limit(50)
+    
+    if (error) throw error
+    return data
+  },
+
+  async getAll() {
+    const { data, error } = await supabase
+      .from('price_history')
+      .select(`
+        *,
+        components(*)
+      `)
+      .order('changed_at', { ascending: false })
+      .limit(100)
+    
+    if (error) throw error
+    return data
+  }
+}
+
 // User History operations
 export const userHistoryService = {
   async getBuildHistory(buildId: number) {

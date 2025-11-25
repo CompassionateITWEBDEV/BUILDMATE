@@ -77,6 +77,7 @@ export default function AdminPage() {
   const [builds, setBuilds] = useState<Build[]>([])
   const [components, setComponents] = useState<Component[]>([])
   const [purchases, setPurchases] = useState<any[]>([])
+  const [userActivity, setUserActivity] = useState<UserActivity[]>([])
   const [loading, setLoading] = useState(true)
   const [searchTerm, setSearchTerm] = useState("")
   const [selectedStatus, setSelectedStatus] = useState<string>("all")
@@ -104,16 +105,18 @@ export default function AdminPage() {
   const loadData = async () => {
     try {
       setLoading(true)
-      const [usersData, buildsData, componentsData, purchasesData] = await Promise.all([
+      const [usersData, buildsData, componentsData, purchasesData, activityData] = await Promise.all([
         adminService.getAllUsers(),
         adminService.getAllBuilds(),
         adminService.getAllComponents(),
-        adminService.getAllPurchases()
+        adminService.getAllPurchases(),
+        userActivityService.getAllActivity(100)
       ])
       setUsers(usersData as User[])
       setBuilds(buildsData as Build[])
       setComponents(componentsData as Component[])
       setPurchases(purchasesData || [])
+      setUserActivity(activityData || [])
     } catch (error) {
       console.error("Error loading admin data:", error)
     } finally {
@@ -202,12 +205,13 @@ export default function AdminPage() {
         </div>
 
         <Tabs value={activeTab} onValueChange={setActiveTab}>
-          <TabsList className="grid w-full grid-cols-5">
+          <TabsList className="grid w-full grid-cols-6">
             <TabsTrigger value="overview">Overview</TabsTrigger>
             <TabsTrigger value="users">Users</TabsTrigger>
             <TabsTrigger value="builds">Builds</TabsTrigger>
             <TabsTrigger value="components">Components</TabsTrigger>
             <TabsTrigger value="purchases">Purchases</TabsTrigger>
+            <TabsTrigger value="activity">Activity</TabsTrigger>
           </TabsList>
 
           <TabsContent value="overview" className="space-y-4">
@@ -534,6 +538,82 @@ export default function AdminPage() {
                     ))
                   )}
                 </div>
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          <TabsContent value="activity" className="space-y-4">
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Activity className="h-5 w-5" />
+                  User Activity Monitoring
+                </CardTitle>
+                <CardDescription>Monitor all user activities across the platform</CardDescription>
+              </CardHeader>
+              <CardContent>
+                {loading ? (
+                  <div className="text-center py-8">Loading activity...</div>
+                ) : (
+                  <div className="space-y-4">
+                    <div className="flex gap-4">
+                      <Select value={selectedStatus} onValueChange={setSelectedStatus}>
+                        <SelectTrigger className="w-48">
+                          <SelectValue placeholder="Filter by type" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="all">All Activities</SelectItem>
+                          <SelectItem value="login">Logins</SelectItem>
+                          <SelectItem value="logout">Logouts</SelectItem>
+                          <SelectItem value="build_created">Build Created</SelectItem>
+                          <SelectItem value="build_updated">Build Updated</SelectItem>
+                          <SelectItem value="component_viewed">Component Viewed</SelectItem>
+                          <SelectItem value="guide_viewed">Guide Viewed</SelectItem>
+                          <SelectItem value="profile_updated">Profile Updated</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+
+                    <div className="space-y-2 max-h-[600px] overflow-y-auto">
+                      {userActivity
+                        .filter((activity) => selectedStatus === 'all' || activity.activity_type === selectedStatus)
+                        .map((activity) => (
+                          <div
+                            key={activity.activity_id}
+                            className="border rounded-lg p-4 hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors"
+                          >
+                            <div className="flex items-start justify-between">
+                              <div className="flex-1">
+                                <div className="flex items-center gap-2 mb-1">
+                                  <Badge variant="outline">{activity.activity_type}</Badge>
+                                  <span className="text-sm font-medium">
+                                    {activity.users?.user_name || 'Unknown User'}
+                                  </span>
+                                  <span className="text-xs text-slate-500">
+                                    ({activity.users?.email || 'N/A'})
+                                  </span>
+                                </div>
+                                <p className="text-sm text-slate-600 dark:text-slate-400">
+                                  {activity.activity_description}
+                                </p>
+                                <div className="flex items-center gap-4 mt-2 text-xs text-slate-500">
+                                  <span>{new Date(activity.created_at).toLocaleString()}</span>
+                                  {activity.ip_address && (
+                                    <span>IP: {activity.ip_address}</span>
+                                  )}
+                                </div>
+                              </div>
+                            </div>
+                          </div>
+                        ))}
+                      {userActivity.filter((activity) => selectedStatus === 'all' || activity.activity_type === selectedStatus).length === 0 && (
+                        <div className="text-center py-8 text-slate-500">
+                          No activity found
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                )}
               </CardContent>
             </Card>
           </TabsContent>

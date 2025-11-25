@@ -215,10 +215,10 @@ export default function BuildsPage() {
               <p className="text-slate-600 dark:text-slate-400">Discover amazing PC builds from our community</p>
             </div>
             <div className="flex gap-2">
-              <Link href="/dashboard">
+              <Link href="/">
                 <Button variant="outline" size="sm">
                   <ArrowLeft className="h-4 w-4 mr-2" />
-                  Back to Dashboard
+                  Back to Home
                 </Button>
               </Link>
               <Button asChild>

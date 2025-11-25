@@ -7,7 +7,6 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Badge } from "@/components/ui/badge"
 import { Progress } from "@/components/ui/progress"
 import { Checkbox } from "@/components/ui/checkbox"
-import Image from "next/image"
 import {
   ArrowLeft,
   Clock,
@@ -15,12 +14,9 @@ import {
   CheckCircle,
   AlertTriangle,
   Info,
-  RotateCcw,
   BookOpen,
   Wrench,
   Lightbulb,
-  Share,
-  Download,
 } from "lucide-react"
 
 // Complete guide steps with user-provided content and images
@@ -379,11 +375,6 @@ export default function GuideDetailPage() {
     }
   }
 
-  const resetProgress = () => {
-    setCompletedSteps([])
-    setCurrentStep(1)
-  }
-
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 dark:from-slate-900 dark:to-slate-800">
       {/* Header */}
@@ -439,21 +430,6 @@ export default function GuideDetailPage() {
                       <Progress value={progress} className="h-2" />
                     </div>
                   </div>
-
-                  <div className="flex gap-2">
-                    <Button variant="outline" size="sm">
-                      <Share className="h-4 w-4 mr-2" />
-                      Share
-                    </Button>
-                    <Button variant="outline" size="sm">
-                      <Download className="h-4 w-4 mr-2" />
-                      Download
-                    </Button>
-                    <Button variant="outline" size="sm" onClick={resetProgress}>
-                      <RotateCcw className="h-4 w-4 mr-2" />
-                      Reset
-                    </Button>
-                  </div>
                 </div>
               </CardHeader>
             </Card>
@@ -493,14 +469,12 @@ export default function GuideDetailPage() {
 
                   {/* Step Image */}
                   {currentStepData.image && (
-                    <div className="w-full rounded-lg overflow-hidden border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800">
-                      <Image
+                    <div className="w-full rounded-lg overflow-hidden border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 p-4">
+                      <img
                         src={currentStepData.image}
                         alt={`Step ${currentStep} illustration`}
-                        width={1200}
-                        height={800}
-                        className="w-full h-auto object-contain"
-                        priority={currentStep <= 2}
+                        className="w-full h-auto object-contain max-w-full"
+                        loading={currentStep <= 2 ? "eager" : "lazy"}
                       />
                     </div>
                   )}
@@ -610,10 +584,6 @@ export default function GuideDetailPage() {
                 <div className="flex justify-between text-sm">
                   <span className="text-slate-600 dark:text-slate-400">Total Steps</span>
                   <span className="font-medium">{guide.totalSteps}</span>
-                </div>
-                <div className="flex justify-between text-sm">
-                  <span className="text-slate-600 dark:text-slate-400">Estimated Cost</span>
-                  <span className="font-medium">{guide.estimatedCost}</span>
                 </div>
                 <div className="flex justify-between text-sm">
                   <span className="text-slate-600 dark:text-slate-400">Last Updated</span>

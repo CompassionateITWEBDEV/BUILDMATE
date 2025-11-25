@@ -162,6 +162,7 @@ export interface Database {
           compatibility_information: string | null
           category_id: number
           retailer_id: number | null
+          availability_status: 'in_stock' | 'out_of_stock' | 'low_stock' | 'discontinued' | null
         }
         Insert: {
           component_id?: number
@@ -172,6 +173,7 @@ export interface Database {
           compatibility_information?: string | null
           category_id: number
           retailer_id?: number | null
+          availability_status?: 'in_stock' | 'out_of_stock' | 'low_stock' | 'discontinued' | null
         }
         Update: {
           component_id?: number
@@ -182,6 +184,33 @@ export interface Database {
           compatibility_information?: string | null
           category_id?: number
           retailer_id?: number | null
+          availability_status?: 'in_stock' | 'out_of_stock' | 'low_stock' | 'discontinued' | null
+        }
+      }
+      price_history: {
+        Row: {
+          price_history_id: number
+          component_id: number
+          old_price: number | null
+          new_price: number
+          changed_at: string
+          changed_by: string | null
+        }
+        Insert: {
+          price_history_id?: number
+          component_id: number
+          old_price?: number | null
+          new_price: number
+          changed_at?: string
+          changed_by?: string | null
+        }
+        Update: {
+          price_history_id?: number
+          component_id?: number
+          old_price?: number | null
+          new_price?: number
+          changed_at?: string
+          changed_by?: string | null
         }
       }
       retailers: {
@@ -228,6 +257,35 @@ export interface Database {
           build_component_id?: number
           build_id?: number
           component_id?: number
+        }
+      }
+      user_activity: {
+        Row: {
+          activity_id: number
+          user_id: number
+          activity_type: 'login' | 'logout' | 'build_created' | 'build_updated' | 'build_deleted' | 'component_viewed' | 'guide_viewed' | 'profile_updated'
+          activity_description: string
+          ip_address: string | null
+          user_agent: string | null
+          created_at: string
+        }
+        Insert: {
+          activity_id?: number
+          user_id: number
+          activity_type: 'login' | 'logout' | 'build_created' | 'build_updated' | 'build_deleted' | 'component_viewed' | 'guide_viewed' | 'profile_updated'
+          activity_description: string
+          ip_address?: string | null
+          user_agent?: string | null
+          created_at?: string
+        }
+        Update: {
+          activity_id?: number
+          user_id?: number
+          activity_type?: 'login' | 'logout' | 'build_created' | 'build_updated' | 'build_deleted' | 'component_viewed' | 'guide_viewed' | 'profile_updated'
+          activity_description?: string
+          ip_address?: string | null
+          user_agent?: string | null
+          created_at?: string
         }
       }
       build_history: {

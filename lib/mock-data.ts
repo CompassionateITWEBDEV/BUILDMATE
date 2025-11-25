@@ -24,6 +24,16 @@ export interface Component {
   rating: number
   reviews: number
   performanceTags: PerformanceCategory[]
+  availabilityStatus?: 'in_stock' | 'out_of_stock' | 'low_stock' | 'discontinued'
+  retailer?: {
+    id: number
+    name: string
+    address?: string | null
+    phone?: string | null
+    contactPerson?: string | null
+    email?: string | null
+    website?: string | null
+  }
 }
 
 export type ComponentCategory = "cpu" | "motherboard" | "memory" | "storage" | "gpu" | "psu" | "case" | "cooling"

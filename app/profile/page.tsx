@@ -260,9 +260,9 @@ export default function ProfilePage() {
           <div className="container mx-auto px-4 py-4">
             <div className="flex items-center gap-4">
               <Button variant="ghost" size="sm" asChild>
-                <Link href="/dashboard">
+                <Link href="/">
                   <ArrowLeft className="h-4 w-4 mr-2" />
-                  Back to Dashboard
+                  Back to Home
                 </Link>
               </Button>
               <h1 className="text-xl font-bold text-slate-900 dark:text-white">Profile Settings</h1>

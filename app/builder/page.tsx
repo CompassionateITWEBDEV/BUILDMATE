@@ -41,7 +41,8 @@ import {
   TrendingUp,
   Loader2,
   CheckCircle2,
-  ShoppingCart
+  ShoppingCart,
+  MapPin
 } from "lucide-react"
 
 import { mockComponents, type Component, type ComponentCategory, type PerformanceCategory, performanceCategories } from "@/lib/mock-data"
@@ -54,6 +55,8 @@ import { getCSPRecommendations, getUpgradeRecommendations, type CSPSolution } fr
 import { getSupabaseComponents, getSupabaseComponentsByCategory } from "@/lib/supabase-components"
 import { useAuth } from "@/contexts/supabase-auth-context"
 import { Textarea } from "@/components/ui/textarea"
+import { AvailabilityBadge } from "@/components/availability-badge"
+import { RetailerLocation } from "@/components/retailer-location"
 
 const categoryIcons = {
   cpu: Cpu,
@@ -97,6 +100,7 @@ export default function BuilderPage() {
   const [fetchError, setFetchError] = useState<string | null>(null)
   const [activeCategory, setActiveCategory] = useState<ComponentCategory>("cpu")
   const [searchTerm, setSearchTerm] = useState("")
+  const [locationFilter, setLocationFilter] = useState<string>("")
   const [buildName, setBuildName] = useState("My Custom Build")
   const [buildType, setBuildType] = useState<string>("4")
   const [isSaveDialogOpen, setIsSaveDialogOpen] = useState(false)
@@ -137,8 +141,17 @@ export default function BuilderPage() {
         component.brand.toLowerCase().includes(searchTerm.toLowerCase()),
     )
 
+    // Location-based filtering
+    const locationFiltered = locationFilter
+      ? searchFiltered.filter(
+          (component) =>
+            component.retailer?.address?.toLowerCase().includes(locationFilter.toLowerCase()) ||
+            component.retailer?.name?.toLowerCase().includes(locationFilter.toLowerCase())
+        )
+      : searchFiltered
+
     // Remove budget-based filtering — all components will show
-    return searchFiltered
+    return locationFiltered
   }
 
 
@@ -546,15 +559,24 @@ export default function BuilderPage() {
                                         <Icon className="h-5 w-5 text-slate-500 mt-1" />
                                       )}
                                       <div className="flex-1">
-                                        <h3 className="font-semibold text-slate-900 dark:text-white">
-                                          {component!.name}
-                                        </h3>
+                                        <div className="flex items-center gap-2 mb-1">
+                                          <h3 className="font-semibold text-slate-900 dark:text-white">
+                                            {component!.name}
+                                          </h3>
+                                          <AvailabilityBadge status={component!.availabilityStatus} className="text-xs" />
+                                        </div>
                                         <Badge variant="secondary" className="mt-1">
                                           {categoryName}
                                         </Badge>
                                         {component!.brand && (
                                           <p className="text-sm text-slate-600 dark:text-slate-400 mt-1">
                                             Brand: {component!.brand}
+                                          </p>
+                                        )}
+                                        {component!.retailer && (
+                                          <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
+                                            Retailer: {component!.retailer.name}
+                                            {component!.retailer.address && ` • ${component!.retailer.address.split(',')[0]}`}
                                           </p>
                                         )}
                                       </div>
@@ -579,6 +601,12 @@ export default function BuilderPage() {
                                             </p>
                                           ))}
                                       </div>
+                                    </div>
+                                  )}
+                                  
+                                  {component!.retailer && (
+                                    <div className="pt-3 border-t">
+                                      <RetailerLocation retailer={component!.retailer} className="border-0 shadow-none" />
                                     </div>
                                   )}
                                 </div>
@@ -758,14 +786,25 @@ export default function BuilderPage() {
                 <div className="space-y-4">
                   <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
                     <CardTitle className="text-lg sm:text-xl">Select Components</CardTitle>
-                    <div className="flex items-center gap-2 w-full sm:w-auto">
-                      <Search className="h-4 w-4 text-slate-400" />
-                      <Input
-                        placeholder="Search components..."
-                        value={searchTerm}
-                        onChange={(e) => setSearchTerm(e.target.value)}
-                        className="w-full sm:w-64"
-                      />
+                    <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 w-full sm:w-auto">
+                      <div className="flex items-center gap-2 flex-1 sm:flex-initial">
+                        <Search className="h-4 w-4 text-slate-400" />
+                        <Input
+                          placeholder="Search components..."
+                          value={searchTerm}
+                          onChange={(e) => setSearchTerm(e.target.value)}
+                          className="w-full sm:w-64"
+                        />
+                      </div>
+                      <div className="flex items-center gap-2 flex-1 sm:flex-initial">
+                        <MapPin className="h-4 w-4 text-slate-400" />
+                        <Input
+                          placeholder="Filter by location..."
+                          value={locationFilter}
+                          onChange={(e) => setLocationFilter(e.target.value)}
+                          className="w-full sm:w-64"
+                        />
+                      </div>
                     </div>
                   </div>
                   
@@ -950,8 +989,17 @@ export default function BuilderPage() {
                                     <div className="flex-1 min-w-0">
                                       <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-2">
                                         <div>
-                                          <h3 className="font-semibold text-slate-900 dark:text-white">{component.name}</h3>
+                                          <div className="flex items-start gap-2 mb-1">
+                                            <h3 className="font-semibold text-slate-900 dark:text-white">{component.name}</h3>
+                                            <AvailabilityBadge status={component.availabilityStatus} className="text-xs" />
+                                          </div>
                                           <p className="text-sm text-slate-600 dark:text-slate-400 mb-2">{component.brand}</p>
+                                          {component.retailer && (
+                                            <p className="text-xs text-slate-500 dark:text-slate-400">
+                                              {component.retailer.name}
+                                              {component.retailer.address && ` • ${component.retailer.address.split(',')[0]}`}
+                                            </p>
+                                          )}
                                         </div>
                                         <div className="text-right">
                                           <div className="flex items-center gap-2">

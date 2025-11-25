@@ -79,6 +79,17 @@ if (dbComponent.component_purpose) {
 }
 
 
+  // Extract retailer information
+  const retailer = dbComponent.retailers ? {
+    id: dbComponent.retailers.retailer_id,
+    name: dbComponent.retailers.retailer_name || 'Central Juan Solution',
+    address: dbComponent.retailers.retailer_address || null,
+    phone: dbComponent.retailers.retailer_phone || null,
+    contactPerson: dbComponent.retailers.retailer_contact_person || null,
+    email: dbComponent.retailers.email || null,
+    website: dbComponent.retailers.website || null,
+  } : undefined
+
   return {
     id: `component-${dbComponent.component_id}`,
     name: dbComponent.component_name,
@@ -109,7 +120,9 @@ if (dbComponent.component_purpose) {
       })
     },
     compatibility,
-    performanceTags: performanceTags
+    performanceTags: performanceTags,
+    availabilityStatus: dbComponent.availability_status || 'in_stock',
+    retailer: retailer
   }
 }
 

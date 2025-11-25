@@ -7,7 +7,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Badge } from "@/components/ui/badge"
 import { Input } from "@/components/ui/input"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Cpu, BookOpen, Play, Clock, Users, Wrench, Zap, Shield, Search, Star, CheckCircle, ArrowLeft } from "lucide-react"
+import { Cpu, BookOpen, Play, Clock, Users, Wrench, Zap, Shield, Search, Star, CheckCircle, ArrowLeft, Upload } from "lucide-react"
 import { formatCurrency } from "@/lib/currency"
 import { type PerformanceCategory, performanceCategories } from "@/lib/mock-data"
 
@@ -228,12 +228,20 @@ export default function GuidesPage() {
         <div className="container mx-auto px-4 py-4">
           <div className="flex items-center justify-between">
             <h2 className="text-xl font-semibold text-slate-700 dark:text-slate-300">Build Guides</h2>
-            <Link href="/dashboard">
-              <Button variant="outline" size="sm">
-                <ArrowLeft className="h-4 w-4 mr-2" />
-                Back to Dashboard
-              </Button>
-            </Link>
+            <div className="flex items-center gap-2">
+              <Link href="/guides/submit">
+                <Button size="sm">
+                  <Upload className="h-4 w-4 mr-2" />
+                  Submit Guide
+                </Button>
+              </Link>
+              <Link href="/">
+                <Button variant="outline" size="sm">
+                  <ArrowLeft className="h-4 w-4 mr-2" />
+                  Back to Home
+                </Button>
+              </Link>
+            </div>
           </div>
         </div>
       </div>
@@ -374,11 +382,6 @@ export default function GuidesPage() {
                       }
                     >
                       {guide.difficulty}
-                    </Badge>
-                  </div>
-                  <div className="absolute top-4 right-4">
-                    <Badge variant="outline" className="bg-white/90 text-slate-900">
-                      {guide.estimatedCost}
                     </Badge>
                   </div>
                 </div>
