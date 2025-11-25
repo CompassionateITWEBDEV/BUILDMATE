@@ -28,17 +28,33 @@ export async function POST(request: NextRequest) {
 
       clearTimeout(timeoutId)
 
+      // Check content-type to ensure we're getting JSON, not HTML
+      const contentType = response.headers.get('content-type') || ''
+      const isJSON = contentType.includes('application/json')
+
       if (!response.ok) {
         let errorMessage = 'Failed to get upgrade recommendations from algorithm'
         try {
           const errorText = await response.text()
           console.error('Python API error:', errorText)
-          // Try to parse as JSON
-          try {
-            const errorData = JSON.parse(errorText)
-            errorMessage = errorData.error || errorMessage
-          } catch {
-            errorMessage = errorText || errorMessage
+          
+          // If response is HTML (error page), provide helpful message
+          if (!isJSON || errorText.trim().startsWith('<!')) {
+            if (response.status === 404) {
+              errorMessage = `Python backend endpoint not found. Please check PYTHON_API_URL. Current: ${PYTHON_API_URL}`
+            } else if (response.status === 503 || response.status === 502) {
+              errorMessage = 'Python backend service is unavailable. The service may be starting up or down. Please try again in a few moments.'
+            } else {
+              errorMessage = `Python backend returned HTML error page (status ${response.status}). Please verify the backend URL is correct.`
+            }
+          } else {
+            // Try to parse as JSON
+            try {
+              const errorData = JSON.parse(errorText)
+              errorMessage = errorData.error || errorMessage
+            } catch {
+              errorMessage = errorText || errorMessage
+            }
           }
         } catch (e) {
           errorMessage = `Python backend returned status ${response.status}`
@@ -47,6 +63,18 @@ export async function POST(request: NextRequest) {
         return NextResponse.json(
           { error: errorMessage },
           { status: response.status }
+        )
+      }
+
+      // Validate response is JSON before parsing
+      if (!isJSON) {
+        const text = await response.text()
+        console.error('Python API returned non-JSON response:', text.substring(0, 200))
+        return NextResponse.json(
+          { 
+            error: `Python backend returned non-JSON response. Please check if the backend URL (${PYTHON_API_URL}) is correct and the service is running.` 
+          },
+          { status: 502 }
         )
       }
 
@@ -62,9 +90,21 @@ export async function POST(request: NextRequest) {
         )
       }
       
-      if (fetchError.code === 'ECONNREFUSED' || fetchError.message?.includes('fetch failed')) {
+      // Handle JSON parsing errors (when backend returns HTML)
+      if (fetchError.message?.includes('JSON') || fetchError.message?.includes('Unexpected token')) {
         return NextResponse.json(
-          { error: 'Cannot connect to Python backend. Please make sure it is running on port 5000.' },
+          { 
+            error: `Python backend returned invalid response. Please verify PYTHON_API_URL is correct (current: ${PYTHON_API_URL}) and the backend service is running.` 
+          },
+          { status: 502 }
+        )
+      }
+      
+      if (fetchError.code === 'ECONNREFUSED' || fetchError.message?.includes('fetch failed') || fetchError.message?.includes('Failed to fetch')) {
+        return NextResponse.json(
+          { 
+            error: `Cannot connect to Python backend at ${PYTHON_API_URL}. Please make sure the backend service is deployed and running.` 
+          },
           { status: 503 }
         )
       }
