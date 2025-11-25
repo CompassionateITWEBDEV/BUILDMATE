@@ -4,6 +4,10 @@
 
 Para mag-work ang CSP Recommendation Checker, kailangan i-deploy ang Python backend sa Render.
 
+## 🔍 Troubleshooting
+
+Kung nakakakuha ka ng error na **"Python backend endpoint not found"**, check ang `TROUBLESHOOT_PYTHON_BACKEND.md` para sa detailed troubleshooting guide.
+
 ## Option 1: Deploy Python Backend as Separate Service (Recommended)
 
 ### Step 1: Create Python Backend Service in Render
