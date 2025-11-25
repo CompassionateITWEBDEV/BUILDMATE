@@ -7,6 +7,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Badge } from "@/components/ui/badge"
 import { Progress } from "@/components/ui/progress"
 import { Checkbox } from "@/components/ui/checkbox"
+import Image from "next/image"
 import {
   ArrowLeft,
   Clock,
@@ -22,85 +23,112 @@ import {
   Download,
 } from "lucide-react"
 
-// Mock guide data with detailed steps
+// Complete guide steps with user-provided content and images
 const guideSteps = [
   {
     id: 1,
-    title: "Prepare Your Workspace",
-    description: "Set up a clean, well-lit workspace and gather all necessary tools",
+    title: "Prepare Your Workspace and Check All Parts",
+    description: "Before starting, lay everything on a clean, static-free table. Make sure you have all components ready.",
     duration: "5 minutes",
     difficulty: "Easy",
-    tools: ["Phillips screwdriver", "Anti-static wrist strap", "Good lighting"],
+    tools: ["Screwdriver (magnetic tip recommended)", "Clean workspace", "Anti-static mat (optional)"],
+    content: `Before starting, lay everything on a clean, static-free table. Make sure you have:
+
+- Motherboard
+- Processor (CPU)
+- CPU Cooler / Fan
+- Thermal Paste
+- RAM (Memory)
+- SSD or HDD (Storage)
+- Graphics Card (GPU)
+- Power Supply (PSU)
+- PC Case
+- Case Fans
+- Screws and cables
+- Screwdriver (magnetic tip recommended)
+
+Double-check that nothing is missing. It's way easier to spot problems early.`,
     tips: [
       "Work on a hard, flat surface away from carpets",
       "Ensure good lighting to see small components clearly",
       "Keep component boxes nearby for easy access",
     ],
     warnings: ["Avoid working on carpeted surfaces to prevent static buildup"],
+    image: "/1st.png",
     completed: false,
   },
   {
     id: 2,
-    title: "Install Power Supply",
-    description: "Mount the power supply unit in the case with proper orientation",
+    title: "Install the CPU on the Motherboard",
+    description: "Carefully install the processor into the motherboard socket with proper alignment",
     duration: "10 minutes",
-    difficulty: "Easy",
-    tools: ["Phillips screwdriver", "PSU mounting screws"],
-    tips: [
-      "Install PSU with fan facing down if case has bottom ventilation",
-      "Ensure the power switch is accessible",
-      "Don't fully tighten screws until PSU is properly aligned",
-    ],
-    warnings: [
-      "Make sure PSU is switched OFF before installation",
-      "Check PSU orientation - fan should face ventilation",
-    ],
-    completed: false,
-  },
-  {
-    id: 3,
-    title: "Install Motherboard Standoffs",
-    description: "Install brass standoffs in the case to mount the motherboard",
-    duration: "8 minutes",
-    difficulty: "Easy",
-    tools: ["Motherboard standoffs", "Phillips screwdriver"],
-    tips: [
-      "Only install standoffs where motherboard mounting holes are located",
-      "Hand-tighten standoffs - don't over-tighten",
-      "Test fit motherboard before final installation",
-    ],
-    warnings: [
-      "Extra standoffs can cause short circuits - only use what's needed",
-      "Ensure standoffs are properly threaded into case",
-    ],
-    completed: false,
-  },
-  {
-    id: 4,
-    title: "Install CPU",
-    description: "Carefully install the processor into the motherboard socket",
-    duration: "15 minutes",
     difficulty: "Medium",
     tools: ["Anti-static protection"],
+    content: `Place the motherboard on its box or an anti-static mat.
+
+1. Open the CPU socket lever.
+2. Align the golden triangle on the CPU with the matching triangle on the socket.
+3. Gently lower the CPU into place—no force needed.
+4. Lock the CPU using the lever.
+
+If it doesn't fit easily, stop and realign. Never press down on a CPU.`,
     tips: [
       "Handle CPU by edges only - never touch pins or contacts",
       "CPU will only fit one way - don't force it",
-      "Remove plastic socket cover after CPU installation",
+      "The golden triangle is your alignment guide",
     ],
     warnings: [
       "NEVER force the CPU - it should drop in easily",
       "Static electricity can damage the CPU - stay grounded",
       "Keep CPU in anti-static packaging until ready to install",
     ],
+    image: "/2nd.png",
     completed: false,
   },
   {
-    id: 5,
-    title: "Install RAM",
-    description: "Insert memory modules into the correct DIMM slots",
-    duration: "5 minutes",
+    id: 3,
+    title: "Apply Thermal Paste and Install the CPU Cooler",
+    description: "Apply thermal paste and mount the CPU cooler properly",
+    duration: "15 minutes",
+    difficulty: "Medium",
+    tools: ["Thermal paste", "CPU cooler", "Screwdriver"],
+    content: `1. Apply a pea-sized dot of thermal paste on top of the CPU.
+2. Place the CPU cooler/fan directly on top.
+3. Tighten the screws evenly in a cross pattern.
+4. Connect the fan cable to the motherboard port labeled CPU_FAN.
+
+The thermal paste helps transfer heat. Too much or too little can cause overheating.`,
+    tips: [
+      "A pea-sized amount is usually enough",
+      "Tighten screws in a cross pattern for even pressure",
+      "Make sure the cooler is making full contact with the CPU",
+    ],
+    warnings: [
+      "Too much thermal paste can cause overheating",
+      "Too little thermal paste can also cause overheating",
+      "Don't forget to connect the CPU_FAN header",
+    ],
+    image: "/3rd.png",
+    completed: false,
+  },
+  {
+    id: 4,
+    title: "Install RAM and SSD",
+    description: "Install memory modules and storage drives",
+    duration: "10 minutes",
     difficulty: "Easy",
-    tools: [],
+    tools: ["Screwdriver (for M.2 SSD)"],
+    content: `RAM Installation:
+- Find the RAM slots on the motherboard.
+- Open the locking clips.
+- Align the notch, then press down firmly until it clicks.
+
+M.2 SSD Installation:
+- Locate the M.2 slot.
+- Insert the SSD at a slight angle.
+- Push it down and secure it with a screw.
+
+SSDs installed in M.2 slots boot faster and look cleaner.`,
     tips: [
       "Check motherboard manual for correct slot configuration",
       "Press down firmly until clips snap into place",
@@ -109,7 +137,183 @@ const guideSteps = [
     warnings: [
       "Ensure RAM is fully seated - you should hear a click",
       "Match RAM speed with motherboard specifications",
+      "Don't forget the M.2 SSD screw",
     ],
+    image: "/4th.png",
+    completed: false,
+  },
+  {
+    id: 5,
+    title: "Mount the Motherboard in the Case",
+    description: "Install the motherboard into the PC case with proper alignment",
+    duration: "15 minutes",
+    difficulty: "Medium",
+    tools: ["Screwdriver", "Motherboard standoffs"],
+    content: `1. Open the case and lay it on its side.
+2. Install motherboard standoffs (small metal spacers) if they aren't preinstalled.
+3. Carefully align the motherboard with the I/O shield and standoffs.
+4. Secure it using the screws provided.
+
+Do not overtighten screws—just snug and secure.`,
+    tips: [
+      "Only install standoffs where motherboard mounting holes are located",
+      "Hand-tighten standoffs - don't over-tighten",
+      "Test fit motherboard before final installation",
+    ],
+    warnings: [
+      "Extra standoffs can cause short circuits - only use what's needed",
+      "Ensure standoffs are properly threaded into case",
+      "Don't overtighten - just snug",
+    ],
+    image: "/5th.png",
+    completed: false,
+  },
+  {
+    id: 6,
+    title: "Install Case Fans",
+    description: "Mount case fans with proper airflow direction",
+    duration: "10 minutes",
+    difficulty: "Easy",
+    tools: ["Screwdriver", "Case fan screws"],
+    content: `1. Decide airflow direction: front fans pull air in, rear/top fans push air out.
+2. Mount the fans using screws.
+3. Connect them to FAN headers on the motherboard or to a fan hub.
+
+Good airflow = Cooler PC, longer lifespan.`,
+    tips: [
+      "Front and bottom fans should pull air IN",
+      "Rear and top fans should push air OUT",
+      "Check fan direction arrows before mounting",
+    ],
+    warnings: [
+      "Wrong airflow direction reduces cooling efficiency",
+      "Make sure fans are properly secured",
+      "Don't forget to connect fan cables",
+    ],
+    image: "/6th.png",
+    completed: false,
+  },
+  {
+    id: 7,
+    title: "Install the Power Supply",
+    description: "Mount the PSU in the case with proper cable routing",
+    duration: "10 minutes",
+    difficulty: "Easy",
+    tools: ["Screwdriver", "PSU mounting screws"],
+    content: `1. Slide the PSU into the bottom/back of the case.
+2. Ensure the fan faces outward or downward (depending on case design).
+3. Secure with screws.
+4. Route the cables through the back side of the case.
+
+Keep your cable management clean, future you will thank you.`,
+    tips: [
+      "Install PSU with fan facing down if case has bottom ventilation",
+      "Ensure the power switch is accessible",
+      "Route cables behind the motherboard tray",
+    ],
+    warnings: [
+      "Make sure PSU is switched OFF before installation",
+      "Check PSU orientation - fan should face ventilation",
+      "Don't block PSU fan with cables",
+    ],
+    image: "/7th.png",
+    completed: false,
+  },
+  {
+    id: 8,
+    title: "Install the Graphics Card (GPU)",
+    description: "Install the graphics card into the PCIe slot",
+    duration: "10 minutes",
+    difficulty: "Easy",
+    tools: ["Screwdriver"],
+    content: `1. Remove the metal PCIe slot covers on the back of the case.
+2. Insert the GPU into the PCIe x16 slot on the motherboard.
+3. Push until it clicks, then screw it in securely.
+4. Connect PCIe power cables from the PSU, if required.
+
+GPUs are hungry, make sure you plug in all power connectors.`,
+    tips: [
+      "GPU should click into place - don't force it",
+      "Make sure all PCIe power connectors are plugged in",
+      "Remove slot covers before installing GPU",
+    ],
+    warnings: [
+      "GPUs need additional power - don't forget PCIe cables",
+      "Ensure GPU is fully seated in the slot",
+      "Some GPUs are heavy - support them if needed",
+    ],
+    image: "/8th.png",
+    completed: false,
+  },
+  {
+    id: 9,
+    title: "Connect All Cables to the Motherboard",
+    description: "Connect all power and data cables properly",
+    duration: "15 minutes",
+    difficulty: "Medium",
+    tools: ["Motherboard manual"],
+    content: `Essential connections include:
+
+✔️ 24-Pin ATX Power (Motherboard main power)
+✔️ 8-Pin or 4-Pin CPU Power (Near CPU socket)
+✔️ PCIe Power for GPU
+✔️ SATA Power/Data for SSD/HDD (if not M.2)
+✔️ Front Panel Connectors: Power button, reset button, USB ports, audio
+✔️ Case Fans
+
+Refer to the motherboard manual for front panel pin layout. It's small but important.`,
+    tips: [
+      "Keep motherboard manual nearby for pin layouts",
+      "Front panel connectors are small - be patient",
+      "Route cables neatly behind the motherboard tray",
+    ],
+    warnings: [
+      "Wrong front panel connections = PC won't turn on",
+      "Make sure all power connectors are fully seated",
+      "Check that no cables are pinched or damaged",
+    ],
+    image: "/9th.png",
+    completed: false,
+  },
+  {
+    id: 10,
+    title: "Close the Case and Secure It",
+    description: "Final step - close up the case and prepare for first boot",
+    duration: "5 minutes",
+    difficulty: "Easy",
+    tools: ["Screwdriver or thumbscrews"],
+    content: `1. Tuck excess cables behind the motherboard tray.
+2. Reinstall the side panels.
+3. Secure them using screws or thumbscrews.
+
+Boom. You now have a clean, assembled PC.
+
+First Power-On Checklist:
+Before pressing that power button, do a quick check:
+
+✔️ All power cables connected?
+✔️ Fans spinning freely?
+✔️ GPU and RAM fully seated?
+✔️ No loose screws or cables?
+
+Turn it on. If it boots to BIOS, you're golden.
+
+Final Tips for Beginners:
+- Never force parts — everything should click naturally.
+- Keep your motherboard manual nearby.
+- If it doesn't turn on, check power cables first (80% of the time, that's the issue).
+- Patience beats panic.`,
+    tips: [
+      "Cable management makes future upgrades easier",
+      "Leave some slack in cables for future changes",
+      "Test boot before closing the case completely",
+    ],
+    warnings: [
+      "Don't force side panels - they should slide easily",
+      "Make sure no cables are pinched when closing",
+      "Test the build before fully securing panels",
+    ],
+    image: "/10th.png",
     completed: false,
   },
 ]
@@ -121,8 +325,28 @@ export default function GuideDetailPage() {
   const [completedSteps, setCompletedSteps] = useState<number[]>([])
   const [isPlaying, setIsPlaying] = useState(false)
 
-  // Mock guide data
-  const guide = {
+  // Guide data - check if it's the PC assembly guide
+  const isPcAssemblyGuide = params.id === "beginner-gaming-build" || params.id === "pc-assembly-guide"
+  
+  const guide = isPcAssemblyGuide ? {
+    id: params.id,
+    title: "Complete PC Assembly Guide",
+    description: "Step-by-step guide for building your PC from scratch with detailed visuals and instructions",
+    difficulty: "Beginner",
+    duration: "2-3 hours",
+    views: "45.2k",
+    category: "Gaming",
+    estimatedCost: "₱44,000-66,000",
+    totalSteps: guideSteps.length,
+    tools: [
+      "Screwdriver (magnetic tip recommended)",
+      "Anti-static wrist strap (optional)",
+      "Thermal paste",
+      "Clean workspace",
+      "Motherboard manual"
+    ],
+    lastUpdated: "Just now",
+  } : {
     id: params.id,
     title: "Your First Gaming PC Build",
     description: "Complete step-by-step guide for building your first gaming PC from scratch",
@@ -258,6 +482,29 @@ export default function GuideDetailPage() {
                 </CardHeader>
 
                 <CardContent className="space-y-6">
+                  {/* Step Content */}
+                  {currentStepData.content && (
+                    <div className="prose prose-slate dark:prose-invert max-w-none">
+                      <div className="whitespace-pre-line text-slate-700 dark:text-slate-300 leading-relaxed">
+                        {currentStepData.content}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Step Image */}
+                  {currentStepData.image && (
+                    <div className="w-full rounded-lg overflow-hidden border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800">
+                      <Image
+                        src={currentStepData.image}
+                        alt={`Step ${currentStep} illustration`}
+                        width={1200}
+                        height={800}
+                        className="w-full h-auto object-contain"
+                        priority={currentStep <= 2}
+                      />
+                    </div>
+                  )}
+
                   {/* Tools Required */}
                   {currentStepData.tools.length > 0 && (
                     <div>

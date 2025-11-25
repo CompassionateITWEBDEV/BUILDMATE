@@ -14,9 +14,9 @@ import { type PerformanceCategory, performanceCategories } from "@/lib/mock-data
 const buildGuides = [
   {
     id: "beginner-gaming-build",
-    title: "Your First Gaming PC Build",
+    title: "Complete PC Assembly Guide",
     description:
-      "Complete step-by-step guide for building your first gaming PC from scratch with detailed explanations",
+      "Step-by-step guide for building your PC from scratch with detailed visuals and instructions. Perfect for beginners!",
     difficulty: "Beginner",
     duration: "2-3 hours",
     views: "45.2k",
@@ -24,12 +24,12 @@ const buildGuides = [
     reviews: 1247,
     category: "Gaming",
     performanceCategory: "gaming" as PerformanceCategory,
-    image: "/gaming-pc-build-guide.png",
-    steps: 12,
-    tools: ["Phillips screwdriver", "Anti-static wrist strap", "Zip ties"],
+    image: "/1st.png",
+    steps: 10,
+    tools: ["Screwdriver (magnetic tip)", "Thermal paste", "Anti-static wrist strap"],
     estimatedCost: "₱44,000-66,000",
-    lastUpdated: "2 weeks ago",
-    tags: ["first-build", "gaming", "budget-friendly"],
+    lastUpdated: "Just now",
+    tags: ["first-build", "gaming", "budget-friendly", "visual-guide"],
   },
   {
     id: "high-end-workstation",
