@@ -108,11 +108,11 @@ export async function POST(request: NextRequest) {
     
     components.forEach((component: any) => {
       const retailer = component.retailers
-      // Always send to Central Juan email for all purchases
+      // Always send to Central Juan Solution email for all purchases
       if (!retailerMap.has(CENTRAL_JUAN_EMAIL)) {
         retailerMap.set(CENTRAL_JUAN_EMAIL, { 
           retailer: { 
-            retailer_name: 'Central Juan', 
+            retailer_name: 'Central Juan Solution', 
             email: CENTRAL_JUAN_EMAIL,
             retailer_address: null,
             retailer_phone: null

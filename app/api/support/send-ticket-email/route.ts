@@ -179,7 +179,7 @@ export async function POST(request: NextRequest) {
       ? fromEmailRaw.match(/<(.+)>/)?.[1] || fromEmailRaw 
       : fromEmailRaw
 
-    // Always send to Central Juan email
+    // Always send to Central Juan Solution email
     const CENTRAL_JUAN_EMAIL = 'sales.centraljuan.net@gmail.com'
     // Also send copy to admin email for verification
     const ADMIN_EMAIL = 'dummy.dumm.acc001@gmail.com'
@@ -198,7 +198,7 @@ export async function POST(request: NextRequest) {
       }
 
       const emailInfo = await transporter.sendMail(mailOptions)
-      console.log('✅ Support ticket email sent to Central Juan:', emailInfo.messageId)
+      console.log('✅ Support ticket email sent to Central Juan Solution:', emailInfo.messageId)
       console.log(`📧 Email sent to: ${CENTRAL_JUAN_EMAIL} (CC: ${ADMIN_EMAIL})`)
 
       return NextResponse.json({
