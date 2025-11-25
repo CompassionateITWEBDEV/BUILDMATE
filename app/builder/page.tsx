@@ -225,25 +225,45 @@ export default function BuilderPage() {
 
 
   const handleApplyCSPSolution = (solution: CSPSolution) => {
-    // Map solution categories to ComponentCategory keys
+    // Map solution categories from Python backend to ComponentCategory keys
+    const categoryMap: Record<string, ComponentCategory> = {
+      'CPU': 'cpu',
+      'Motherboard': 'motherboard',
+      'Memory': 'memory',
+      'RAM': 'memory',
+      'Storage': 'storage',
+      'Video Card': 'gpu',
+      'GPU': 'gpu',
+      'Power Supply': 'psu',
+      'PSU': 'psu',
+      'Case': 'case',
+      'CPU Cooler': 'cooling',
+      'Cooling': 'cooling',
+      'Cooler': 'cooling',
+    }
+
     const newSelected: Record<ComponentCategory, Component | null> = { ...selectedComponents }
 
     Object.entries(solution).forEach(([category, comp]: [string, any]) => {
-      // Convert the solution category string to your ComponentCategory keys if needed
-      const key = category.toLowerCase() as ComponentCategory
-        newSelected[key] = {
+      // Convert the solution category string to ComponentCategory key
+      const key = categoryMap[category] || category.toLowerCase() as ComponentCategory
+      
+      // Only add if it's a valid category
+      if (key && ['cpu', 'motherboard', 'memory', 'storage', 'gpu', 'psu', 'case', 'cooling'].includes(key)) {
+        newSelected[key as ComponentCategory] = {
           id: comp.id,
           name: comp.name,
           brand: comp.brand || "",
           price: comp.price,
-          category: key,
+          category: key as ComponentCategory,
           image: comp.image || "",
           rating: comp.rating || 0,
           reviews: comp.reviews || 0,
           specifications: comp.specifications || {},
-          compatibility: comp.compatibility || {}, // << add this
+          compatibility: comp.compatibility || {},
           performanceTags: comp.performanceTags || ['all'] as PerformanceCategory[],
         }
+      }
     })
 
     setSelectedComponents(newSelected)
