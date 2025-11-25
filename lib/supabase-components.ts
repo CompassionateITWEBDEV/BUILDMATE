@@ -89,7 +89,6 @@ if (dbComponent.component_purpose) {
     rating: 4.5,
     reviews: Math.floor(Math.random() * 1000) + 100,
     specifications: {
-      'Compatibility': JSON.stringify(compatInfo, null, 2) || 'Standard compatibility',
       'Price': `$${dbComponent.component_price || 0}`,
       'Category': dbComponent.component_categories?.category_name || 'Unknown',
       'Retailer': dbComponent.retailers?.retailer_name || 'Unknown',
