@@ -8,7 +8,7 @@ import { Badge } from "@/components/ui/badge"
 import { Input } from "@/components/ui/input"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
-import { Cpu, Heart, MessageCircle, Share, Search, Monitor, Users, Eye, BarChart3 } from "lucide-react"
+import { Cpu, Heart, MessageCircle, Share, Search, Monitor, Users, Eye, BarChart3, ArrowLeft } from "lucide-react"
 import { buildService, buildComponentService } from "@/lib/database"
 import { formatCurrency, PRICE_RANGES } from "@/lib/currency"
 import { useAuth } from "@/contexts/supabase-auth-context"
@@ -215,6 +215,12 @@ export default function BuildsPage() {
               <p className="text-slate-600 dark:text-slate-400">Discover amazing PC builds from our community</p>
             </div>
             <div className="flex gap-2">
+              <Link href="/dashboard">
+                <Button variant="outline" size="sm">
+                  <ArrowLeft className="h-4 w-4 mr-2" />
+                  Back to Dashboard
+                </Button>
+              </Link>
               <Button asChild>
                 <Link href="/builder">Create Build</Link>
               </Button>

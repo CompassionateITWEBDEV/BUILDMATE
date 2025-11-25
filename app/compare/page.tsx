@@ -71,28 +71,25 @@ export default function ComparePage() {
   const [searchTerm, setSearchTerm] = useState("")
   const [filteredBuilds, setFilteredBuilds] = useState<Build[]>([])
   const [activeTab, setActiveTab] = useState("overview")
+  const [currentUserBuild, setCurrentUserBuild] = useState<ComparisonBuild | null>(null)
 
-  // Mock current user build (in real app, this would come from user's saved builds)
-  const currentUserBuild: ComparisonBuild = {
-    id: "user-build",
-    name: "My Current Build",
-    description: "My personal PC build",
-    totalPrice: 1250,
-    tags: ["gaming", "budget"],
-    likes: 0,
-    createdAt: new Date(),
-    createdBy: "1",
-    components: {
-      cpu: mockComponents.find(c => c.id === "cpu-1") || null,
-      motherboard: mockComponents.find(c => c.id === "motherboard-1") || null,
-      memory: mockComponents.find(c => c.id === "memory-1") || null,
-      storage: mockComponents.find(c => c.id === "storage-1") || null,
-      gpu: mockComponents.find(c => c.id === "gpu-1") || null,
-      psu: mockComponents.find(c => c.id === "psu-1") || null,
-      case: mockComponents.find(c => c.id === "case-1") || null,
-      cooling: mockComponents.find(c => c.id === "cooling-1") || null,
+  // Check for current user build from localStorage or API
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const savedBuild = localStorage.getItem('buildmate-current-build')
+      if (savedBuild) {
+        try {
+          const build = JSON.parse(savedBuild)
+          // Only set if it has valid components
+          if (build && build.components && Object.keys(build.components).length > 0) {
+            setCurrentUserBuild(build)
+          }
+        } catch (e) {
+          console.error('Error parsing current build:', e)
+        }
+      }
     }
-  }
+  }, [])
 
   useEffect(() => {
     // Filter builds based on search term
@@ -171,7 +168,7 @@ export default function ComparePage() {
     return Math.round(100 - (pricePerPerformance / 20)) // Higher score = better value
   }
 
-  const allBuilds = [currentUserBuild, ...selectedBuilds]
+  const allBuilds = currentUserBuild ? [currentUserBuild, ...selectedBuilds] : selectedBuilds
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 dark:from-slate-900 dark:to-slate-800">
@@ -184,10 +181,15 @@ export default function ComparePage() {
               <h2 className="text-xl font-semibold text-slate-700 dark:text-slate-300">Build Comparison</h2>
             </div>
             <div className="flex items-center gap-2">
-              <Link href="/builds">
+              <Link href="/dashboard">
                 <Button variant="outline" size="sm">
                   <ArrowLeft className="h-4 w-4 mr-2" />
-                  Back to Builds
+                  Back to Dashboard
+                </Button>
+              </Link>
+              <Link href="/builds">
+                <Button variant="outline" size="sm">
+                  Community Builds
                 </Button>
               </Link>
               <Link href="/builder">
@@ -202,7 +204,7 @@ export default function ComparePage() {
       </div>
 
       <div className="container mx-auto px-4 py-8">
-        {allBuilds.length === 1 ? (
+        {allBuilds.length === 0 || (!currentUserBuild && selectedBuilds.length === 0) ? (
           // Build Selection View
           <div className="space-y-6">
             <Card>

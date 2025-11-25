@@ -258,12 +258,21 @@ export default function SupportPage() {
             <div className="flex items-center gap-4">
               <h2 className="text-xl font-semibold text-slate-700 dark:text-slate-300">Help & Support</h2>
             </div>
-            <Link href="/dashboard">
-              <Button variant="outline" size="sm">
-                <ArrowLeft className="h-4 w-4 mr-2" />
-                Back to Dashboard
-              </Button>
-            </Link>
+            {user ? (
+              <Link href="/dashboard">
+                <Button variant="outline" size="sm">
+                  <ArrowLeft className="h-4 w-4 mr-2" />
+                  Back to Dashboard
+                </Button>
+              </Link>
+            ) : (
+              <Link href="/login">
+                <Button variant="outline" size="sm">
+                  <ArrowLeft className="h-4 w-4 mr-2" />
+                  Back to Login
+                </Button>
+              </Link>
+            )}
           </div>
         </div>
       </div>
