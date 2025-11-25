@@ -480,20 +480,20 @@ export default function BuilderPage() {
       {/* Builder Header */}
       <div className="border-b bg-white/80 backdrop-blur-sm dark:bg-slate-900/80">
         <div className="container mx-auto px-4 py-4">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-4">
-              <Button variant="ghost" size="sm" asChild>
-                <Link href={user ? "/dashboard" : "/"}>
-                  <ArrowLeft className="h-4 w-4 mr-2" />
-                  Back
-                </Link>
-              </Button>
-              <div className="flex items-center gap-2">
-                <Cpu className="h-6 w-6 text-blue-600" />
-                <h1 className="text-xl font-bold text-slate-900 dark:text-white">PC Builder</h1>
+            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+              <div className="flex items-center gap-4">
+                <Button variant="ghost" size="sm" asChild>
+                  <Link href={user ? "/dashboard" : "/"}>
+                    <ArrowLeft className="h-4 w-4 mr-2" />
+                    <span className="hidden sm:inline">Back</span>
+                  </Link>
+                </Button>
+                <div className="flex items-center gap-2">
+                  <Cpu className="h-6 w-6 text-blue-600" />
+                  <h1 className="text-xl font-bold text-slate-900 dark:text-white">PC Builder</h1>
+                </div>
               </div>
-            </div>
-            <div className="flex items-center gap-2">
+              <div className="flex items-center gap-2 w-full sm:w-auto">
               <Button variant="outline" size="sm" asChild>
                 <Link href="/support">
                   <MessageSquare className="h-4 w-4 mr-2" />
@@ -616,32 +616,32 @@ export default function BuilderPage() {
       </div>
 
       <div className="container mx-auto px-4 py-6">
-        <div className="grid lg:grid-cols-3 gap-6">
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           {/* Component Selection */}
-          <div className="lg:col-span-2">
+          <div className="lg:col-span-2 order-1 lg:order-1">
             <Card className="border-slate-200 dark:border-slate-700">
               <CardHeader>
                 <div className="space-y-4">
-                  <div className="flex items-center justify-between">
+                  <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
                     <CardTitle>Select Components</CardTitle>
-                    <div className="flex items-center gap-2">
+                    <div className="flex items-center gap-2 w-full sm:w-auto">
                       <Search className="h-4 w-4 text-slate-400" />
                       <Input
                         placeholder="Search components..."
                         value={searchTerm}
                         onChange={(e) => setSearchTerm(e.target.value)}
-                        className="w-64"
+                        className="w-full sm:w-64"
                       />
                     </div>
                   </div>
                   
                   {/* Performance Category Selector */}
-                  <div className="flex items-center gap-4">
-                    <Label htmlFor="performance-category" className="text-sm font-medium">
+                  <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4">
+                    <Label htmlFor="performance-category" className="text-sm font-medium whitespace-nowrap">
                       Performance Category:
                     </Label>
                     <Select value={performanceCategory} onValueChange={(value) => setPerformanceCategory(value as PerformanceCategory)}>
-                      <SelectTrigger className="w-64">
+                      <SelectTrigger className="w-full sm:w-64">
                         <SelectValue placeholder="Select performance category" />
                       </SelectTrigger>
                       <SelectContent>
@@ -663,8 +663,8 @@ export default function BuilderPage() {
                   </div>
 
                   {/* Budget Controls */}
-                  <div className="flex items-center gap-4 p-4 bg-slate-50 dark:bg-slate-800 rounded-lg">
-                    <div className="flex items-center gap-2">
+                  <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4 p-4 bg-slate-50 dark:bg-slate-800 rounded-lg">
+                    <div className="flex items-center gap-2 w-full sm:w-auto">
                       <input
                         type="checkbox"
                         id="budget-enabled"
@@ -678,19 +678,19 @@ export default function BuilderPage() {
                     </div>
                     {budgetEnabled && (
                       <>
-                        <div className="flex items-center gap-2">
+                        <div className="flex items-center gap-2 w-full sm:w-auto">
                           <span className="text-sm text-slate-600 dark:text-slate-400">₱</span>
                           <Input
                             type="number"
                             value={budget}
                             onChange={(e) => setBudget(Number(e.target.value))}
                             placeholder="Min ₱10,000 for CSP"
-                            className="w-32"
+                            className="w-full sm:w-32"
                             min="10000"
                             step="1000"
                           />
                         </div>
-                        <div className="flex items-center gap-2 text-sm">
+                        <div className="flex items-center gap-2 text-sm w-full sm:w-auto">
                           <span className={`font-medium ${isOverBudget ? 'text-red-600' : 'text-slate-600 dark:text-slate-400'}`}>
                             Spent: {formatCurrency(totalPrice)}
                           </span>
@@ -764,7 +764,7 @@ export default function BuilderPage() {
               </CardHeader>
               <CardContent>
                 <Tabs value={activeCategory} onValueChange={(value) => setActiveCategory(value as ComponentCategory)}>
-                  <TabsList className="grid grid-cols-4 lg:grid-cols-8 mb-6">
+                  <TabsList className="grid grid-cols-4 lg:grid-cols-8 mb-6 overflow-x-auto">
                     {Object.entries(categoryIcons).map(([category, Icon]) => (
                       <TabsTrigger key={category} value={category} className="flex flex-col gap-1 p-2">
                         <Icon className="h-4 w-4" />
@@ -834,7 +834,7 @@ export default function BuilderPage() {
                                       </div>
 
                                       {/* Component specifications */}
-                                      <div className="grid grid-cols-2 gap-2 text-xs text-slate-600 dark:text-slate-400">
+                                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs text-slate-600 dark:text-slate-400">
                                         {Object.entries(component.specifications || {})
                                           .filter(([key]) => key !== 'Compatibility') // Exclude Compatibility description
                                           .slice(0, 4)
@@ -861,7 +861,7 @@ export default function BuilderPage() {
           </div>
 
           {/* Build Summary */}
-          <div className="space-y-6">
+          <div className="space-y-6 order-2 lg:order-2">
             <Card className="border-slate-200 dark:border-slate-700">
               <CardHeader className="pb-3">
                 <CardTitle className="text-lg flex items-center gap-2">
