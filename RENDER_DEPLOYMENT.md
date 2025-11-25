@@ -138,12 +138,38 @@ Service Root Directory "/opt/render/project/src/BUILDMATE" is missing.
    - Go to "Settings" → "Auto-Deploy"
    - Enable auto-deploy from main branch
 
+## Python Backend Setup
+
+**⚠️ IMPORTANT:** Para mag-work ang CSP Recommendation Checker, kailangan i-deploy ang Python backend.
+
+### Quick Setup:
+
+1. **Create Python Backend Service:**
+   - Go to Render Dashboard → "New +" → "Web Service"
+   - Name: `buildmate-python-api`
+   - Environment: **Python 3**
+   - Build Command: `pip install -r Algorithm/python-backend/requirements.txt`
+   - Start Command: `cd Algorithm/python-backend && python api.py`
+   - Environment Variables:
+     ```
+     SUPABASE_URL=your_supabase_url
+     SUPABASE_KEY=your_supabase_anon_key
+     PORT=5000
+     ```
+
+2. **Update Next.js Service:**
+   - Add `PYTHON_API_URL` environment variable
+   - Value: Your Python backend URL (e.g., `https://buildmate-python-api.onrender.com`)
+
+3. **See `RENDER_PYTHON_BACKEND_SETUP.md` for detailed instructions**
+
 ## Notes
 
 - Render provides a free tier with limitations
 - For production, consider upgrading to a paid plan
-- The Python API backend needs to be deployed separately if not using Docker Compose
+- The Python API backend needs to be deployed separately as a Web Service
 - Database should be hosted separately (Supabase or Render PostgreSQL)
+- Free tier services may spin down after inactivity (takes time to wake up)
 
 ## Support
 

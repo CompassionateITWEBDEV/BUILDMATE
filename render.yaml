@@ -1,4 +1,21 @@
 services:
+  # Python Backend API for CSP and Graph Algorithms
+  - type: web
+    name: buildmate-python-api
+    env: python
+    plan: starter
+    buildCommand: pip install -r Algorithm/python-backend/requirements.txt
+    startCommand: cd Algorithm/python-backend && python api.py
+    envVars:
+      - key: SUPABASE_URL
+        sync: false
+      - key: SUPABASE_KEY
+        sync: false
+      - key: PORT
+        value: "5000"
+    healthCheckPath: /
+
+  # Next.js Frontend Application
   - type: web
     name: buildmate-nextjs
     env: node
