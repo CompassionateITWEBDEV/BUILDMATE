@@ -17,7 +17,6 @@ import {
   Cpu,
   ArrowLeft,
   Plus,
-  MessageSquare,
   Wrench,
   Truck,
   AlertTriangle,
@@ -33,7 +32,6 @@ import {
   User,
   Calendar,
   Tag,
-  Star,
 } from "lucide-react"
 
 // Mock support ticket data
@@ -469,8 +467,7 @@ export default function SupportPage() {
 
           {/* Help Center Tab */}
           <TabsContent value="help" className="space-y-6">
-            <div className="grid lg:grid-cols-3 gap-6">
-              <div className="lg:col-span-2 space-y-6">
+            <div className="space-y-6">
                 <Card>
                   <CardHeader>
                     <CardTitle>Frequently Asked Questions</CardTitle>
@@ -524,62 +521,8 @@ export default function SupportPage() {
                         <p className="text-sm text-slate-600 dark:text-slate-400">support@buildmate.com</p>
                       </div>
                     </div>
-                    <div className="flex items-center gap-3">
-                      <MessageSquare className="h-5 w-5 text-purple-600" />
-                      <div>
-                        <p className="font-medium">Live Chat</p>
-                        <p className="text-sm text-slate-600 dark:text-slate-400">Available 24/7 on our website</p>
-                      </div>
-                    </div>
                   </CardContent>
                 </Card>
-              </div>
-
-              <div className="space-y-6">
-                <Card>
-                  <CardHeader>
-                    <CardTitle>Quick Actions</CardTitle>
-                  </CardHeader>
-                  <CardContent className="space-y-3">
-                    <Button className="w-full justify-start" variant="outline">
-                      <Wrench className="h-4 w-4 mr-2" />
-                      Troubleshooting Guide
-                    </Button>
-                    <Button className="w-full justify-start" variant="outline">
-                      <Settings className="h-4 w-4 mr-2" />
-                      Build Checklist
-                    </Button>
-                    <Button className="w-full justify-start" variant="outline">
-                      <FileText className="h-4 w-4 mr-2" />
-                      User Manual
-                    </Button>
-                    <Button className="w-full justify-start" variant="outline">
-                      <Star className="h-4 w-4 mr-2" />
-                      Rate Our Service
-                    </Button>
-                  </CardContent>
-                </Card>
-
-                <Card>
-                  <CardHeader>
-                    <CardTitle>Support Stats</CardTitle>
-                  </CardHeader>
-                  <CardContent className="space-y-3">
-                    <div className="flex justify-between">
-                      <span className="text-sm text-slate-600 dark:text-slate-400">Avg. Response Time</span>
-                      <span className="font-medium">2 hours</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="text-sm text-slate-600 dark:text-slate-400">Resolution Rate</span>
-                      <span className="font-medium">95%</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="text-sm text-slate-600 dark:text-slate-400">Customer Satisfaction</span>
-                      <span className="font-medium">4.8/5</span>
-                    </div>
-                  </CardContent>
-                </Card>
-              </div>
             </div>
           </TabsContent>
         </Tabs>

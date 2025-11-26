@@ -57,8 +57,26 @@ export function SupabaseAuthProvider({ children }: { children: ReactNode }) {
             .eq("supabase_id", supabaseUser.id)
             .single();
 
-          if (profileError) {
-            console.error('Error fetching profile:', profileError);
+            if (profileError) {
+              // Check if error has meaningful content
+              const hasMessage = profileError?.message && typeof profileError.message === 'string' && profileError.message.trim().length > 0;
+              const hasCode = profileError?.code && typeof profileError.code === 'string' && profileError.code.trim().length > 0;
+              const hasDetails = profileError?.details && typeof profileError.details === 'string' && profileError.details.trim().length > 0;
+              const hasHint = profileError?.hint && typeof profileError.hint === 'string' && profileError.hint.trim().length > 0;
+              
+              // Check if error object is empty (no meaningful properties)
+              const isEmpty = !hasMessage && !hasCode && !hasDetails && !hasHint && 
+                             Object.keys(profileError).length === 0;
+              
+              const isNotFound = profileError.code === 'PGRST116';
+              
+              // Only log if error has meaningful content (has message, code, details, or hint)
+              if (!isEmpty && !isNotFound && (hasMessage || hasCode || hasDetails || hasHint)) {
+                console.error('Error fetching profile:', profileError);
+              } else {
+                // Empty error or "not found" - clear session silently without logging
+                await supabase.auth.signOut();
+              }
           } else if (profile) {
             setUser(profile as CustomUser);
             console.log('✅ Session restored - user logged in:', profile.user_name);

@@ -70,6 +70,7 @@ export default function BuildDetailPage() {
   const [isFollowing, setIsFollowing] = useState(false);
   const [isSubmittingComment, setIsSubmittingComment] = useState(false);
   const [followerCount, setFollowerCount] = useState(0);
+  const [isTogglingFollow, setIsTogglingFollow] = useState(false);
 
 
   useEffect(() => {
@@ -132,7 +133,9 @@ export default function BuildDetailPage() {
         if (!countError) setTotalUserBuilds(count || 0);
 
         // Fetch followers AFTER setting creator
-        fetchFollowerData(userData.user_id);
+        if (userData.user_id) {
+          fetchFollowerData(userData.user_id.toString());
+        }
       }
 
 
@@ -212,51 +215,101 @@ export default function BuildDetailPage() {
   const fetchComments = async () => {
     if (!params.id) return;
 
-    const { data: commentsData, error: commentsError } = await supabase
-      .from("build_comments")
-      .select(`
-        *,
-        users:user_id (
-          user_name,
-          avatar_url
-        )
-      `)
-      .eq("build_id", Number(params.id))
-      .order("created_at", { ascending: false }); // latest first
+    try {
+      const { data: commentsData, error: commentsError } = await supabase
+        .from("build_comments")
+        .select(`
+          *,
+          users:user_id (
+            user_name,
+            avatar_url
+          )
+        `)
+        .eq("build_id", Number(params.id))
+        .order("created_at", { ascending: false }); // latest first
 
-    if (!commentsError && commentsData) {
-      const mappedComments = commentsData.map((c: any) => ({
-        id: c.comment_id,
-        user: c.users?.user_name || "Anonymous",
-        avatar: c.users?.avatar_url || "/placeholder.svg",
-        content: c.content,
-        timestamp: new Date(c.created_at).toLocaleString(),
-        likes: c.likes || 0,
-      }));
-      setComments(mappedComments);
+      if (commentsError) {
+        console.error("Error fetching comments:", commentsError);
+        // Still set empty array to show "No comments yet" message
+        setComments([]);
+        return;
+      }
+
+      if (commentsData) {
+        console.log(`✅ Loaded ${commentsData.length} comment(s) for build ${params.id}`);
+        const mappedComments = commentsData.map((c: any) => ({
+          id: c.comment_id,
+          user: c.users?.user_name || "Anonymous",
+          avatar: c.users?.avatar_url || "/placeholder.svg",
+          content: c.content,
+          timestamp: new Date(c.created_at).toLocaleString(),
+          likes: c.likes || 0,
+        }));
+        setComments(mappedComments);
+      } else {
+        console.log(`ℹ️ No comments found for build ${params.id}`);
+        setComments([]);
+      }
+    } catch (err) {
+      console.error("Error in fetchComments:", err);
+      setComments([]);
     }
   };
 
   const fetchFollowerData = async (creatorId: string) => {
-    if (!creatorId || !user) return;
+    if (!creatorId) {
+      // If no user is logged in, still fetch follower count
+      const { count: followersCount, error: countError } = await supabase
+        .from("followers")
+        .select("*", { count: "exact", head: true })
+        .eq("user_id", creatorId);
 
-    // Fetch total followers
-    const { count: followersCount, error: countError } = await supabase
-      .from("followers")
-      .select("*", { count: "exact", head: true })
-      .eq("user_id", creatorId);
+      if (!countError) setFollowerCount(followersCount || 0);
+      setIsFollowing(false);
+      return;
+    }
 
-    if (!countError) setFollowerCount(followersCount || 0);
+    if (!user) {
+      // Fetch follower count only if user is not logged in
+      const { count: followersCount, error: countError } = await supabase
+        .from("followers")
+        .select("*", { count: "exact", head: true })
+        .eq("user_id", creatorId);
 
-    // Check if current user is following
-    const { data: followData, error: followError } = await supabase
-      .from("followers")
-      .select("*")
-      .eq("user_id", creatorId)
-      .eq("follower_user_id", user.user_id)
-      .single();
+      if (!countError) setFollowerCount(followersCount || 0);
+      setIsFollowing(false);
+      return;
+    }
 
-    setIsFollowing(!followError && !!followData);
+    try {
+      // Fetch total followers
+      const { count: followersCount, error: countError } = await supabase
+        .from("followers")
+        .select("*", { count: "exact", head: true })
+        .eq("user_id", creatorId);
+
+      if (countError) {
+        console.error("Error fetching follower count:", countError);
+      } else {
+        setFollowerCount(followersCount || 0);
+      }
+
+      // Check if current user is following
+      const { data: followData, error: followError } = await supabase
+        .from("followers")
+        .select("*")
+        .eq("user_id", creatorId)
+        .eq("follower_user_id", user.user_id)
+        .maybeSingle(); // Use maybeSingle instead of single to avoid errors when no record exists
+
+      if (followError && followError.code !== 'PGRST116') { // PGRST116 = no rows returned
+        console.error("Error checking follow status:", followError);
+      } else {
+        setIsFollowing(!!followData);
+      }
+    } catch (err) {
+      console.error("Error in fetchFollowerData:", err);
+    }
   };
 
 
@@ -289,13 +342,19 @@ export default function BuildDetailPage() {
       }
 
       if (newComment) {
+        console.log("✅ Comment posted successfully:", newComment.comment_id);
+        
         // Update the comments count in the builds table
-        await supabase
+        const { error: updateError } = await supabase
           .from("builds")
           .update({
             comments: (build.comments || 0) + 1
           })
           .eq("build_id", build.build_id);
+
+        if (updateError) {
+          console.error("Error updating build comments count:", updateError);
+        }
 
         // Fetch user data for the comment
         const { data: userData } = await supabase
@@ -449,28 +508,76 @@ export default function BuildDetailPage() {
   };
 
   const toggleFollow = async () => {
-    if (!user || !creator) return;
+    if (!user) {
+      alert("Please log in to follow users.");
+      return;
+    }
+
+    if (!creator) {
+      alert("Creator information not available.");
+      return;
+    }
+
     if (user.user_id === creator.user_id) {
       alert("You cannot follow yourself.");
       return;
     }
 
-    if (isFollowing) {
-      await supabase
-        .from("followers")
-        .delete()
-        .eq("user_id", creator.user_id)
-        .eq("follower_user_id", user.user_id);
-    } else {
-      await supabase
-        .from("followers")
-        .insert({
-          user_id: creator.user_id,
-          follower_user_id: user.user_id,
-        });
+    setIsTogglingFollow(true);
+    try {
+      if (isFollowing) {
+        // Unfollow: Delete the follow relationship
+        const { error: deleteError } = await supabase
+          .from("followers")
+          .delete()
+          .eq("user_id", creator.user_id)
+          .eq("follower_user_id", user.user_id);
+
+        if (deleteError) {
+          console.error("Error unfollowing:", deleteError);
+          alert("Failed to unfollow. Please try again.");
+          return;
+        }
+
+        console.log("✅ Successfully unfollowed user");
+        // Update local state immediately
+        setIsFollowing(false);
+        setFollowerCount((prev) => Math.max(0, prev - 1));
+      } else {
+        // Follow: Insert the follow relationship
+        const { error: insertError } = await supabase
+          .from("followers")
+          .insert({
+            user_id: creator.user_id,
+            follower_user_id: user.user_id,
+          });
+
+        if (insertError) {
+          console.error("Error following:", insertError);
+          // Check if it's a duplicate key error (already following)
+          if (insertError.code === '23505') {
+            alert("You are already following this user.");
+            setIsFollowing(true);
+          } else {
+            alert("Failed to follow. Please try again.");
+          }
+          return;
+        }
+
+        console.log("✅ Successfully followed user");
+        // Update local state immediately
+        setIsFollowing(true);
+        setFollowerCount((prev) => prev + 1);
+      }
+
+      // Refresh follow status and count from database to ensure consistency
+      await fetchFollowerData(creator.user_id);
+    } catch (err) {
+      console.error("Error in toggleFollow:", err);
+      alert("An error occurred. Please try again.");
+    } finally {
+      setIsTogglingFollow(false);
     }
-    // Refresh follow status and count
-    fetchFollowerData(creator.user_id);
   };
 
 
@@ -762,9 +869,13 @@ export default function BuildDetailPage() {
                   className="w-full mt-4"
                   variant={isFollowing ? "default" : "outline"}
                   onClick={toggleFollow}
+                  disabled={isTogglingFollow || !user}
                 >
                   <User className="h-4 w-4 mr-2" />
-                  {isFollowing ? "Following" : "Follow"}
+                  {isTogglingFollow 
+                    ? (isFollowing ? "Unfollowing..." : "Following...") 
+                    : (isFollowing ? "Following" : "Follow")
+                  }
                 </Button>
               </CardContent>
             </Card>

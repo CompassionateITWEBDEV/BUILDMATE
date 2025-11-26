@@ -100,7 +100,7 @@ if (dbComponent.component_purpose) {
     rating: 4.5,
     reviews: Math.floor(Math.random() * 1000) + 100,
     specifications: {
-      'Price': `₱${dbComponent.component_price || 0}`,
+      'Price': `$${dbComponent.component_price || 0}`,
       'Category': dbComponent.component_categories?.category_name || 'Unknown',
       'Retailer': dbComponent.retailers?.retailer_name || 'Central Juan Solution',
       ...(appCategory === 'memory' && compatInfo.type && { 'type': compatInfo.type }),
@@ -132,8 +132,22 @@ export async function getSupabaseComponents(): Promise<Component[]> {
     const dbComponents = await componentService.getAll()
     console.log(`Fetched ${dbComponents.length} components from Supabase`, dbComponents)
     return dbComponents.map(convertDbComponentToAppComponent)
-  } catch (error) {
-    console.error('Error fetching components from Supabase:', error)
+  } catch (error: any) {
+    // Check if error has meaningful content
+    const hasMessage = error?.message && typeof error.message === 'string' && error.message.trim().length > 0;
+    const hasCode = error?.code && typeof error.code === 'string' && error.code.trim().length > 0;
+    const hasStack = error?.stack && typeof error.stack === 'string' && error.stack.trim().length > 0;
+    const hasName = error?.name && typeof error.name === 'string' && error.name.trim().length > 0;
+    
+    // Check if error object is empty (no meaningful properties)
+    const isEmpty = !hasMessage && !hasCode && !hasStack && !hasName && 
+                   (!error || (typeof error === 'object' && Object.keys(error).length === 0));
+    
+    // Only log if error has meaningful content
+    if (!isEmpty && (hasMessage || hasCode || hasStack || hasName)) {
+      console.error('Error fetching components from Supabase:', error)
+    }
+    // Silently return empty array for empty errors
     return []
   }
 }

@@ -45,7 +45,7 @@ import {
   MapPin
 } from "lucide-react"
 
-import { mockComponents, type Component, type ComponentCategory, type PerformanceCategory, performanceCategories } from "@/lib/mock-data"
+import { type Component, type ComponentCategory, type PerformanceCategory, performanceCategories } from "@/lib/mock-data"
 import { CompatibilityChecker, type CompatibilityResult } from "@/lib/compatibility-checker"
 import { filterComponentsByPerformance } from "@/lib/performance-filter"
 import { DuplicateDetector, type BuildComparison } from "@/lib/duplicate-detector"
@@ -130,7 +130,9 @@ export default function BuilderPage() {
   const isComponentCompatible = (component: Component, category: ComponentCategory): boolean => {
     // If no components are selected, show all components
     const hasSelectedComponents = Object.values(selectedComponents).some(comp => comp !== null)
-    if (!hasSelectedComponents) return true
+    if (!hasSelectedComponents) {
+      return true // Show all when nothing is selected
+    }
 
     // CPU-Motherboard compatibility
     if (category === "motherboard" && selectedComponents.cpu) {
@@ -399,6 +401,44 @@ export default function BuilderPage() {
       }
     }
 
+    // PSU-Power requirement compatibility
+    if (category === "psu") {
+      // Calculate total power requirement from selected components
+      let totalPower = 0
+      if (selectedComponents.cpu) {
+        const cpuTdp = Number.parseInt(selectedComponents.cpu.specifications.tdp as string) || 0
+        totalPower += cpuTdp
+      }
+      if (selectedComponents.gpu) {
+        const gpuTdp = Number.parseInt(selectedComponents.gpu.specifications.tdp as string) || 0
+        totalPower += gpuTdp
+      }
+      // Add base power for other components (motherboard, RAM, storage, etc.)
+      totalPower += 150 // Base power for other components
+      
+      const psuWattage = Number.parseInt(component.specifications.wattage as string) || 0
+      // PSU should have at least 20% headroom
+      if (psuWattage > 0 && totalPower > 0 && psuWattage < totalPower * 1.2) {
+        return false // PSU wattage is insufficient
+      }
+    }
+
+    // GPU-Motherboard compatibility (PCIe slot)
+    if (category === "gpu" && selectedComponents.motherboard) {
+      const pcieSlots = Number.parseInt(selectedComponents.motherboard.specifications.pcieSlots as string) || 0
+      if (pcieSlots === 0) {
+        return false // Motherboard has no PCIe slots
+      }
+    }
+
+    if (category === "motherboard" && selectedComponents.gpu) {
+      const pcieSlots = Number.parseInt(component.specifications.pcieSlots as string) || 0
+      if (pcieSlots === 0) {
+        return false // This motherboard has no PCIe slots for selected GPU
+      }
+    }
+
+    // If we reach here, component is compatible (or no compatibility check applies)
     return true
   }
 
@@ -550,41 +590,73 @@ export default function BuilderPage() {
     const selectedComponentsList = Object.values(selectedComponents).filter(Boolean)
     
     if (selectedComponentsList.length === 0) {
-      setAlgorithmError("Please select some components first")
+      setAlgorithmError("Please select at least one component first to get upgrade suggestions.")
+      setTimeout(() => setAlgorithmError(null), 5000)
       return
     }
 
     setIsLoadingUpgrades(true)
     setAlgorithmError(null)
+    setUpgradeRecommendations([])
 
     try {
-      const currentBuild = selectedComponentsList.map((comp) => ({
-        component_id: typeof comp!.id === 'number' ? comp!.id : parseInt(String(comp!.id).replace(/\D/g, '')) || 0,
-        component_name: comp!.name,
-        component_price: comp!.price,
-        category_name: comp!.category.charAt(0).toUpperCase() + comp!.category.slice(1),
-      }))
+      // Build the current build array with proper component data
+      const currentBuild = selectedComponentsList.map((comp) => {
+        // Extract numeric ID from component
+        let componentId = 0
+        if (typeof comp!.id === 'number') {
+          componentId = comp!.id
+        } else if (typeof comp!.id === 'string') {
+          const numericId = parseInt(String(comp!.id).replace(/\D/g, ''))
+          componentId = isNaN(numericId) ? 0 : numericId
+        }
 
+        return {
+          component_id: componentId,
+          component_name: comp!.name || comp!.brand + ' ' + comp!.name || 'Unknown',
+          component_price: comp!.price || 0,
+          category_name: comp!.category.charAt(0).toUpperCase() + comp!.category.slice(1),
+        }
+      })
+
+      console.log("Requesting upgrade recommendations for build:", currentBuild)
+
+      // Get upgrade recommendations from the algorithm service
       const recommendations = await getUpgradeRecommendations(currentBuild)
+      
+      console.log("Received upgrade recommendations:", recommendations)
+
+      if (!recommendations || recommendations.length === 0) {
+        setAlgorithmError("No upgrade recommendations available for your current build.")
+        setTimeout(() => setAlgorithmError(null), 5000)
+        return
+      }
+
       setUpgradeRecommendations(recommendations)
       
       // Create a map of recommendation index to category by matching component names
       const categoryMap = new Map<number, ComponentCategory>()
       recommendations.forEach((rec, recIndex) => {
         // Find the component in selectedComponentsList that matches this recommendation
-        const matchingComponent = selectedComponentsList.find(comp => 
-          comp!.name === rec.current_component
-        )
+        const matchingComponent = selectedComponentsList.find(comp => {
+          const compName = comp!.name || comp!.brand + ' ' + comp!.name || ''
+          return compName.toLowerCase().includes(rec.current_component.toLowerCase()) ||
+                 rec.current_component.toLowerCase().includes(compName.toLowerCase())
+        })
         if (matchingComponent) {
           categoryMap.set(recIndex, matchingComponent.category)
         }
       })
       setUpgradeCategoryMap(categoryMap)
       
+      // Show the dialog with recommendations
       setShowUpgradeDialog(true)
+      console.log("✅ Upgrade recommendations dialog opened")
     } catch (error: any) {
       console.error("Error getting upgrade recommendations:", error)
-      setAlgorithmError(error.message || "Failed to get upgrade recommendations. Make sure Python backend is running.")
+      const errorMessage = error.message || "Failed to get upgrade recommendations. Please make sure the Python backend is running and try again."
+      setAlgorithmError(errorMessage)
+      setTimeout(() => setAlgorithmError(null), 8000)
     } finally {
       setIsLoadingUpgrades(false)
     }
@@ -593,24 +665,40 @@ export default function BuilderPage() {
   const handleApplyUpgrade = async (recIndex: number, recommendedName: string) => {
     const category = upgradeCategoryMap.get(recIndex)
     if (!category) {
-      setAlgorithmError("Could not determine component category for upgrade")
+      setAlgorithmError("Could not determine component category for upgrade. Please try again.")
+      setTimeout(() => setAlgorithmError(null), 5000)
       return
     }
 
     try {
+      console.log(`Applying upgrade: ${recommendedName} to ${category} category`)
+      
       // Fetch all components in this category from Supabase
       const categoryComponents = await getSupabaseComponentsByCategory(category)
       
-      // Find the component by name (case-insensitive partial match)
-      const upgradedComponent = categoryComponents.find(comp => 
-        comp.name.toLowerCase().includes(recommendedName.toLowerCase()) ||
-        recommendedName.toLowerCase().includes(comp.name.toLowerCase())
-      )
-
-      if (!upgradedComponent) {
-        setAlgorithmError(`Could not find component "${recommendedName}" in ${category} category`)
+      if (!categoryComponents || categoryComponents.length === 0) {
+        setAlgorithmError(`No components found in ${category} category. Please try again.`)
+        setTimeout(() => setAlgorithmError(null), 5000)
         return
       }
+      
+      // Find the component by name (case-insensitive partial match)
+      const upgradedComponent = categoryComponents.find(comp => {
+        const compFullName = `${comp.brand || ''} ${comp.name || ''}`.trim().toLowerCase()
+        const recommendedLower = recommendedName.toLowerCase()
+        return compFullName.includes(recommendedLower) ||
+               recommendedLower.includes(compFullName) ||
+               comp.name.toLowerCase().includes(recommendedLower) ||
+               recommendedLower.includes(comp.name.toLowerCase())
+      })
+
+      if (!upgradedComponent) {
+        setAlgorithmError(`Could not find component "${recommendedName}" in ${category} category. The component may not be available in the database.`)
+        setTimeout(() => setAlgorithmError(null), 5000)
+        return
+      }
+
+      console.log("✅ Found upgrade component:", upgradedComponent)
 
       // Apply the upgrade to the selected components
       setSelectedComponents(prev => ({
@@ -621,9 +709,13 @@ export default function BuilderPage() {
       // Show success message and close dialog
       setShowUpgradeDialog(false)
       setAlgorithmError(null)
+      
+      // Show a brief success indicator
+      console.log(`✅ Successfully upgraded ${category} to ${upgradedComponent.name}`)
     } catch (error: any) {
       console.error("Error applying upgrade:", error)
-      setAlgorithmError(error.message || "Failed to apply upgrade")
+      setAlgorithmError(error.message || "Failed to apply upgrade. Please try again.")
+      setTimeout(() => setAlgorithmError(null), 5000)
     }
   }
 
@@ -742,23 +834,22 @@ export default function BuilderPage() {
     const fetchComponents = async () => {
       setIsLoadingComponents(true)
       try {
-        // Fetch components from Supabase database
+        // Fetch components from Supabase database only
         const dbComponents = await getSupabaseComponents()
         
         if (dbComponents.length > 0) {
           setComponents(dbComponents)
-          console.log("Fetched components from database:", dbComponents)
-          console.log(`Loaded ${dbComponents.length} components from database`)
+          console.log(`✅ Loaded ${dbComponents.length} components from Supabase database`)
         } else {
-          // Fallback to mock data if database is empty
-          console.warn("No components found in database, using mock data")
-          setComponents(mockComponents)
+          // No components in database - show error message
+          console.warn("⚠️ No components found in database")
+          setFetchError("No components available. Please add components to the database.")
+          setComponents([])
         }
       } catch (err) {
-        console.error("Error fetching components:", err)
-        setFetchError("Failed to fetch components")
-        // Fallback to mock data on error
-        setComponents(mockComponents)
+        console.error("❌ Error fetching components from database:", err)
+        setFetchError("Failed to fetch components from database. Please check your connection.")
+        setComponents([])
       } finally {
         setIsLoadingComponents(false)
       }
@@ -1636,62 +1727,79 @@ export default function BuilderPage() {
 
       {/* Upgrade Recommendations Dialog */}
       <Dialog open={showUpgradeDialog} onOpenChange={setShowUpgradeDialog}>
-        <DialogContent className="max-w-2xl">
+        <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle>
+            <DialogTitle className="flex items-center gap-2">
+              <TrendingUp className="h-5 w-5 text-green-600" />
               Upgrade Recommendations
             </DialogTitle>
             <DialogDescription>
               Suggested component upgrades for your current build
             </DialogDescription>
           </DialogHeader>
-          {upgradeRecommendations.length === 0 ? (
+          {isLoadingUpgrades ? (
             <div className="text-center py-8">
-              <p className="text-slate-600 dark:text-slate-400">No upgrade recommendations available.</p>
+              <Loader2 className="h-8 w-8 animate-spin mx-auto mb-4 text-blue-600" />
+              <p className="text-slate-600 dark:text-slate-400">Loading upgrade recommendations...</p>
+            </div>
+          ) : upgradeRecommendations.length === 0 ? (
+            <div className="text-center py-8">
+              <p className="text-slate-600 dark:text-slate-400">No upgrade recommendations available for your current build.</p>
+              <p className="text-xs text-slate-500 mt-2">Try selecting different components or check back later.</p>
             </div>
           ) : (
-            <div className="space-y-3">
+            <div className="space-y-4">
               {upgradeRecommendations.map((rec, index) => (
                 <Card 
                   key={index} 
                   className={`border-slate-200 dark:border-slate-700 ${
-                    rec.recommended_upgrade ? 'hover:border-green-500 hover:shadow-md transition-all cursor-pointer' : ''
+                    rec.recommended_upgrade ? 'hover:border-green-500 hover:shadow-md transition-all' : 'opacity-75'
                   }`}
                 >
                   <CardContent className="p-4">
-                    <div className="flex items-center justify-between">
-                      <div className="flex-1">
-                        <p className="text-sm font-medium text-slate-900 dark:text-white">
-                          {rec.current_component}
-                        </p>
+                    <div className="flex items-start justify-between gap-4">
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2 mb-2">
+                          <p className="text-sm font-semibold text-slate-900 dark:text-white">
+                            {rec.current_component}
+                          </p>
+                        </div>
                         {rec.recommended_upgrade ? (
-                          <>
-                            <div className="flex items-center gap-2 mt-1">
-                              <span className="text-xs text-slate-500">→</span>
-                              <p className="text-sm text-green-600 dark:text-green-400 font-medium">
+                          <div className="space-y-2">
+                            <div className="flex items-center gap-2">
+                              <span className="text-sm text-slate-500">→</span>
+                              <p className="text-sm font-medium text-green-600 dark:text-green-400">
                                 {rec.recommended_upgrade}
                               </p>
                             </div>
-                            {rec.new_price && (
-                              <p className="text-xs text-slate-600 dark:text-slate-400 mt-1">
-                                New price: {formatCurrency(rec.new_price)}
-                              </p>
-                            )}
-                            {rec.upgrade_cost && (
-                              <p className="text-xs text-blue-600 dark:text-blue-400 mt-1">
-                                Upgrade cost: {formatCurrency(rec.upgrade_cost)}
-                              </p>
-                            )}
-                          </>
+                            <div className="flex flex-col gap-1 ml-4">
+                              {rec.new_price && (
+                                <div className="flex items-center gap-2">
+                                  <span className="text-xs text-slate-500">New price:</span>
+                                  <span className="text-xs font-semibold text-slate-700 dark:text-slate-300">
+                                    {formatCurrency(rec.new_price)}
+                                  </span>
+                                </div>
+                              )}
+                              {rec.upgrade_cost && (
+                                <div className="flex items-center gap-2">
+                                  <span className="text-xs text-slate-500">Upgrade cost:</span>
+                                  <span className="text-xs font-semibold text-blue-600 dark:text-blue-400">
+                                    {formatCurrency(rec.upgrade_cost)}
+                                  </span>
+                                </div>
+                              )}
+                            </div>
+                          </div>
                         ) : (
-                          <p className="text-xs text-slate-500 mt-1">No upgrade available</p>
+                          <p className="text-xs text-slate-500 italic">No upgrade available for this component</p>
                         )}
                       </div>
                       {rec.recommended_upgrade && (
                         <Button
                           size="sm"
                           onClick={() => handleApplyUpgrade(index, rec.recommended_upgrade!)}
-                          className="ml-4"
+                          className="flex-shrink-0"
                         >
                           Apply
                         </Button>

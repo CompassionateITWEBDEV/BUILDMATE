@@ -108,7 +108,7 @@ export async function POST(request: NextRequest) {
 
     // Collect unique retailers with their components
     const retailerMap = new Map<string, { retailer: any; components: any[] }>()
-    const CENTRAL_JUAN_EMAIL = 'sales.centraljuan.net@gmail.com'
+    const CENTRAL_JUAN_EMAIL = 'dummy.dumm.acc001@gmail.com'
     
     components.forEach((component: any) => {
       const retailer = component.retailers
