@@ -7,8 +7,9 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Input } from "@/components/ui/input"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
-import { Cpu, Heart, MessageCircle, Share, Search, Monitor, Users, Eye, BarChart3, ArrowLeft } from "lucide-react"
+import { Cpu, Heart, MessageCircle, Share, Search, Monitor, Users, Eye, BarChart3, ArrowLeft, Plus, X, TrendingUp, TrendingDown, DollarSign, Zap, MemoryStick, HardDrive, Fan, Settings } from "lucide-react"
 import { buildService, buildComponentService } from "@/lib/database"
 import { formatCurrency, PRICE_RANGES } from "@/lib/currency"
 import { useAuth } from "@/contexts/supabase-auth-context"
@@ -48,6 +49,10 @@ export default function BuildsPage() {
   const [likedBuilds, setLikedBuilds] = useState<number[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const [activeTab, setActiveTab] = useState<"browse" | "compare">("browse")
+  const [selectedBuildsForCompare, setSelectedBuildsForCompare] = useState<BuildWithDetails[]>([])
+  const [compareSearchTerm, setCompareSearchTerm] = useState("")
+  const [compareActiveTab, setCompareActiveTab] = useState("overview")
 
   // Fetch builds and statistics
   useEffect(() => {
@@ -123,7 +128,10 @@ export default function BuildsPage() {
   }
 
   const handleLike = async (build: BuildWithDetails) => {
-    if (!user) return
+    if (!user) {
+      alert("Please log in to like builds.")
+      return
+    }
     const isLiked = likedBuilds.includes(build.build_id)
 
     if (build.users?.user_id === user.user_id) {
@@ -215,7 +223,7 @@ export default function BuildsPage() {
               <p className="text-slate-600 dark:text-slate-400">Discover amazing PC builds from our community</p>
             </div>
             <div className="flex gap-2">
-              <Link href="/">
+              <Link href="/dashboard">
                 <Button variant="outline" size="sm">
                   <ArrowLeft className="h-4 w-4 mr-2" />
                   Back to Home
@@ -254,6 +262,14 @@ export default function BuildsPage() {
           </div>
         </div>
 
+        <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as "browse" | "compare")} className="mb-8">
+          <TabsList className="grid w-full grid-cols-2 max-w-md">
+            <TabsTrigger value="browse">Browse Builds</TabsTrigger>
+            <TabsTrigger value="compare">Compare Builds</TabsTrigger>
+          </TabsList>
+
+          {/* Browse Tab */}
+          <TabsContent value="browse" className="space-y-6">
         <div className="flex flex-col lg:flex-row gap-4 mb-8">
           <div className="flex-1 relative">
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-slate-400" />
@@ -378,29 +394,66 @@ export default function BuildsPage() {
                   {/* Actions */}
                   <div className="flex items-center justify-between pt-2 border-t border-slate-100 dark:border-slate-700">
                     <div className="flex items-center gap-3">
-                      <button
-                        className={`flex items-center gap-1 text-sm transition-colors ${
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className={`h-auto p-0 flex items-center gap-1 text-sm transition-colors ${
                           isLiked ? "text-red-500 hover:text-red-600" : "text-slate-500 hover:text-red-500"
                         }`}
                         onClick={() => handleLike(build)}
                       >
                         <Heart className={`h-4 w-4 ${isLiked ? "fill-current" : ""}`} />
-                        <span>{build.likes}</span>
-                      </button>
-                      <button className="flex items-center gap-1 text-sm text-slate-500 hover:text-blue-500 transition-colors">
-                        <MessageCircle className="h-4 w-4" />
-                        <span>{build.comments || 0}</span>
-                      </button>
-                      <button className="flex items-center gap-1 text-sm text-slate-500 hover:text-green-500 transition-colors">
+                        <span>{build.likes || 0}</span>
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="h-auto p-0 text-slate-500 hover:text-blue-500"
+                        asChild
+                      >
+                        <Link href={`/builds/${build.build_id}`}>
+                          <MessageCircle className="h-4 w-4 mr-1" />
+                          <span>{build.comments || 0}</span>
+                        </Link>
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="h-auto p-0 text-slate-500 hover:text-green-500"
+                        onClick={async () => {
+                          const url = `${window.location.origin}/builds/${build.build_id}`
+                          try {
+                            await navigator.clipboard.writeText(url)
+                            alert("Build link copied to clipboard!")
+                          } catch (err) {
+                            console.error("Failed to copy link:", err)
+                            alert("Failed to copy link. Please copy manually: " + url)
+                          }
+                        }}
+                      >
                         <Share className="h-4 w-4" />
-                      </button>
+                      </Button>
                     </div>
                     <div className="flex items-center gap-2">
-                      <Button size="sm" variant="outline" asChild className="text-xs bg-transparent">
-                        <Link href={`/compare?add=${build.build_id}`}>
-                          <BarChart3 className="h-3 w-3 mr-1" />
-                          Compare
-                        </Link>
+                      <Button 
+                        size="sm" 
+                        variant="outline" 
+                        className="text-xs bg-transparent"
+                        onClick={() => {
+                          if (selectedBuildsForCompare.length >= 3) {
+                            alert("You can compare up to 3 builds at once")
+                            return
+                          }
+                          if (selectedBuildsForCompare.some(b => b.build_id === build.build_id)) {
+                            alert("This build is already in the comparison")
+                            return
+                          }
+                          setSelectedBuildsForCompare([...selectedBuildsForCompare, build])
+                          setActiveTab("compare")
+                        }}
+                      >
+                        <BarChart3 className="h-3 w-3 mr-1" />
+                        Compare
                       </Button>
                       <Button size="sm" variant="outline" asChild className="text-xs bg-transparent">
                         <Link href={`/builds/${build.build_id}`}>View Details</Link>
@@ -423,6 +476,222 @@ export default function BuildsPage() {
             </Button>
           </div>
         )}
+          </TabsContent>
+
+          {/* Compare Tab */}
+          <TabsContent value="compare" className="space-y-6">
+            {selectedBuildsForCompare.length === 0 ? (
+              <Card>
+                <CardHeader>
+                  <CardTitle>Select Builds to Compare</CardTitle>
+                  <CardContent>
+                    <p className="text-slate-600 dark:text-slate-400 mb-4">
+                      Choose builds from the Browse tab to compare them side by side
+                    </p>
+                    <Button onClick={() => setActiveTab("browse")}>
+                      Browse Builds
+                    </Button>
+                  </CardContent>
+                </CardHeader>
+              </Card>
+            ) : (
+              <div className="space-y-6">
+                <Card>
+                  <CardHeader>
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <CardTitle>Comparing {selectedBuildsForCompare.length} Builds</CardTitle>
+                        <p className="text-sm text-slate-600 dark:text-slate-400 mt-1">
+                          Analyze differences in specs, performance, and cost
+                        </p>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <Button variant="outline" size="sm" onClick={() => setSelectedBuildsForCompare([])}>
+                          <X className="h-4 w-4 mr-2" />
+                          Clear All
+                        </Button>
+                        <Button size="sm" onClick={() => setActiveTab("browse")}>
+                          Add More
+                        </Button>
+                      </div>
+                    </div>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="flex flex-wrap gap-2">
+                      {selectedBuildsForCompare.map((build, index) => (
+                        <div key={build.build_id} className="flex items-center gap-2 bg-slate-100 dark:bg-slate-800 rounded-lg px-3 py-2">
+                          <Badge variant={index === 0 ? "default" : "secondary"}>
+                            Build {index + 1}
+                          </Badge>
+                          <span className="font-medium">{build.build_name}</span>
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            onClick={() => setSelectedBuildsForCompare(selectedBuildsForCompare.filter(b => b.build_id !== build.build_id))}
+                            className="h-6 w-6 p-0"
+                          >
+                            <X className="h-3 w-3" />
+                          </Button>
+                        </div>
+                      ))}
+                    </div>
+                  </CardContent>
+                </Card>
+
+                <Tabs value={compareActiveTab} onValueChange={setCompareActiveTab}>
+                  <TabsList className="grid w-full grid-cols-4">
+                    <TabsTrigger value="overview">Overview</TabsTrigger>
+                    <TabsTrigger value="components">Components</TabsTrigger>
+                    <TabsTrigger value="price">Price</TabsTrigger>
+                    <TabsTrigger value="specs">Specs</TabsTrigger>
+                  </TabsList>
+
+                  <TabsContent value="overview" className="space-y-6">
+                    <div className="grid lg:grid-cols-3 gap-6">
+                      {selectedBuildsForCompare.map((build, index) => (
+                        <Card key={build.build_id} className="border-slate-200 dark:border-slate-700">
+                          <CardHeader>
+                            <CardTitle className="text-lg">{build.build_name}</CardTitle>
+                            <p className="text-sm text-slate-600 dark:text-slate-400">{build.description || 'PC Build'}</p>
+                          </CardHeader>
+                          <CardContent className="space-y-4">
+                            <div className="flex items-center justify-between">
+                              <span className="text-sm text-slate-600 dark:text-slate-400">Total Price</span>
+                              <span className="text-xl font-bold text-blue-600">{formatCurrency(build.totalPrice || 0)}</span>
+                            </div>
+                            <div className="flex items-center justify-between">
+                              <span className="text-sm text-slate-600 dark:text-slate-400">Likes</span>
+                              <span className="font-medium">{build.likes || 0}</span>
+                            </div>
+                            <div className="flex items-center justify-between">
+                              <span className="text-sm text-slate-600 dark:text-slate-400">Views</span>
+                              <span className="font-medium">{(build.views || 0).toLocaleString()}</span>
+                            </div>
+                            <div className="flex items-center justify-between">
+                              <span className="text-sm text-slate-600 dark:text-slate-400">Components</span>
+                              <span className="font-medium">{build.components?.length || 0}</span>
+                            </div>
+                          </CardContent>
+                        </Card>
+                      ))}
+                    </div>
+                  </TabsContent>
+
+                  <TabsContent value="price" className="space-y-6">
+                    <Card>
+                      <CardHeader>
+                        <CardTitle className="flex items-center gap-2">
+                          <DollarSign className="h-5 w-5" />
+                          Price Comparison
+                        </CardTitle>
+                      </CardHeader>
+                      <CardContent>
+                        <div className="space-y-4">
+                          {selectedBuildsForCompare.map((build, index) => {
+                            const maxPrice = Math.max(...selectedBuildsForCompare.map(b => b.totalPrice || 0))
+                            const pricePercentage = maxPrice > 0 ? ((build.totalPrice || 0) / maxPrice) * 100 : 0
+                            return (
+                              <div key={build.build_id} className="space-y-2">
+                                <div className="flex items-center justify-between">
+                                  <span className="font-medium">{build.build_name}</span>
+                                  <span className="text-lg font-bold">{formatCurrency(build.totalPrice || 0)}</span>
+                                </div>
+                                <div className="w-full bg-slate-200 dark:bg-slate-700 rounded-full h-3">
+                                  <div
+                                    className="bg-blue-600 h-3 rounded-full"
+                                    style={{ width: `${pricePercentage}%` }}
+                                  />
+                                </div>
+                              </div>
+                            )
+                          })}
+                        </div>
+                      </CardContent>
+                    </Card>
+                  </TabsContent>
+
+                  <TabsContent value="components" className="space-y-6">
+                    <Card>
+                      <CardHeader>
+                        <CardTitle>Component Comparison</CardTitle>
+                      </CardHeader>
+                      <CardContent>
+                        <div className="overflow-x-auto">
+                          <table className="w-full">
+                            <thead>
+                              <tr className="border-b">
+                                <th className="text-left p-2">Component</th>
+                                {selectedBuildsForCompare.map((build, index) => (
+                                  <th key={build.build_id} className="text-left p-2">
+                                    Build {index + 1}
+                                  </th>
+                                ))}
+                              </tr>
+                            </thead>
+                            <tbody>
+                              {['CPU', 'GPU', 'Memory', 'Storage'].map((category) => (
+                                <tr key={category} className="border-b">
+                                  <td className="p-2 font-medium">{category}</td>
+                                  {selectedBuildsForCompare.map((build) => {
+                                    const component = build.components?.find((bc: any) => 
+                                      bc.components?.component_categories?.category_name === category
+                                    )
+                                    return (
+                                      <td key={build.build_id} className="p-2">
+                                        {component?.components?.component_name || 'N/A'}
+                                      </td>
+                                    )
+                                  })}
+                                </tr>
+                              ))}
+                            </tbody>
+                          </table>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  </TabsContent>
+
+                  <TabsContent value="specs" className="space-y-6">
+                    <Card>
+                      <CardHeader>
+                        <CardTitle>Detailed Specifications</CardTitle>
+                      </CardHeader>
+                      <CardContent>
+                        <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+                          {selectedBuildsForCompare.map((build, index) => (
+                            <Card key={build.build_id} className="border-slate-200 dark:border-slate-700">
+                              <CardHeader>
+                                <CardTitle className="text-lg">{build.build_name}</CardTitle>
+                              </CardHeader>
+                              <CardContent className="space-y-2">
+                                <div className="text-sm">
+                                  <span className="font-medium">Price: </span>
+                                  <span>{formatCurrency(build.totalPrice || 0)}</span>
+                                </div>
+                                <div className="text-sm">
+                                  <span className="font-medium">Components: </span>
+                                  <span>{build.components?.length || 0}</span>
+                                </div>
+                                <div className="text-sm">
+                                  <span className="font-medium">Type: </span>
+                                  <span>{build.build_types?.type_name || 'N/A'}</span>
+                                </div>
+                                <div className="text-sm">
+                                  <span className="font-medium">Created: </span>
+                                  <span>{new Date(build.date_created).toLocaleDateString()}</span>
+                                </div>
+                              </CardContent>
+                            </Card>
+                          ))}
+                        </div>
+                      </CardContent>
+                    </Card>
+                  </TabsContent>
+                </Tabs>
+              </div>
+            )}
+          </TabsContent>
+        </Tabs>
       </div>
     </div>
   )

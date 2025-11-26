@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
@@ -10,11 +10,11 @@ import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { Separator } from "@/components/ui/separator"
 import { Switch } from "@/components/ui/switch"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { Badge } from "@/components/ui/badge"
 import { ProtectedRoute } from "@/components/protected-route"
 import { useAuth } from "@/contexts/supabase-auth-context"
-import { ArrowLeft, Camera, Save, Calendar, MapPin, LinkIcon, Bell, Shield } from "lucide-react"
-
-import { useEffect } from "react";
+import { ArrowLeft, Camera, Save, Calendar, MapPin, LinkIcon, Bell, Shield, MessageSquare, Search, Tag, User, Plus, Clock, Settings, CheckCircle, FileText } from "lucide-react"
 import { supabase } from "@/lib/supabase";
 import Cropper from "react-easy-crop";
 import { getCroppedImg } from "@/lib/crop";
@@ -60,6 +60,12 @@ export default function ProfilePage() {
   const [croppedAreaPixels, setCroppedAreaPixels] = useState<any>(null);
   const [followers, setFollowers] = useState(0);
   const [following, setFollowing] = useState(0);
+  
+  // Support tickets state
+  const [tickets, setTickets] = useState<any[]>([]);
+  const [ticketSearchTerm, setTicketSearchTerm] = useState("");
+  const [ticketStatusFilter, setTicketStatusFilter] = useState("all");
+  const [ticketTypeFilter, setTicketTypeFilter] = useState("all");
 
 
   // When file is selected
@@ -81,15 +87,24 @@ export default function ProfilePage() {
 
   // Upload cropped image
   const handleUpload = async () => {
-    if (!imageSrc || !user?.supabase_id) return;
+    if (!imageSrc || !user?.supabase_id) {
+      alert("Please select an image to upload.");
+      return;
+    }
 
-    const croppedBlob = await getCroppedImg(imageSrc, croppedAreaPixels);
+    if (!croppedAreaPixels) {
+      alert("Please crop the image first.");
+      return;
+    }
 
-    const fileExt = "png"; // or extract from original file
-    const fileName = `${user.supabase_id}-${Date.now()}.${fileExt}`;
-    const filePath = `avatars/${fileName}`;
-
+    setUploading(true);
     try {
+      const croppedBlob = await getCroppedImg(imageSrc, croppedAreaPixels);
+
+      const fileExt = "png"; // or extract from original file
+      const fileName = `${user.supabase_id}-${Date.now()}.${fileExt}`;
+      const filePath = `avatars/${fileName}`;
+
       // Delete old avatar if exists
       if (user.avatar_url) {
         const oldFileName = user.avatar_url.split("/").pop();
@@ -106,14 +121,23 @@ export default function ProfilePage() {
           upsert: true,
         });
 
-      if (uploadError) throw uploadError;
+      if (uploadError) {
+        throw new Error(uploadError.message || "Failed to upload image");
+      }
 
       // Get public URL
       const { data: urlData } = supabase.storage.from("profile_pictures").getPublicUrl(filePath);
       setAvatarUrl(urlData.publicUrl);
 
       // Update user table
-      await supabase.from("users").update({ avatar_url: urlData.publicUrl }).eq("user_id", user.user_id);
+      const { error: updateError } = await supabase
+        .from("users")
+        .update({ avatar_url: urlData.publicUrl })
+        .eq("user_id", user.user_id);
+
+      if (updateError) {
+        throw new Error(updateError.message || "Failed to update profile");
+      }
 
       // Clear crop state
       setImageSrc(null);
@@ -121,9 +145,12 @@ export default function ProfilePage() {
       setZoom(1);
       setCroppedAreaPixels(null);
 
-      console.log("Avatar updated successfully!");
-    } catch (err) {
+      alert("Avatar updated successfully!");
+    } catch (err: any) {
       console.error("Upload error:", err);
+      alert(err.message || "Failed to upload avatar. Please try again.");
+    } finally {
+      setUploading(false);
     }
   };
 
@@ -190,7 +217,71 @@ export default function ProfilePage() {
       website: user.website || "",
       joinDate: user.created_at ? new Date(user.created_at) : new Date(),
     });
+
+    // Load notification preferences from database
+    if (user.notification_preferences) {
+      try {
+        const prefs = typeof user.notification_preferences === 'string' 
+          ? JSON.parse(user.notification_preferences)
+          : user.notification_preferences;
+        setNotifications(prefs);
+      } catch (e) {
+        console.error('Error parsing notification preferences:', e);
+      }
+    }
+
+    // Load privacy settings from database
+    if (user.privacy_settings) {
+      try {
+        const settings = typeof user.privacy_settings === 'string'
+          ? JSON.parse(user.privacy_settings)
+          : user.privacy_settings;
+        setPrivacy(settings);
+      } catch (e) {
+        console.error('Error parsing privacy settings:', e);
+      }
+    }
   }, [user]);
+
+  // Save notification preferences to database
+  const saveNotificationPreferences = async (newPreferences: typeof notifications) => {
+    if (!user) return;
+    
+    try {
+      const { error } = await supabase
+        .from("users")
+        .update({
+          notification_preferences: JSON.stringify(newPreferences)
+        })
+        .eq("user_id", user.user_id);
+
+      if (error) {
+        console.error("Failed to save notification preferences:", error);
+      }
+    } catch (err) {
+      console.error("Error saving notification preferences:", err);
+    }
+  };
+
+  // Save privacy settings to database
+  const savePrivacySettings = async (newSettings: typeof privacy) => {
+    if (!user) return;
+    
+    try {
+      const { error } = await supabase
+        .from("users")
+        .update({
+          privacy_settings: JSON.stringify(newSettings)
+        })
+        .eq("user_id", user.user_id);
+
+      if (error) {
+        console.error("Failed to save privacy settings:", error);
+      }
+    } catch (err) {
+      console.error("Error saving privacy settings:", err);
+    }
+  };
 
 
   const handleSave = async () => {
@@ -237,6 +328,28 @@ export default function ProfilePage() {
     }));
   }, [user]);
 
+  // Load tickets from localStorage
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const savedTickets = localStorage.getItem('buildmate-support-tickets');
+      if (savedTickets) {
+        try {
+          const parsedTickets = JSON.parse(savedTickets);
+          // Filter tickets for current user
+          const userTickets = parsedTickets.filter((ticket: any) => 
+            ticket.userId === user?.user_id || !ticket.userId
+          );
+          setTickets(userTickets.map((ticket: any) => ({
+            ...ticket,
+            replies: Array.isArray(ticket.replies) ? ticket.replies.length : (typeof ticket.replies === 'number' ? ticket.replies : 0)
+          })));
+        } catch (e) {
+          console.error('Error loading tickets from localStorage:', e);
+        }
+      }
+    }
+  }, [user]);
+
 
   if (!user) {
     return (
@@ -260,7 +373,7 @@ export default function ProfilePage() {
           <div className="container mx-auto px-4 py-4">
             <div className="flex items-center gap-4">
               <Button variant="ghost" size="sm" asChild>
-                <Link href="/">
+                <Link href="/dashboard">
                   <ArrowLeft className="h-4 w-4 mr-2" />
                   Back to Home
                 </Link>
@@ -313,11 +426,22 @@ export default function ProfilePage() {
                       <div className="mt-4 flex gap-2">
                         <Button
                           variant="outline"
-                          onClick={() => setImageSrc(null)} // Cancel cropping
+                          onClick={() => {
+                            setImageSrc(null);
+                            setCrop({ x: 0, y: 0 });
+                            setZoom(1);
+                            setCroppedAreaPixels(null);
+                          }}
+                          disabled={uploading}
                         >
                           Cancel
                         </Button>
-                        <Button onClick={handleUpload}>Upload</Button>
+                        <Button 
+                          onClick={handleUpload}
+                          disabled={uploading || !croppedAreaPixels}
+                        >
+                          {uploading ? "Uploading..." : "Upload"}
+                        </Button>
                       </div>
                     </div>
                   </div>
@@ -479,7 +603,11 @@ export default function ProfilePage() {
                   <Switch
                     id="email-updates"
                     checked={notifications.emailUpdates}
-                    onCheckedChange={(checked) => setNotifications((prev) => ({ ...prev, emailUpdates: checked }))}
+                    onCheckedChange={(checked) => {
+                      const newPrefs = { ...notifications, emailUpdates: checked };
+                      setNotifications(newPrefs);
+                      saveNotificationPreferences(newPrefs);
+                    }}
                   />
                 </div>
 
@@ -491,7 +619,11 @@ export default function ProfilePage() {
                   <Switch
                     id="build-likes"
                     checked={notifications.buildLikes}
-                    onCheckedChange={(checked) => setNotifications((prev) => ({ ...prev, buildLikes: checked }))}
+                    onCheckedChange={(checked) => {
+                      const newPrefs = { ...notifications, buildLikes: checked };
+                      setNotifications(newPrefs);
+                      saveNotificationPreferences(newPrefs);
+                    }}
                   />
                 </div>
 
@@ -503,7 +635,11 @@ export default function ProfilePage() {
                   <Switch
                     id="comments"
                     checked={notifications.comments}
-                    onCheckedChange={(checked) => setNotifications((prev) => ({ ...prev, comments: checked }))}
+                    onCheckedChange={(checked) => {
+                      const newPrefs = { ...notifications, comments: checked };
+                      setNotifications(newPrefs);
+                      saveNotificationPreferences(newPrefs);
+                    }}
                   />
                 </div>
 
@@ -515,7 +651,11 @@ export default function ProfilePage() {
                   <Switch
                     id="followers"
                     checked={notifications.followers}
-                    onCheckedChange={(checked) => setNotifications((prev) => ({ ...prev, followers: checked }))}
+                    onCheckedChange={(checked) => {
+                      const newPrefs = { ...notifications, followers: checked };
+                      setNotifications(newPrefs);
+                      saveNotificationPreferences(newPrefs);
+                    }}
                   />
                 </div>
 
@@ -529,7 +669,11 @@ export default function ProfilePage() {
                   <Switch
                     id="newsletter"
                     checked={notifications.newsletter}
-                    onCheckedChange={(checked) => setNotifications((prev) => ({ ...prev, newsletter: checked }))}
+                    onCheckedChange={(checked) => {
+                      const newPrefs = { ...notifications, newsletter: checked };
+                      setNotifications(newPrefs);
+                      saveNotificationPreferences(newPrefs);
+                    }}
                   />
                 </div>
               </CardContent>
@@ -553,7 +697,11 @@ export default function ProfilePage() {
                   <Switch
                     id="profile-public"
                     checked={privacy.profilePublic}
-                    onCheckedChange={(checked) => setPrivacy((prev) => ({ ...prev, profilePublic: checked }))}
+                    onCheckedChange={(checked) => {
+                      const newSettings = { ...privacy, profilePublic: checked };
+                      setPrivacy(newSettings);
+                      savePrivacySettings(newSettings);
+                    }}
                   />
                 </div>
 
@@ -565,7 +713,11 @@ export default function ProfilePage() {
                   <Switch
                     id="show-builds"
                     checked={privacy.showBuilds}
-                    onCheckedChange={(checked) => setPrivacy((prev) => ({ ...prev, showBuilds: checked }))}
+                    onCheckedChange={(checked) => {
+                      const newSettings = { ...privacy, showBuilds: checked };
+                      setPrivacy(newSettings);
+                      savePrivacySettings(newSettings);
+                    }}
                   />
                 </div>
 
@@ -577,7 +729,11 @@ export default function ProfilePage() {
                   <Switch
                     id="show-activity"
                     checked={privacy.showActivity}
-                    onCheckedChange={(checked) => setPrivacy((prev) => ({ ...prev, showActivity: checked }))}
+                    onCheckedChange={(checked) => {
+                      const newSettings = { ...privacy, showActivity: checked };
+                      setPrivacy(newSettings);
+                      savePrivacySettings(newSettings);
+                    }}
                   />
                 </div>
 
@@ -589,8 +745,201 @@ export default function ProfilePage() {
                   <Switch
                     id="show-email"
                     checked={privacy.showEmail}
-                    onCheckedChange={(checked) => setPrivacy((prev) => ({ ...prev, showEmail: checked }))}
+                    onCheckedChange={(checked) => {
+                      const newSettings = { ...privacy, showEmail: checked };
+                      setPrivacy(newSettings);
+                      savePrivacySettings(newSettings);
+                    }}
                   />
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* My Tickets */}
+            <Card>
+              <CardHeader>
+                <div className="flex items-center justify-between">
+                  <div>
+                    <CardTitle className="flex items-center gap-2">
+                      <MessageSquare className="h-5 w-5" />
+                      My Support Tickets
+                    </CardTitle>
+                    <CardDescription>Track and manage your support requests</CardDescription>
+                  </div>
+                  <Button asChild>
+                    <Link href="/support">
+                      <Plus className="h-4 w-4 mr-2" />
+                      New Ticket
+                    </Link>
+                  </Button>
+                </div>
+              </CardHeader>
+              <CardContent>
+                {/* Filters */}
+                <div className="flex flex-wrap gap-4 mb-6">
+                  <div className="flex items-center gap-2">
+                    <Search className="h-4 w-4 text-slate-400" />
+                    <Input
+                      placeholder="Search tickets..."
+                      value={ticketSearchTerm}
+                      onChange={(e) => setTicketSearchTerm(e.target.value)}
+                      className="w-64"
+                    />
+                  </div>
+                  <Select value={ticketStatusFilter} onValueChange={setTicketStatusFilter}>
+                    <SelectTrigger className="w-40">
+                      <SelectValue placeholder="Status" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">All Status</SelectItem>
+                      <SelectItem value="open">Open</SelectItem>
+                      <SelectItem value="in_progress">In Progress</SelectItem>
+                      <SelectItem value="resolved">Resolved</SelectItem>
+                      <SelectItem value="closed">Closed</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  <Select value={ticketTypeFilter} onValueChange={setTicketTypeFilter}>
+                    <SelectTrigger className="w-40">
+                      <SelectValue placeholder="Type" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">All Types</SelectItem>
+                      <SelectItem value="troubleshooting">Troubleshooting</SelectItem>
+                      <SelectItem value="build_problem">Build Problem</SelectItem>
+                      <SelectItem value="delivery">Delivery/Repair</SelectItem>
+                      <SelectItem value="general">General Inquiry</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                {/* Tickets List */}
+                <div className="space-y-4">
+                  {tickets
+                    .filter(ticket => {
+                      const matchesSearch = ticket.title.toLowerCase().includes(ticketSearchTerm.toLowerCase()) ||
+                                           ticket.description.toLowerCase().includes(ticketSearchTerm.toLowerCase());
+                      const matchesStatus = ticketStatusFilter === "all" || ticket.status === ticketStatusFilter;
+                      const matchesType = ticketTypeFilter === "all" || ticket.type === ticketTypeFilter;
+                      return matchesSearch && matchesStatus && matchesType;
+                    })
+                    .length === 0 ? (
+                    <div className="text-center py-12">
+                      <MessageSquare className="h-12 w-12 text-slate-400 mx-auto mb-4" />
+                      <h3 className="text-lg font-medium text-slate-900 dark:text-white mb-2">No tickets found</h3>
+                      <p className="text-slate-600 dark:text-slate-400 mb-4">
+                        {ticketSearchTerm || ticketStatusFilter !== "all" || ticketTypeFilter !== "all"
+                          ? "Try adjusting your filters"
+                          : "Create your first support ticket"
+                        }
+                      </p>
+                      <Button asChild>
+                        <Link href="/support">
+                          <Plus className="h-4 w-4 mr-2" />
+                          Create Ticket
+                        </Link>
+                      </Button>
+                    </div>
+                  ) : (
+                    tickets
+                      .filter(ticket => {
+                        const matchesSearch = ticket.title.toLowerCase().includes(ticketSearchTerm.toLowerCase()) ||
+                                             ticket.description.toLowerCase().includes(ticketSearchTerm.toLowerCase());
+                        const matchesStatus = ticketStatusFilter === "all" || ticket.status === ticketStatusFilter;
+                        const matchesType = ticketTypeFilter === "all" || ticket.type === ticketTypeFilter;
+                        return matchesSearch && matchesStatus && matchesType;
+                      })
+                      .map((ticket) => {
+                        const getStatusIcon = (status: string) => {
+                          switch (status) {
+                            case "open": return <Clock className="h-4 w-4" />;
+                            case "in_progress": return <Settings className="h-4 w-4" />;
+                            case "resolved": return <CheckCircle className="h-4 w-4" />;
+                            case "closed": return <FileText className="h-4 w-4" />;
+                            default: return <Clock className="h-4 w-4" />;
+                          }
+                        };
+                        const getPriorityColor = (priority: string) => {
+                          const colors: Record<string, string> = {
+                            low: "bg-green-100 text-green-800",
+                            medium: "bg-yellow-100 text-yellow-800",
+                            high: "bg-orange-100 text-orange-800",
+                            urgent: "bg-red-100 text-red-800"
+                          };
+                          return colors[priority] || "bg-gray-100 text-gray-800";
+                        };
+                        const getStatusColor = (status: string) => {
+                          const colors: Record<string, string> = {
+                            open: "bg-blue-100 text-blue-800",
+                            in_progress: "bg-yellow-100 text-yellow-800",
+                            resolved: "bg-green-100 text-green-800",
+                            closed: "bg-gray-100 text-gray-800"
+                          };
+                          return colors[status] || "bg-gray-100 text-gray-800";
+                        };
+                        const priorityLabels: Record<string, string> = {
+                          low: "Low",
+                          medium: "Medium",
+                          high: "High",
+                          urgent: "Urgent"
+                        };
+                        const statusLabels: Record<string, string> = {
+                          open: "Open",
+                          in_progress: "In Progress",
+                          resolved: "Resolved",
+                          closed: "Closed"
+                        };
+                        const typeLabels: Record<string, string> = {
+                          troubleshooting: "Troubleshooting",
+                          build_problem: "Build Problem",
+                          delivery: "Delivery/Repair",
+                          general: "General Inquiry"
+                        };
+                        return (
+                          <Card key={ticket.id} className="border-slate-200 dark:border-slate-700">
+                            <CardContent className="p-6">
+                              <div className="flex items-start justify-between">
+                                <div className="flex-1">
+                                  <div className="flex items-center gap-3 mb-2">
+                                    <h3 className="font-semibold text-slate-900 dark:text-white">{ticket.title}</h3>
+                                    <Badge className={getPriorityColor(ticket.priority)}>
+                                      {priorityLabels[ticket.priority] || ticket.priority}
+                                    </Badge>
+                                    <Badge className={getStatusColor(ticket.status)}>
+                                      {getStatusIcon(ticket.status)}
+                                      <span className="ml-1">{statusLabels[ticket.status] || ticket.status}</span>
+                                    </Badge>
+                                  </div>
+                                  <p className="text-sm text-slate-600 dark:text-slate-400 mb-3">{ticket.description}</p>
+                                  <div className="flex items-center gap-4 text-xs text-slate-500">
+                                    <div className="flex items-center gap-1">
+                                      <Tag className="h-3 w-3" />
+                                      {typeLabels[ticket.type] || ticket.type}
+                                    </div>
+                                    <div className="flex items-center gap-1">
+                                      <User className="h-3 w-3" />
+                                      {ticket.assignedTo || "Unassigned"}
+                                    </div>
+                                    <div className="flex items-center gap-1">
+                                      <Calendar className="h-3 w-3" />
+                                      {ticket.createdAt}
+                                    </div>
+                                    <div className="flex items-center gap-1">
+                                      <MessageSquare className="h-3 w-3" />
+                                      {ticket.replies || 0} replies
+                                    </div>
+                                  </div>
+                                </div>
+                                <Button variant="outline" size="sm" asChild>
+                                  <Link href={`/support/${ticket.id}`}>
+                                    View Details
+                                  </Link>
+                                </Button>
+                              </div>
+                            </CardContent>
+                          </Card>
+                        );
+                      })
+                  )}
                 </div>
               </CardContent>
             </Card>

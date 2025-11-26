@@ -181,7 +181,7 @@ export default function ComparePage() {
               <h2 className="text-xl font-semibold text-slate-700 dark:text-slate-300">Build Comparison</h2>
             </div>
             <div className="flex items-center gap-2">
-              <Link href="/">
+              <Link href="/dashboard">
                 <Button variant="outline" size="sm">
                   <ArrowLeft className="h-4 w-4 mr-2" />
                   Back to Home

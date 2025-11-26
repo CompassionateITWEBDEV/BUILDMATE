@@ -213,10 +213,10 @@ export default function SupportPage() {
       buildId: "",
     })
 
-    // Switch to tickets tab to show the new ticket
+    // Redirect to profile to view tickets
     setTimeout(() => {
-      setActiveTab("tickets")
       setSubmitSuccess(false)
+      window.location.href = "/profile"
     }, 2000)
   }
 
@@ -258,7 +258,7 @@ export default function SupportPage() {
             <div className="flex items-center gap-4">
               <h2 className="text-xl font-semibold text-slate-700 dark:text-slate-300">Help & Support</h2>
             </div>
-            <Link href="/">
+            <Link href="/dashboard">
               <Button variant="outline" size="sm">
                 <ArrowLeft className="h-4 w-4 mr-2" />
                 Back to Home
@@ -270,9 +270,8 @@ export default function SupportPage() {
 
       <div className="container mx-auto px-4 py-8">
         <Tabs value={activeTab} onValueChange={setActiveTab}>
-          <TabsList className="grid w-full grid-cols-3">
+          <TabsList className="grid w-full grid-cols-2">
             <TabsTrigger value="create">Create Ticket</TabsTrigger>
-            <TabsTrigger value="tickets">My Tickets</TabsTrigger>
             <TabsTrigger value="help">Help Center</TabsTrigger>
           </TabsList>
 
@@ -466,129 +465,6 @@ export default function SupportPage() {
                 </CardContent>
               </Card>
             </div>
-          </TabsContent>
-
-          {/* My Tickets Tab */}
-          <TabsContent value="tickets" className="space-y-6">
-            <Card>
-              <CardHeader>
-                <div className="flex items-center justify-between">
-                  <div>
-                    <CardTitle>My Support Tickets</CardTitle>
-                    <CardDescription>Track and manage your support requests</CardDescription>
-                  </div>
-                  <Button onClick={() => setActiveTab("create")}>
-                    <Plus className="h-4 w-4 mr-2" />
-                    New Ticket
-                  </Button>
-                </div>
-              </CardHeader>
-              <CardContent>
-                {/* Filters */}
-                <div className="flex flex-wrap gap-4 mb-6">
-                  <div className="flex items-center gap-2">
-                    <Search className="h-4 w-4 text-slate-400" />
-                    <Input
-                      placeholder="Search tickets..."
-                      value={searchTerm}
-                      onChange={(e) => setSearchTerm(e.target.value)}
-                      className="w-64"
-                    />
-                  </div>
-                  <Select value={statusFilter} onValueChange={setStatusFilter}>
-                    <SelectTrigger className="w-40">
-                      <SelectValue placeholder="Status" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="all">All Status</SelectItem>
-                      {statusOptions.map((status) => (
-                        <SelectItem key={status.value} value={status.value}>
-                          {status.label}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                  <Select value={typeFilter} onValueChange={setTypeFilter}>
-                    <SelectTrigger className="w-40">
-                      <SelectValue placeholder="Type" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="all">All Types</SelectItem>
-                      {supportTypes.map((type) => (
-                        <SelectItem key={type.value} value={type.value}>
-                          {type.label}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                {/* Tickets List */}
-                <div className="space-y-4">
-                  {filteredTickets.length === 0 ? (
-                    <div className="text-center py-12">
-                      <MessageSquare className="h-12 w-12 text-slate-400 mx-auto mb-4" />
-                      <h3 className="text-lg font-medium text-slate-900 dark:text-white mb-2">No tickets found</h3>
-                      <p className="text-slate-600 dark:text-slate-400 mb-4">
-                        {searchTerm || statusFilter !== "all" || typeFilter !== "all"
-                          ? "Try adjusting your filters"
-                          : "Create your first support ticket"
-                        }
-                      </p>
-                      <Button onClick={() => setActiveTab("create")}>
-                        <Plus className="h-4 w-4 mr-2" />
-                        Create Ticket
-                      </Button>
-                    </div>
-                  ) : (
-                    filteredTickets.map((ticket) => (
-                      <Card key={ticket.id} className="border-slate-200 dark:border-slate-700">
-                        <CardContent className="p-6">
-                          <div className="flex items-start justify-between">
-                            <div className="flex-1">
-                              <div className="flex items-center gap-3 mb-2">
-                                <h3 className="font-semibold text-slate-900 dark:text-white">{ticket.title}</h3>
-                                <Badge className={getPriorityColor(ticket.priority)}>
-                                  {priorityLevels.find(p => p.value === ticket.priority)?.label}
-                                </Badge>
-                                <Badge className={getStatusColor(ticket.status)}>
-                                  {getStatusIcon(ticket.status)}
-                                  <span className="ml-1">{statusOptions.find(s => s.value === ticket.status)?.label}</span>
-                                </Badge>
-                              </div>
-                              <p className="text-sm text-slate-600 dark:text-slate-400 mb-3">{ticket.description}</p>
-                              <div className="flex items-center gap-4 text-xs text-slate-500">
-                                <div className="flex items-center gap-1">
-                                  <Tag className="h-3 w-3" />
-                                  {supportTypes.find(t => t.value === ticket.type)?.label}
-                                </div>
-                                <div className="flex items-center gap-1">
-                                  <User className="h-3 w-3" />
-                                  {ticket.assignedTo}
-                                </div>
-                                <div className="flex items-center gap-1">
-                                  <Calendar className="h-3 w-3" />
-                                  {ticket.createdAt}
-                                </div>
-                                <div className="flex items-center gap-1">
-                                  <MessageSquare className="h-3 w-3" />
-                                  {Array.isArray(ticket.replies) ? ticket.replies.length : (typeof ticket.replies === 'number' ? ticket.replies : 0)} replies
-                                </div>
-                              </div>
-                            </div>
-                            <Link href={`/support/${ticket.id}`} onClick={() => startLoading("Loading ticket details...")}>
-                              <Button variant="outline" size="sm">
-                                View Details
-                              </Button>
-                            </Link>
-                          </div>
-                        </CardContent>
-                      </Card>
-                    ))
-                  )}
-                </div>
-              </CardContent>
-            </Card>
           </TabsContent>
 
           {/* Help Center Tab */}

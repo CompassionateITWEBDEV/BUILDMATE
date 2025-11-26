@@ -409,14 +409,6 @@ export default function GuideDetailPage() {
                       <Badge variant={guide.difficulty === "Beginner" ? "secondary" : "default"}>
                         {guide.difficulty}
                       </Badge>
-                      <div className="flex items-center gap-1 text-sm text-slate-600 dark:text-slate-400">
-                        <Clock className="h-4 w-4" />
-                        {guide.duration}
-                      </div>
-                      <div className="flex items-center gap-1 text-sm text-slate-600 dark:text-slate-400">
-                        <Users className="h-4 w-4" />
-                        {guide.views} views
-                      </div>
                     </div>
 
                     {/* Progress */}
@@ -449,10 +441,6 @@ export default function GuideDetailPage() {
                       <Badge variant={currentStepData.difficulty === "Easy" ? "secondary" : "default"}>
                         {currentStepData.difficulty}
                       </Badge>
-                      <div className="flex items-center gap-1 text-sm text-slate-600 dark:text-slate-400">
-                        <Clock className="h-4 w-4" />
-                        {currentStepData.duration}
-                      </div>
                     </div>
                   </div>
                 </CardHeader>

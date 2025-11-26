@@ -1,14 +1,25 @@
 "use client"
 
 import { useState, useEffect } from "react"
+import { useRouter } from "next/navigation"
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
 import { Card, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Navigation } from "@/components/navigation"
 import { WelcomeScreen } from "@/components/welcome-screen"
+import { useAuth } from "@/contexts/supabase-auth-context"
 import { Cpu, HardDrive, Monitor, Zap, Users, BookOpen, Star } from "lucide-react"
 
 export default function HomePage() {
+  const { user, isLoading } = useAuth()
+  const router = useRouter()
+
+  // Redirect logged-in users to dashboard
+  useEffect(() => {
+    if (!isLoading && user) {
+      router.push("/dashboard")
+    }
+  }, [user, isLoading, router])
   const [showWelcome, setShowWelcome] = useState(true)
   const [isFaded, setIsFaded] = useState(false)
 
@@ -27,6 +38,11 @@ export default function HomePage() {
     }
     setShowWelcome(false)
     setTimeout(() => setIsFaded(true), 100)
+  }
+
+  // Don't render landing page if user is logged in (will redirect)
+  if (!isLoading && user) {
+    return null
   }
 
   return (

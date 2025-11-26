@@ -100,7 +100,7 @@ if (dbComponent.component_purpose) {
     rating: 4.5,
     reviews: Math.floor(Math.random() * 1000) + 100,
     specifications: {
-      'Price': `$${dbComponent.component_price || 0}`,
+      'Price': `₱${dbComponent.component_price || 0}`,
       'Category': dbComponent.component_categories?.category_name || 'Unknown',
       'Retailer': dbComponent.retailers?.retailer_name || 'Central Juan Solution',
       ...(appCategory === 'memory' && compatInfo.type && { 'type': compatInfo.type }),

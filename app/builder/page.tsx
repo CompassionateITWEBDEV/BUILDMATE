@@ -126,6 +126,282 @@ export default function BuilderPage() {
   const [cspPage, setCspPage] = useState(0)
   const SOLUTIONS_PER_PAGE = 2
 
+  // Check if a component is compatible with currently selected components
+  const isComponentCompatible = (component: Component, category: ComponentCategory): boolean => {
+    // If no components are selected, show all components
+    const hasSelectedComponents = Object.values(selectedComponents).some(comp => comp !== null)
+    if (!hasSelectedComponents) return true
+
+    // CPU-Motherboard compatibility
+    if (category === "motherboard" && selectedComponents.cpu) {
+      const cpuSocket = selectedComponents.cpu.compatibility.socket
+      const mbSocket = component.compatibility.socket
+      if (cpuSocket && mbSocket && cpuSocket !== mbSocket) {
+        return false
+      }
+    }
+
+    if (category === "cpu" && selectedComponents.motherboard) {
+      const cpuSocket = component.compatibility.socket
+      const mbSocket = selectedComponents.motherboard.compatibility.socket
+      if (cpuSocket && mbSocket && cpuSocket !== mbSocket) {
+        return false
+      }
+    }
+
+    // Memory-Motherboard compatibility
+    if (category === "memory" && selectedComponents.motherboard) {
+      const memoryType = component.compatibility.memoryType || 
+                        (component.specifications.type as string)
+      const mbMemoryType = selectedComponents.motherboard.compatibility.memoryType ||
+                          (selectedComponents.motherboard.specifications.memoryType as string)
+      
+      if (memoryType && mbMemoryType) {
+        const mbSupports = Array.isArray(mbMemoryType) ? mbMemoryType : [mbMemoryType]
+        if (!mbSupports.includes(memoryType)) {
+          return false
+        }
+      }
+    }
+
+    if (category === "motherboard" && selectedComponents.memory) {
+      const memoryType = selectedComponents.memory.compatibility.memoryType ||
+                        (selectedComponents.memory.specifications.type as string)
+      const mbMemoryType = component.compatibility.memoryType ||
+                          (component.specifications.memoryType as string)
+      
+      if (memoryType && mbMemoryType) {
+        const mbSupports = Array.isArray(mbMemoryType) ? mbMemoryType : [mbMemoryType]
+        if (!mbSupports.includes(memoryType)) {
+          return false
+        }
+      }
+    }
+
+    // GPU-Case compatibility (dimensions)
+    if (category === "gpu" && selectedComponents.case) {
+      const gpuLength = component.compatibility.dimensions?.length || 0
+      const caseMaxGpuLength = Number.parseInt(selectedComponents.case.specifications.maxGpuLength as string) || 0
+      
+      if (gpuLength > 0 && caseMaxGpuLength > 0 && gpuLength > caseMaxGpuLength) {
+        return false
+      }
+
+      const gpuHeight = component.compatibility.dimensions?.height || 0
+      const caseMaxGpuHeight = Number.parseInt(selectedComponents.case.specifications.maxCoolerHeight as string) || 0
+      
+      if (gpuHeight > 0 && caseMaxGpuHeight > 0 && gpuHeight > caseMaxGpuHeight) {
+        return false
+      }
+    }
+
+    if (category === "case" && selectedComponents.gpu) {
+      const gpuLength = selectedComponents.gpu.compatibility.dimensions?.length || 0
+      const caseMaxGpuLength = Number.parseInt(component.specifications.maxGpuLength as string) || 0
+      
+      if (gpuLength > 0 && caseMaxGpuLength > 0 && gpuLength > caseMaxGpuLength) {
+        return false
+      }
+
+      const gpuHeight = selectedComponents.gpu.compatibility.dimensions?.height || 0
+      const caseMaxGpuHeight = Number.parseInt(component.specifications.maxCoolerHeight as string) || 0
+      
+      if (gpuHeight > 0 && caseMaxGpuHeight > 0 && gpuHeight > caseMaxGpuHeight) {
+        return false
+      }
+    }
+
+    // Cooling-CPU compatibility (socket)
+    if (category === "cooling" && selectedComponents.cpu) {
+      const cpuSocket = selectedComponents.cpu.compatibility.socket
+      if (cpuSocket && cpuSocket !== 'Standard') {
+        // Try to get supported sockets from cooling component
+        let supportedSockets: string[] = []
+        
+        // Method 1: Check compatibility.socket (may be comma-separated string like "AM4,LGA1700")
+        if (component.compatibility.socket) {
+          const socketStr = component.compatibility.socket
+          if (socketStr.includes(',')) {
+            supportedSockets = socketStr.split(',').map(s => s.trim())
+          } else if (socketStr !== 'Standard') {
+            supportedSockets = [socketStr]
+          }
+        }
+        
+        // Method 2: Try parsing from Compatibility JSON in specifications
+        if (supportedSockets.length === 0) {
+          try {
+            const compatStr = component.specifications.Compatibility as string
+            if (typeof compatStr === 'string') {
+              const compat = JSON.parse(compatStr)
+              if (compat.supportedSockets) {
+                supportedSockets = Array.isArray(compat.supportedSockets) 
+                  ? compat.supportedSockets 
+                  : [compat.supportedSockets]
+              } else if (compat.supported_sockets) {
+                supportedSockets = Array.isArray(compat.supported_sockets) 
+                  ? compat.supported_sockets 
+                  : [compat.supported_sockets]
+              }
+            }
+          } catch (e) {
+            // Ignore parse errors
+          }
+        }
+        
+        // Method 3: Check specifications for supportedSockets field (JSON string)
+        if (supportedSockets.length === 0 && component.specifications.supportedSockets) {
+          try {
+            const parsed = JSON.parse(component.specifications.supportedSockets as string)
+            if (Array.isArray(parsed)) {
+              supportedSockets = parsed
+            } else if (typeof parsed === 'string') {
+              // Handle comma-separated string
+              supportedSockets = parsed.includes(',') 
+                ? parsed.split(',').map(s => s.trim())
+                : [parsed]
+            }
+          } catch (e) {
+            // Not a JSON string, try as direct array or string
+            if (Array.isArray(component.specifications.supportedSockets)) {
+              supportedSockets = component.specifications.supportedSockets as string[]
+            } else if (typeof component.specifications.supportedSockets === 'string') {
+              const socketStr = component.specifications.supportedSockets
+              supportedSockets = socketStr.includes(',')
+                ? socketStr.split(',').map(s => s.trim())
+                : [socketStr]
+            }
+          }
+        }
+        
+        // Check compatibility - if we have socket info and it doesn't match, filter out
+        if (supportedSockets.length > 0 && !supportedSockets.includes(cpuSocket)) {
+          return false
+        }
+      }
+    }
+
+    // CPU-Cooling compatibility (when CPU is selected, filter coolers)
+    if (category === "cpu" && selectedComponents.cooling) {
+      const cpuSocket = component.compatibility.socket
+      if (cpuSocket && cpuSocket !== 'Standard') {
+        let supportedSockets: string[] = []
+        
+        // Method 1: Check compatibility.socket (may be comma-separated string)
+        if (selectedComponents.cooling.compatibility.socket) {
+          const socketStr = selectedComponents.cooling.compatibility.socket
+          if (socketStr.includes(',')) {
+            supportedSockets = socketStr.split(',').map(s => s.trim())
+          } else if (socketStr !== 'Standard') {
+            supportedSockets = [socketStr]
+          }
+        }
+        
+        // Method 2: Try parsing from Compatibility JSON
+        if (supportedSockets.length === 0) {
+          try {
+            const compatStr = selectedComponents.cooling.specifications.Compatibility as string
+            if (typeof compatStr === 'string') {
+              const compat = JSON.parse(compatStr)
+              if (compat.supportedSockets) {
+                supportedSockets = Array.isArray(compat.supportedSockets) 
+                  ? compat.supportedSockets 
+                  : [compat.supportedSockets]
+              } else if (compat.supported_sockets) {
+                supportedSockets = Array.isArray(compat.supported_sockets) 
+                  ? compat.supported_sockets 
+                  : [compat.supported_sockets]
+              }
+            }
+          } catch (e) {
+            // Ignore parse errors
+          }
+        }
+        
+        // Method 3: Check specifications for supportedSockets
+        if (supportedSockets.length === 0 && selectedComponents.cooling.specifications.supportedSockets) {
+          try {
+            const parsed = JSON.parse(selectedComponents.cooling.specifications.supportedSockets as string)
+            if (Array.isArray(parsed)) {
+              supportedSockets = parsed
+            } else if (typeof parsed === 'string') {
+              supportedSockets = parsed.includes(',')
+                ? parsed.split(',').map(s => s.trim())
+                : [parsed]
+            }
+          } catch (e) {
+            if (Array.isArray(selectedComponents.cooling.specifications.supportedSockets)) {
+              supportedSockets = selectedComponents.cooling.specifications.supportedSockets as string[]
+            } else if (typeof selectedComponents.cooling.specifications.supportedSockets === 'string') {
+              const socketStr = selectedComponents.cooling.specifications.supportedSockets
+              supportedSockets = socketStr.includes(',')
+                ? socketStr.split(',').map(s => s.trim())
+                : [socketStr]
+            }
+          }
+        }
+        
+        if (supportedSockets.length > 0 && !supportedSockets.includes(cpuSocket)) {
+          return false
+        }
+      }
+    }
+
+    // Cooling-Case compatibility (height)
+    if (category === "cooling" && selectedComponents.case) {
+      const coolerHeight = Number.parseInt(component.specifications.height as string) || 0
+      const caseMaxHeight = Number.parseInt(selectedComponents.case.specifications.maxCoolerHeight as string) || 0
+      
+      if (coolerHeight > 0 && caseMaxHeight > 0 && coolerHeight > caseMaxHeight) {
+        return false
+      }
+    }
+
+    if (category === "case" && selectedComponents.cooling) {
+      const coolerHeight = Number.parseInt(selectedComponents.cooling.specifications.height as string) || 0
+      const caseMaxHeight = Number.parseInt(component.specifications.maxCoolerHeight as string) || 0
+      
+      if (coolerHeight > 0 && caseMaxHeight > 0 && coolerHeight > caseMaxHeight) {
+        return false
+      }
+    }
+
+    // Storage-Motherboard compatibility (M.2/SATA slots)
+    if (category === "storage" && selectedComponents.motherboard) {
+      const storageInterface = component.specifications.interface as string
+      if (storageInterface === "M.2") {
+        const m2Slots = Number.parseInt(selectedComponents.motherboard.specifications.m2Slots as string) || 0
+        if (m2Slots === 0) {
+          return false
+        }
+      }
+      if (storageInterface === "SATA") {
+        const sataPorts = Number.parseInt(selectedComponents.motherboard.specifications.sataPorts as string) || 0
+        if (sataPorts === 0) {
+          return false
+        }
+      }
+    }
+
+    if (category === "motherboard" && selectedComponents.storage) {
+      const storageInterface = selectedComponents.storage.specifications.interface as string
+      if (storageInterface === "M.2") {
+        const m2Slots = Number.parseInt(component.specifications.m2Slots as string) || 0
+        if (m2Slots === 0) {
+          return false
+        }
+      }
+      if (storageInterface === "SATA") {
+        const sataPorts = Number.parseInt(component.specifications.sataPorts as string) || 0
+        if (sataPorts === 0) {
+          return false
+        }
+      }
+    }
+
+    return true
+  }
+
   const getFilteredComponents = (category: ComponentCategory) => {
     const categoryFiltered = components.filter((component) => component.category === category)
 
@@ -150,8 +426,12 @@ export default function BuilderPage() {
         )
       : searchFiltered
 
-    // Remove budget-based filtering — all components will show
-    return locationFiltered
+    // Compatibility-based filtering - remove incompatible components
+    const compatibilityFiltered = locationFiltered.filter(
+      (component) => isComponentCompatible(component, category)
+    )
+
+    return compatibilityFiltered
   }
 
 
@@ -511,7 +791,6 @@ export default function BuilderPage() {
             <div className="flex items-center gap-2 flex-wrap">
               <Button variant="outline" size="sm" asChild className="text-xs sm:text-sm">
                 <Link href="/support">
-                  <MessageSquare className="h-4 w-4 sm:mr-2" />
                   <span className="hidden sm:inline">Get Help</span>
                   <span className="sm:hidden">Help</span>
                 </Link>
@@ -555,9 +834,6 @@ export default function BuilderPage() {
                                 >
                                   <div className="flex items-start justify-between">
                                     <div className="flex items-start gap-3 flex-1">
-                                      {Icon && (
-                                        <Icon className="h-5 w-5 text-slate-500 mt-1" />
-                                      )}
                                       <div className="flex-1">
                                         <div className="flex items-center gap-2 mb-1">
                                           <h3 className="font-semibold text-slate-900 dark:text-white">
@@ -649,7 +925,6 @@ export default function BuilderPage() {
                             }}
                             className="w-full"
                           >
-                            <Save className="h-4 w-4 mr-2" />
                             Save Build to Purchase
                           </Button>
                           <p className="text-xs text-slate-500 dark:text-slate-400 text-center">
@@ -664,7 +939,6 @@ export default function BuilderPage() {
               <Dialog open={isSaveDialogOpen} onOpenChange={setIsSaveDialogOpen}>
                 <DialogTrigger asChild>
                   <Button variant="outline" size="sm" className="text-xs sm:text-sm">
-                    <Save className="h-4 w-4 sm:mr-2" />
                     <span className="hidden sm:inline">Save Build</span>
                     <span className="sm:hidden">Save</span>
                   </Button>
@@ -769,7 +1043,6 @@ export default function BuilderPage() {
               </Dialog>
 
               <Button variant="outline" size="sm" className="text-xs sm:text-sm">
-                <Share className="h-4 w-4 sm:mr-2" />
                 <span className="hidden sm:inline">Share</span>
               </Button>
             </div>
@@ -788,11 +1061,11 @@ export default function BuilderPage() {
                     <CardTitle className="text-lg sm:text-xl">Select Components</CardTitle>
                     <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 w-full sm:w-auto">
                       <div className="flex items-center gap-2 flex-1 sm:flex-initial">
-                        <Search className="h-4 w-4 text-slate-400" />
-                        <Input
-                          placeholder="Search components..."
-                          value={searchTerm}
-                          onChange={(e) => setSearchTerm(e.target.value)}
+                      <Search className="h-4 w-4 text-slate-400" />
+                      <Input
+                        placeholder="Search components..."
+                        value={searchTerm}
+                        onChange={(e) => setSearchTerm(e.target.value)}
                           className="w-full sm:w-64"
                         />
                       </div>
@@ -803,7 +1076,7 @@ export default function BuilderPage() {
                           value={locationFilter}
                           onChange={(e) => setLocationFilter(e.target.value)}
                           className="w-full sm:w-64"
-                        />
+                      />
                       </div>
                     </div>
                   </div>
@@ -924,7 +1197,6 @@ export default function BuilderPage() {
                         </>
                       ) : (
                         <>
-                          <TrendingUp className="h-4 w-4" />
                           <span className="hidden sm:inline">Get Upgrade Suggestions</span>
                           <span className="sm:hidden">Upgrade Suggestions</span>
                         </>
@@ -942,9 +1214,8 @@ export default function BuilderPage() {
                 <Tabs value={activeCategory} onValueChange={(value) => setActiveCategory(value as ComponentCategory)}>
                   <TabsList className="grid grid-cols-4 lg:grid-cols-8 mb-6 gap-1">
                     {Object.entries(categoryIcons).map(([category, Icon]) => (
-                      <TabsTrigger key={category} value={category} className="flex flex-col gap-1 p-2 text-xs">
-                        <Icon className="h-4 w-4 sm:h-5 sm:w-5" />
-                        <span className="text-[10px] sm:text-xs hidden xs:block">{categoryNames[category as ComponentCategory]}</span>
+                      <TabsTrigger key={category} value={category} className="p-2 text-xs">
+                        <span className="text-[10px] sm:text-xs">{categoryNames[category as ComponentCategory]}</span>
                       </TabsTrigger>
                     ))}
                   </TabsList>
@@ -990,7 +1261,7 @@ export default function BuilderPage() {
                                       <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-2">
                                         <div>
                                           <div className="flex items-start gap-2 mb-1">
-                                            <h3 className="font-semibold text-slate-900 dark:text-white">{component.name}</h3>
+                                          <h3 className="font-semibold text-slate-900 dark:text-white">{component.name}</h3>
                                             <AvailabilityBadge status={component.availabilityStatus} className="text-xs" />
                                           </div>
                                           <p className="text-sm text-slate-600 dark:text-slate-400 mb-2">{component.brand}</p>
@@ -1110,8 +1381,7 @@ export default function BuilderPage() {
             {recommendations.length > 0 && (
               <Card className="border-slate-200 dark:border-slate-700">
                 <CardHeader className="pb-3">
-                  <CardTitle className="text-lg flex items-center gap-2">
-                    <Lightbulb className="h-5 w-5 text-yellow-500" />
+                  <CardTitle className="text-lg">
                     Recommendations
                   </CardTitle>
                 </CardHeader>
@@ -1132,8 +1402,7 @@ export default function BuilderPage() {
             {performanceCategory !== "all" && (
               <Card className="border-slate-200 dark:border-slate-700">
                 <CardHeader className="pb-3">
-                  <CardTitle className="text-lg flex items-center gap-2">
-                    <Lightbulb className="h-5 w-5 text-blue-500" />
+                  <CardTitle className="text-lg">
                     Performance Category
                   </CardTitle>
                 </CardHeader>
@@ -1165,7 +1434,6 @@ export default function BuilderPage() {
                   return (
                     <div key={category} className="flex items-center justify-between">
                       <div className="flex items-center gap-3">
-                        {Icon ? <Icon className="h-4 w-4 text-slate-500" /> : null}
                         <div>
                           <p className="text-sm font-medium text-slate-900 dark:text-white">
                             {categoryNames[category as ComponentCategory]}
@@ -1239,11 +1507,9 @@ export default function BuilderPage() {
                     onClick={() => setIsSaveDialogOpen(true)}
                     disabled={isCheckingDuplicates}
                   >
-                    <Save className="h-4 w-4 mr-2" />
                     {isCheckingDuplicates ? "Checking..." : "Save Build"}
                   </Button>
                   <Button variant="outline" className="w-full bg-transparent">
-                    <Share className="h-4 w-4 mr-2" />
                     Share Build
                   </Button>
                 </div>
@@ -1372,8 +1638,7 @@ export default function BuilderPage() {
       <Dialog open={showUpgradeDialog} onOpenChange={setShowUpgradeDialog}>
         <DialogContent className="max-w-2xl">
           <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
-              <TrendingUp className="h-5 w-5 text-green-600" />
+            <DialogTitle>
               Upgrade Recommendations
             </DialogTitle>
             <DialogDescription>

@@ -6,8 +6,7 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Input } from "@/components/ui/input"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Cpu, BookOpen, Play, Clock, Users, Wrench, Zap, Shield, Search, Star, CheckCircle, ArrowLeft, Upload } from "lucide-react"
+import { Cpu, BookOpen, Play, Clock, Users, Wrench, Zap, Shield, Search, Star, CheckCircle, ArrowLeft } from "lucide-react"
 import { formatCurrency } from "@/lib/currency"
 import { type PerformanceCategory, performanceCategories } from "@/lib/mock-data"
 
@@ -229,13 +228,7 @@ export default function GuidesPage() {
           <div className="flex items-center justify-between">
             <h2 className="text-xl font-semibold text-slate-700 dark:text-slate-300">Build Guides</h2>
             <div className="flex items-center gap-2">
-              <Link href="/guides/submit">
-                <Button size="sm">
-                  <Upload className="h-4 w-4 mr-2" />
-                  Submit Guide
-                </Button>
-              </Link>
-              <Link href="/">
+              <Link href="/dashboard">
                 <Button variant="outline" size="sm">
                   <ArrowLeft className="h-4 w-4 mr-2" />
                   Back to Home
@@ -253,20 +246,6 @@ export default function GuidesPage() {
           <p className="text-xl text-slate-600 dark:text-slate-400 max-w-2xl mx-auto">
             Step-by-step tutorials to help you build your perfect PC with confidence
           </p>
-          <div className="flex items-center justify-center gap-8 mt-6 text-sm text-slate-600 dark:text-slate-400">
-            <div className="flex items-center gap-1">
-              <BookOpen className="h-4 w-4" />
-              <span>{buildGuides.length} guides available</span>
-            </div>
-            <div className="flex items-center gap-1">
-              <Users className="h-4 w-4" />
-              <span>150k+ builders helped</span>
-            </div>
-            <div className="flex items-center gap-1">
-              <Star className="h-4 w-4" />
-              <span>4.7 average rating</span>
-            </div>
-          </div>
         </div>
 
         {/* Quick Tips */}
@@ -293,8 +272,8 @@ export default function GuidesPage() {
         </div>
 
         <div className="mb-8">
-          <div className="flex flex-col lg:flex-row gap-4 mb-6">
-            <div className="flex-1 relative">
+          <div className="mb-6">
+            <div className="flex-1 relative max-w-2xl mx-auto">
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-slate-400" />
               <Input
                 placeholder="Search guides, topics, or tags..."
@@ -303,63 +282,18 @@ export default function GuidesPage() {
                 onChange={(e) => setSearchTerm(e.target.value)}
               />
             </div>
-            <div className="flex gap-2">
-              <Select value={selectedPerformanceCategory} onValueChange={(value) => setSelectedPerformanceCategory(value as PerformanceCategory)}>
-                <SelectTrigger className="w-48">
-                  <SelectValue placeholder="Performance Category" />
-                </SelectTrigger>
-                <SelectContent>
-                  {Object.entries(performanceCategories).map(([key, category]) => (
-                    <SelectItem key={key} value={key}>
-                      <div className="flex flex-col">
-                        <span className="font-medium">{category.name}</span>
-                        <span className="text-xs text-slate-500">{category.description}</span>
-                      </div>
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              <Select value={selectedDifficulty} onValueChange={setSelectedDifficulty}>
-                <SelectTrigger className="w-32">
-                  <SelectValue placeholder="Difficulty" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All Levels</SelectItem>
-                  <SelectItem value="beginner">Beginner</SelectItem>
-                  <SelectItem value="intermediate">Intermediate</SelectItem>
-                  <SelectItem value="advanced">Advanced</SelectItem>
-                </SelectContent>
-              </Select>
-              <Select value={sortBy} onValueChange={setSortBy}>
-                <SelectTrigger className="w-32">
-                  <SelectValue placeholder="Sort by" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="popular">Most Popular</SelectItem>
-                  <SelectItem value="newest">Newest</SelectItem>
-                  <SelectItem value="rating">Highest Rated</SelectItem>
-                  <SelectItem value="duration">Duration</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
           </div>
         </div>
 
-        {/* Build Guides */}
+        {/* Build Guides - Show only first guide */}
         <div className="mb-8">
           <div className="flex items-center justify-between mb-6">
-            <h3 className="text-2xl font-bold text-slate-900 dark:text-white">
-              {selectedPerformanceCategory === "all"
-                ? "All Guides"
-                : `${performanceCategories[selectedPerformanceCategory].name} Guides`}
-            </h3>
-            <span className="text-sm text-slate-600 dark:text-slate-400">
-              {filteredGuides.length} guide{filteredGuides.length !== 1 ? "s" : ""} found
-            </span>
+            <h3 className="text-2xl font-bold text-slate-900 dark:text-white">All Guides</h3>
+            <span className="text-sm text-slate-600 dark:text-slate-400">1 guide found</span>
           </div>
 
           <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {filteredGuides.map((guide) => (
+            {buildGuides.slice(0, 1).map((guide) => (
               <Card
                 key={guide.id}
                 className="border-slate-200 dark:border-slate-700 hover:shadow-lg transition-all duration-200 group"
@@ -389,44 +323,9 @@ export default function GuidesPage() {
                 <CardHeader className="pb-3">
                   <CardTitle className="text-lg group-hover:text-blue-600 transition-colors">{guide.title}</CardTitle>
                   <CardDescription className="line-clamp-2">{guide.description}</CardDescription>
-
-                  <div className="flex items-center gap-2 mt-2">
-                    <div className="flex items-center">
-                      {[...Array(5)].map((_, i) => (
-                        <Star
-                          key={i}
-                          className={`w-3 h-3 ${
-                            i < Math.floor(guide.rating) ? "text-yellow-400 fill-current" : "text-slate-300"
-                          }`}
-                        />
-                      ))}
-                    </div>
-                    <span className="text-xs text-slate-600 dark:text-slate-400">
-                      {guide.rating} ({guide.reviews} reviews)
-                    </span>
-                  </div>
                 </CardHeader>
 
                 <CardContent className="space-y-4">
-                  {/* Guide stats */}
-                  <div className="grid grid-cols-2 gap-4 text-sm text-slate-600 dark:text-slate-400">
-                    <div className="flex items-center gap-1">
-                      <Clock className="h-4 w-4" />
-                      <span>{guide.duration}</span>
-                    </div>
-                    <div className="flex items-center gap-1">
-                      <BookOpen className="h-4 w-4" />
-                      <span>{guide.steps} steps</span>
-                    </div>
-                    <div className="flex items-center gap-1">
-                      <Users className="h-4 w-4" />
-                      <span>{guide.views} views</span>
-                    </div>
-                    <div className="flex items-center gap-1">
-                      <Wrench className="h-4 w-4" />
-                      <span>{guide.tools.length} tools</span>
-                    </div>
-                  </div>
 
                   {/* Tags */}
                   <div className="flex flex-wrap gap-1">
@@ -441,7 +340,6 @@ export default function GuidesPage() {
                     <span className="text-xs text-slate-500">Updated {guide.lastUpdated}</span>
                     <Button size="sm" asChild className="bg-blue-600 hover:bg-blue-700">
                       <Link href={`/guides/${guide.id}`}>
-                        <Play className="h-4 w-4 mr-2" />
                         Start Guide
                       </Link>
                     </Button>
@@ -450,24 +348,6 @@ export default function GuidesPage() {
               </Card>
             ))}
           </div>
-
-          {filteredGuides.length === 0 && (
-            <div className="text-center py-12">
-              <BookOpen className="h-12 w-12 text-slate-400 mx-auto mb-4" />
-              <h3 className="text-lg font-medium text-slate-900 dark:text-white mb-2">No guides found</h3>
-              <p className="text-slate-600 dark:text-slate-400 mb-4">Try adjusting your search terms or filters</p>
-              <Button
-                variant="outline"
-                onClick={() => {
-                  setSearchTerm("")
-                  setSelectedPerformanceCategory("all")
-                  setSelectedDifficulty("all")
-                }}
-              >
-                Clear Filters
-              </Button>
-            </div>
-          )}
         </div>
 
         {/* CTA Section */}

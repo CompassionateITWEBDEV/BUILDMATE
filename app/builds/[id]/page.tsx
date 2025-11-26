@@ -68,6 +68,7 @@ export default function BuildDetailPage() {
   const [totalUserBuilds, setTotalUserBuilds] = useState(0)
   const [comments, setComments] = useState<any[]>([]) // empty array initially
   const [isFollowing, setIsFollowing] = useState(false);
+  const [isSubmittingComment, setIsSubmittingComment] = useState(false);
   const [followerCount, setFollowerCount] = useState(0);
 
 
@@ -260,49 +261,120 @@ export default function BuildDetailPage() {
 
 
   const handleAddComment = async () => {
-    if (!comment.trim() || !user) return;
+    if (!comment.trim() || !user) {
+      if (!user) {
+        alert("Please log in to post a comment.")
+      }
+      return;
+    }
 
-    // Insert the new comment
-    const { data: newComment, error } = await supabase
-      .from("build_comments")
-      .insert({
-        build_id: build.build_id,
-        user_id: user.user_id,
-        content: comment,
-        likes: 0,
-      })
-      .select(`*, users:user_id(user_name)`)
-      .single();
-
-    if (!error && newComment) {
-      // Update the comments count in the builds table
-      await supabase
-        .from("builds")
-        .update({
-          comments: (build.comments || 0) + 1
+    setIsSubmittingComment(true);
+    try {
+      // Insert the new comment
+      const { data: newComment, error } = await supabase
+        .from("build_comments")
+        .insert({
+          build_id: build.build_id,
+          user_id: user.user_id,
+          content: comment.trim(),
+          likes: 0,
         })
-        .eq("build_id", build.build_id);
+        .select()
+        .single();
 
-      // Update local state
-      setComments((prev) => [
-        {
+      if (error) {
+        console.error("Error adding comment:", error);
+        alert("Failed to post comment. Please try again.");
+        return;
+      }
+
+      if (newComment) {
+        // Update the comments count in the builds table
+        await supabase
+          .from("builds")
+          .update({
+            comments: (build.comments || 0) + 1
+          })
+          .eq("build_id", build.build_id);
+
+        // Fetch user data for the comment
+        const { data: userData } = await supabase
+          .from("users")
+          .select("user_name, avatar_url")
+          .eq("user_id", user.user_id)
+          .single();
+
+        // Update local state immediately
+        const mappedComment = {
           id: newComment.comment_id,
-          user: newComment.users?.user_name || "Anonymous",
-          avatar: newComment.users?.avatar || "/placeholder.svg",
+          user: userData?.user_name || user.user_name || "Anonymous",
+          avatar: userData?.avatar_url || user.avatar_url || "/placeholder.svg",
           content: newComment.content,
           timestamp: new Date(newComment.created_at).toLocaleString(),
           likes: newComment.likes || 0,
-        },
-        ...prev,
-      ]);
+        };
 
-      setBuild((prev: any) => ({
-        ...prev,
-        comments: (prev.comments || 0) + 1, // increment locally
-      }));
+        setComments((prev) => [mappedComment, ...prev]);
 
-      setComment("");
-      fetchComments(); // optional, in case you want to refetch all comments
+        setBuild((prev: any) => ({
+          ...prev,
+          comments: (prev.comments || 0) + 1,
+        }));
+
+        setComment("");
+        // Refresh comments to ensure consistency
+        fetchComments();
+      }
+    } catch (err) {
+      console.error("Error in handleAddComment:", err);
+      alert("An error occurred while posting your comment. Please try again.");
+    } finally {
+      setIsSubmittingComment(false);
+    }
+  };
+
+  const handleLikeComment = async (commentId: number, currentLikes: number) => {
+    if (!user) {
+      alert("Please log in to like comments.");
+      return;
+    }
+
+    try {
+      // Update the comment's like count
+      const { error } = await supabase
+        .from("build_comments")
+        .update({
+          likes: currentLikes + 1
+        })
+        .eq("comment_id", commentId);
+
+      if (error) {
+        console.error("Error liking comment:", error);
+        return;
+      }
+
+      // Update local state
+      setComments((prev) =>
+        prev.map((c) =>
+          c.id === commentId ? { ...c, likes: c.likes + 1 } : c
+        )
+      );
+    } catch (err) {
+      console.error("Error in handleLikeComment:", err);
+    }
+  };
+
+  const handleReply = (commentId: number, userName: string) => {
+    if (!user) {
+      alert("Please log in to reply to comments.");
+      return;
+    }
+    // Focus the comment textarea and add @mention
+    setComment(`@${userName} `);
+    const textarea = document.querySelector('textarea[placeholder*="Share your thoughts"]') as HTMLTextAreaElement;
+    if (textarea) {
+      textarea.focus();
+      textarea.setSelectionRange(textarea.value.length, textarea.value.length);
     }
   };
 
@@ -569,9 +641,12 @@ export default function BuildDetailPage() {
                       className="min-h-20"
                     />
                     <div className="flex justify-end">
-                      <Button onClick={handleAddComment} disabled={!comment.trim()}>
+                      <Button 
+                        onClick={handleAddComment} 
+                        disabled={!comment.trim() || isSubmittingComment}
+                      >
                         <Send className="h-4 w-4 mr-2" />
-                        Post Comment
+                        {isSubmittingComment ? "Posting..." : "Post Comment"}
                       </Button>
                     </div>
                   </div>
@@ -581,7 +656,12 @@ export default function BuildDetailPage() {
 
                 {/* Comments List */}
                 <div className="space-y-4">
-                  {comments.map((comment) => (
+                  {comments.length === 0 ? (
+                    <div className="text-center py-8 text-slate-500 dark:text-slate-400">
+                      No comments yet. Be the first to comment!
+                    </div>
+                  ) : (
+                    comments.map((comment) => (
                     <div key={comment.id} className="flex gap-3">
                       <Avatar className="h-8 w-8">
                         <AvatarImage src={comment.avatar || "/placeholder.svg"} />
@@ -594,15 +674,28 @@ export default function BuildDetailPage() {
                         </div>
                         <p className="text-sm text-slate-600 dark:text-slate-400 mb-2">{comment.content}</p>
                         <div className="flex items-center gap-4 text-xs">
-                          <button className="flex items-center gap-1 text-slate-500 hover:text-red-500">
-                            <Heart className="h-3 w-3" />
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="h-auto p-0 text-slate-500 hover:text-red-500"
+                            onClick={() => handleLikeComment(comment.id, comment.likes)}
+                          >
+                            <Heart className="h-3 w-3 mr-1" />
                             {comment.likes}
-                          </button>
-                          <button className="text-slate-500 hover:text-slate-700">Reply</button>
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="h-auto p-0 text-slate-500 hover:text-slate-700"
+                            onClick={() => handleReply(comment.id, comment.user)}
+                          >
+                            Reply
+                          </Button>
                         </div>
                       </div>
                     </div>
-                  ))}
+                    ))
+                  )}
                 </div>
               </CardContent>
             </Card>

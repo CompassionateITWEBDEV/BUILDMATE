@@ -30,6 +30,7 @@ import { mockBuilds } from "@/lib/mock-data"
 import { supabase } from "@/lib/supabase"
 import { time } from "console"
 import { Navigation } from "@/components/navigation"
+import { formatCurrency } from "@/lib/currency"
 
 export default function DashboardPage() {
   const { user, logout, isLoading } = useAuth()
@@ -577,7 +578,7 @@ export default function DashboardPage() {
                               <CardTitle className="text-lg">{build.build_name}</CardTitle>
                               <CardDescription className="mt-1">{build.description}</CardDescription>
                             </div>
-                            <Badge variant="secondary">${build.total_price.toLocaleString()}</Badge>
+                            <Badge variant="secondary">{formatCurrency(build.total_price)}</Badge>
                           </div>
                         </CardHeader>
                         <CardContent className="space-y-4">
@@ -665,7 +666,7 @@ export default function DashboardPage() {
                                 <CardTitle className="text-lg">{build.build_name}</CardTitle>
                                 <CardDescription className="mt-1">{build.description}</CardDescription>
                               </div>
-                              <Badge variant="secondary">${build.total_price?.toLocaleString()}</Badge>
+                              <Badge variant="secondary">{formatCurrency(build.total_price || 0)}</Badge>
                             </div>
                           </CardHeader>
                           <CardContent className="space-y-4">

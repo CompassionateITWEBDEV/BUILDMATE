@@ -54,7 +54,7 @@ export async function getCSPRecommendations(
     // Check content-type to ensure we're getting JSON
     const contentType = response.headers.get('content-type') || ''
     const isJSON = contentType.includes('application/json')
-
+    
     if (!response.ok) {
       let errorMessage = 'Failed to get CSP recommendations'
       try {
@@ -179,7 +179,7 @@ export async function getUpgradeRecommendations(
           // Try to parse as JSON
           try {
             const errorData = JSON.parse(errorText)
-            errorMessage = errorData.error || errorMessage
+        errorMessage = errorData.error || errorMessage
           } catch {
             errorMessage = errorText || errorMessage
           }
