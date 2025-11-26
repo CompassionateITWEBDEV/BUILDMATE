@@ -102,7 +102,7 @@ export default function HomePage() {
                 <Zap className="h-10 w-10 text-blue-600 mb-2" />
                 <CardTitle>Smart Compatibility</CardTitle>
                 <CardDescription>
-                  Advanced algorithms check component compatibility in real-time, preventing costly mistakes before you
+                  algorithms check component compatibility, preventing costly mistakes before you
                   buy.
                 </CardDescription>
               </CardHeader>
@@ -169,7 +169,7 @@ export default function HomePage() {
           <div className="text-center mb-16">
             <h3 className="text-3xl font-bold text-white mb-6">Ready to Build Your Dream PC?</h3>
             <p className="text-blue-100 mb-8 max-w-xl mx-auto">
-              Join thousands of builders who trust BuildMate for their custom PC projects.
+              Join of builders who trust BuildMate for their custom PC projects.
             </p>
             <Button size="lg" className="bg-white text-blue-600 hover:bg-blue-50" asChild>
               <Link href="/register">Get Started Free</Link>
@@ -184,7 +184,7 @@ export default function HomePage() {
                 <span className="font-semibold text-white text-lg">BuildMate</span>
               </div>
               <p className="text-blue-100 text-sm">
-                © 2024 BuildMate. Built for PC enthusiasts, by PC enthusiasts.
+                © 2025 BuildMate. Built for PC enthusiasts, by PC enthusiasts.
               </p>
             </div>
           </div>
