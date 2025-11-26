@@ -32,6 +32,15 @@ import {
 import { supabase } from "@/lib/supabase"
 import { formatCurrency } from "@/lib/currency"
 import { useAuth } from "@/contexts/supabase-auth-context"
+import { getUpgradeRecommendations } from "@/lib/algorithm-service"
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog"
+import { TrendingUp, Loader2 } from "lucide-react"
 
 const categoryMap = {
   1: "CPU",
@@ -71,6 +80,10 @@ export default function BuildDetailPage() {
   const [isSubmittingComment, setIsSubmittingComment] = useState(false);
   const [followerCount, setFollowerCount] = useState(0);
   const [isTogglingFollow, setIsTogglingFollow] = useState(false);
+  const [upgradeRecommendations, setUpgradeRecommendations] = useState<any[]>([])
+  const [showUpgradeDialog, setShowUpgradeDialog] = useState(false)
+  const [isLoadingUpgrades, setIsLoadingUpgrades] = useState(false)
+  const [upgradeError, setUpgradeError] = useState<string | null>(null)
 
 
   useEffect(() => {
@@ -580,6 +593,59 @@ export default function BuildDetailPage() {
     }
   };
 
+  const handleGetUpgradeRecommendations = async () => {
+    if (!build || !build.components) {
+      setUpgradeError("Build data not available")
+      setTimeout(() => setUpgradeError(null), 5000)
+      return
+    }
+
+    setIsLoadingUpgrades(true)
+    setUpgradeError(null)
+    setUpgradeRecommendations([])
+
+    try {
+      // Convert build components to upgrade API format
+      const currentBuild: any[] = []
+      Object.entries(build.components).forEach(([categoryName, components]: [string, any]) => {
+        if (Array.isArray(components) && components.length > 0) {
+          const comp = components[0] // Take first component of each category
+          const componentId = Number(String(comp.component_id).replace(/\D/g, '')) || 0
+          currentBuild.push({
+            component_id: componentId,
+            component_name: comp.component_name || comp.name || 'Unknown',
+            component_price: comp.component_price || comp.price || 0,
+            category_name: categoryName,
+          })
+        }
+      })
+
+      if (currentBuild.length === 0) {
+        setUpgradeError("No components found in this build")
+        setTimeout(() => setUpgradeError(null), 5000)
+        return
+      }
+
+      console.log("Requesting upgrade recommendations for build:", currentBuild)
+      const recommendations = await getUpgradeRecommendations(currentBuild)
+      console.log("Received upgrade recommendations:", recommendations)
+
+      if (!recommendations || recommendations.length === 0) {
+        setUpgradeError("No upgrade recommendations available for this build")
+        setTimeout(() => setUpgradeError(null), 5000)
+        return
+      }
+
+      setUpgradeRecommendations(recommendations)
+      setShowUpgradeDialog(true)
+    } catch (error: any) {
+      console.error("Error getting upgrade recommendations:", error)
+      setUpgradeError(error.message || "Failed to get upgrade recommendations")
+      setTimeout(() => setUpgradeError(null), 5000)
+    } finally {
+      setIsLoadingUpgrades(false)
+    }
+  };
 
   if (loading) {
     return (
@@ -665,6 +731,31 @@ export default function BuildDetailPage() {
                       {tag}
                     </Badge>
                   ))}
+                </div>
+
+                {/* Upgrade Suggestions Button */}
+                <div className="pt-4 border-t border-slate-200 dark:border-slate-700">
+                  <Button
+                    onClick={handleGetUpgradeRecommendations}
+                    disabled={isLoadingUpgrades}
+                    variant="default"
+                    className="gap-2 w-full sm:w-auto"
+                  >
+                    {isLoadingUpgrades ? (
+                      <>
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                        Loading...
+                      </>
+                    ) : (
+                      <>
+                        <TrendingUp className="h-4 w-4" />
+                        Get Upgrade Suggestions
+                      </>
+                    )}
+                  </Button>
+                  {upgradeError && (
+                    <p className="text-sm text-red-600 mt-2">{upgradeError}</p>
+                  )}
                 </div>
 
                 {/* Actions */}
@@ -882,6 +973,84 @@ export default function BuildDetailPage() {
           </div>
         </div>
       </div>
+
+      {/* Upgrade Recommendations Dialog - Read Only for Community Builds */}
+      <Dialog open={showUpgradeDialog} onOpenChange={setShowUpgradeDialog}>
+        <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <TrendingUp className="h-5 w-5 text-green-600" />
+              Upgrade Recommendations
+            </DialogTitle>
+            <DialogDescription>
+              Suggested component upgrades for this build. Import this build to apply upgrades.
+            </DialogDescription>
+          </DialogHeader>
+          {upgradeRecommendations.length === 0 ? (
+            <div className="text-center py-8">
+              <p className="text-slate-600 dark:text-slate-400">No upgrade recommendations available.</p>
+            </div>
+          ) : (
+            <div className="space-y-4">
+              {upgradeRecommendations.map((rec, index) => (
+                <Card
+                  key={index}
+                  className={`border-slate-200 dark:border-slate-700 ${
+                    rec.recommended_upgrade ? 'hover:border-green-500 hover:shadow-md transition-all' : 'opacity-75'
+                  }`}
+                >
+                  <CardContent className="p-4">
+                    <div className="flex items-start justify-between gap-4">
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2 mb-2">
+                          <p className="text-sm font-semibold text-slate-900 dark:text-white">
+                            {rec.current_component}
+                          </p>
+                        </div>
+                        {rec.recommended_upgrade ? (
+                          <div className="space-y-2">
+                            <div className="flex items-center gap-2">
+                              <span className="text-sm text-slate-500">→</span>
+                              <p className="text-sm font-medium text-green-600 dark:text-green-400">
+                                {rec.recommended_upgrade}
+                              </p>
+                            </div>
+                            <div className="flex flex-col gap-1 ml-4">
+                              {rec.new_price && (
+                                <div className="flex items-center gap-2">
+                                  <span className="text-xs text-slate-500">New price:</span>
+                                  <span className="text-xs font-semibold text-slate-700 dark:text-slate-300">
+                                    {formatCurrency(rec.new_price)}
+                                  </span>
+                                </div>
+                              )}
+                              {rec.upgrade_cost && (
+                                <div className="flex items-center gap-2">
+                                  <span className="text-xs text-slate-500">Upgrade cost:</span>
+                                  <span className="text-xs font-semibold text-blue-600 dark:text-blue-400">
+                                    {formatCurrency(rec.upgrade_cost)}
+                                  </span>
+                                </div>
+                              )}
+                            </div>
+                          </div>
+                        ) : (
+                          <p className="text-xs text-slate-500 italic">No upgrade available for this component</p>
+                        )}
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              ))}
+              <div className="pt-4 border-t">
+                <p className="text-sm text-slate-600 dark:text-slate-400 text-center">
+                  💡 Tip: Import this build to your builder to apply these upgrades
+                </p>
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }

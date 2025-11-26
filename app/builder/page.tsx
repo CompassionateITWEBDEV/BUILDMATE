@@ -42,7 +42,8 @@ import {
   Loader2,
   CheckCircle2,
   ShoppingCart,
-  MapPin
+  MapPin,
+  Download
 } from "lucide-react"
 
 import { type Component, type ComponentCategory, type PerformanceCategory, performanceCategories } from "@/lib/mock-data"
@@ -122,9 +123,82 @@ export default function BuilderPage() {
   const [algorithmError, setAlgorithmError] = useState<string | null>(null)
   const [buildDescription, setBuildDescription] = useState("")
   const [showPurchasePreview, setShowPurchasePreview] = useState(false)
+  const [showImportDialog, setShowImportDialog] = useState(false)
+  const [importSearchTerm, setImportSearchTerm] = useState("")
+  const [availableBuilds, setAvailableBuilds] = useState<any[]>([])
+  const [isLoadingBuilds, setIsLoadingBuilds] = useState(false)
 
   const [cspPage, setCspPage] = useState(0)
   const SOLUTIONS_PER_PAGE = 2
+
+  // Category mapping from database category_id to app category
+  const categoryIdToAppCategory: Record<number, ComponentCategory> = {
+    1: "cpu",
+    2: "motherboard",
+    3: "memory",
+    4: "storage",
+    5: "gpu",
+    6: "psu",
+    7: "case",
+    8: "cooling",
+  }
+
+  // Fetch available builds for import
+  useEffect(() => {
+    if (!showImportDialog) return
+
+    const fetchBuilds = async () => {
+      setIsLoadingBuilds(true)
+      try {
+        const { data: buildsData, error } = await supabase
+          .from("builds")
+          .select(`
+            *,
+            users(user_id, user_name, email),
+            build_types(build_type_id, type_name),
+            build_components(
+              component_id,
+              components(*)
+            )
+          `)
+          .order("date_created", { ascending: false })
+          .limit(50)
+
+        if (error) throw error
+
+        // Filter builds by search term and calculate total price
+        const filteredBuilds = (buildsData || [])
+          .filter((build) => {
+            if (!importSearchTerm.trim()) return true
+            const searchLower = importSearchTerm.toLowerCase()
+            return (
+              build.build_name?.toLowerCase().includes(searchLower) ||
+              build.users?.user_name?.toLowerCase().includes(searchLower)
+            )
+          })
+          .map((build) => {
+            const components = build.build_components || []
+            const totalPrice = components.reduce((sum: number, bc: any) => {
+              return sum + (Number(bc.components?.component_price) || 0)
+            }, 0)
+            return {
+              ...build,
+              components,
+              totalPrice,
+            }
+          })
+
+        setAvailableBuilds(filteredBuilds)
+      } catch (error) {
+        console.error("Error fetching builds:", error)
+        setAvailableBuilds([])
+      } finally {
+        setIsLoadingBuilds(false)
+      }
+    }
+
+    fetchBuilds()
+  }, [showImportDialog, importSearchTerm])
 
   // Check if a component is compatible with currently selected components
   const isComponentCompatible = (component: Component, category: ComponentCategory): boolean => {
@@ -824,6 +898,156 @@ export default function BuilderPage() {
     setShowDuplicateDialog(false)
   }
 
+  const handleImportBuild = async (build: any) => {
+    try {
+      // Convert build components to app Component format
+      const importedComponents: Record<ComponentCategory, Component | null> = {
+        cpu: null,
+        motherboard: null,
+        memory: null,
+        storage: null,
+        gpu: null,
+        psu: null,
+        case: null,
+        cooling: null,
+      }
+
+      // Process each build component
+      for (const bc of build.build_components || []) {
+        if (!bc.components) continue
+
+        const dbComponent = bc.components
+        const categoryId = dbComponent.category_id
+        const appCategory = categoryIdToAppCategory[categoryId]
+
+        if (!appCategory) continue
+
+        // Convert database component to app component format
+        let compatInfo: any = {}
+        try {
+          const compatStr = dbComponent.compatibility_information
+          if (typeof compatStr === "string") {
+            compatInfo = JSON.parse(compatStr)
+          } else if (compatStr && typeof compatStr === "object") {
+            compatInfo = compatStr
+          }
+        } catch (e) {
+          console.warn("Could not parse compatibility information:", e)
+        }
+
+        const dbCategoryName = dbComponent.component_categories?.category_name?.toLowerCase() || ""
+        const brand = dbComponent.component_name?.split(" - ")[0]?.trim() || "Unknown"
+
+        let memoryTypeValue = compatInfo.memoryType || compatInfo.ram_type
+        if (appCategory === "memory" && !memoryTypeValue) {
+          memoryTypeValue = compatInfo.type
+        }
+
+        const compatibility: Component["compatibility"] = {
+          socket: compatInfo.socket || "Standard",
+          formFactor: compatInfo.formFactor || (appCategory === "case" ? compatInfo.type : "Standard"),
+          memoryType: Array.isArray(memoryTypeValue)
+            ? memoryTypeValue[0]
+            : memoryTypeValue || (appCategory === "memory" ? "DDR4" : undefined),
+          powerRequirement: compatInfo.powerRequirement || compatInfo.wattage || compatInfo.tdp || (appCategory === "psu" ? 500 : 100),
+          dimensions: compatInfo.dimensions || {
+            length: compatInfo.length || (appCategory === "gpu" ? 220 : 100),
+            width: compatInfo.width || 100,
+            height: compatInfo.height || (appCategory === "gpu" ? 120 : 50),
+          },
+          memorySupport: compatInfo.memorySupport || compatInfo.ram_type || memoryTypeValue,
+          m2Slots: compatInfo.m2Slots?.toString(),
+          sataPorts: compatInfo.sataPorts?.toString(),
+        }
+
+        // Map performance tags
+        let performanceTags: PerformanceCategory[] = ["all"]
+        if (dbComponent.component_purpose) {
+          const mapPerf = {
+            academic: "academic",
+            gaming: "gaming",
+            office: "office",
+          } as Record<string, PerformanceCategory>
+          const raw = dbComponent.component_purpose.toLowerCase().trim()
+          if (mapPerf[raw]) {
+            performanceTags = ["all", mapPerf[raw]]
+          }
+        }
+
+        // Extract retailer information
+        const retailer = dbComponent.retailers
+          ? {
+              id: dbComponent.retailers.retailer_id,
+              name: dbComponent.retailers.retailer_name || "Central Juan Solution",
+              address: dbComponent.retailers.retailer_address || null,
+              phone: dbComponent.retailers.retailer_phone || null,
+              contactPerson: dbComponent.retailers.retailer_contact_person || null,
+              email: dbComponent.retailers.email || null,
+              website: dbComponent.retailers.website || null,
+            }
+          : undefined
+
+        const appComponent: Component = {
+          id: `component-${dbComponent.component_id}`,
+          name: dbComponent.component_name,
+          brand: brand,
+          price: Number(dbComponent.component_price) || 0,
+          category: appCategory,
+          image: `/placeholder.svg`,
+          rating: 4.5,
+          reviews: Math.floor(Math.random() * 1000) + 100,
+          specifications: {
+            Price: `₱${dbComponent.component_price || 0}`,
+            Category: dbComponent.component_categories?.category_name || "Unknown",
+            Retailer: dbComponent.retailers?.retailer_name || "Central Juan Solution",
+            ...(appCategory === "memory" && compatInfo.type && { type: compatInfo.type }),
+            ...(compatInfo.tdp && { TDP: `${compatInfo.tdp}W` }),
+            ...(compatInfo.wattage && { Wattage: `${compatInfo.wattage}W` }),
+            ...(compatInfo.vram && { VRAM: compatInfo.vram }),
+            ...(compatInfo.capacity && { Capacity: compatInfo.capacity }),
+            ...(compatInfo.speed && { Speed: compatInfo.speed }),
+            ...(compatInfo.interface && { Interface: compatInfo.interface }),
+            ...(appCategory === "case" && compatInfo.maxGpuLength && { maxGpuLength: compatInfo.maxGpuLength.toString() }),
+            ...(appCategory === "case" && compatInfo.maxCoolerHeight && { maxCoolerHeight: compatInfo.maxCoolerHeight.toString() }),
+            ...(appCategory === "cooling" && compatInfo.supportedSockets && {
+              supportedSockets: JSON.stringify(Array.isArray(compatInfo.supportedSockets) ? compatInfo.supportedSockets : [compatInfo.supportedSockets]),
+            }),
+            ...(appCategory === "cooling" && compatInfo.supported_sockets && {
+              supportedSockets: JSON.stringify(Array.isArray(compatInfo.supported_sockets) ? compatInfo.supported_sockets : [compatInfo.supported_sockets]),
+            }),
+          },
+          compatibility,
+          performanceTags: performanceTags,
+          availabilityStatus: dbComponent.availability_status || "in_stock",
+          retailer: retailer,
+        }
+
+        // Only set if category slot is empty (first component of that category)
+        if (!importedComponents[appCategory]) {
+          importedComponents[appCategory] = appComponent
+        }
+      }
+
+      // Set imported components
+      setSelectedComponents(importedComponents)
+      setBuildName(build.build_name || "Imported Build")
+      setBuildDescription(build.description || "")
+      if (build.build_type_id) {
+        setBuildType(build.build_type_id.toString())
+      }
+
+      // Close dialog and show success
+      setShowImportDialog(false)
+      setImportSearchTerm("")
+      
+      // Show success message
+      alert(`Build "${build.build_name}" imported successfully!`)
+    } catch (error) {
+      console.error("Error importing build:", error)
+      alert("Failed to import build. Please try again.")
+    }
+  }
+
   const handleViewSimilar = (buildId: string) => console.log("Viewing similar build:", buildId)
   const handleEditSimilar = (buildId: string) => console.log("Editing similar build:", buildId)
 
@@ -1135,6 +1359,15 @@ export default function BuilderPage() {
 
               <Button variant="outline" size="sm" className="text-xs sm:text-sm">
                 <span className="hidden sm:inline">Share</span>
+              </Button>
+              <Button 
+                variant="outline" 
+                size="sm" 
+                className="text-xs sm:text-sm"
+                onClick={() => setShowImportDialog(true)}
+              >
+                <span className="hidden sm:inline">Import Build</span>
+                <span className="sm:hidden">Import</span>
               </Button>
             </div>
           </div>
@@ -1810,6 +2043,74 @@ export default function BuilderPage() {
               ))}
             </div>
           )}
+        </DialogContent>
+      </Dialog>
+
+      {/* Import Build Dialog */}
+      <Dialog open={showImportDialog} onOpenChange={setShowImportDialog}>
+        <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Import Build from Community</DialogTitle>
+            <DialogDescription>
+              Search and select a build from the community to load into the builder
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div>
+              <Input
+                placeholder="Search builds by name or creator..."
+                value={importSearchTerm}
+                onChange={(e) => setImportSearchTerm(e.target.value)}
+                className="w-full"
+              />
+            </div>
+            {isLoadingBuilds ? (
+              <div className="text-center py-8">
+                <Loader2 className="h-8 w-8 animate-spin mx-auto mb-4 text-blue-600" />
+                <p className="text-slate-600 dark:text-slate-400">Loading builds...</p>
+              </div>
+            ) : availableBuilds.length === 0 ? (
+              <div className="text-center py-8">
+                <p className="text-slate-600 dark:text-slate-400">No builds found.</p>
+              </div>
+            ) : (
+              <div className="space-y-2 max-h-[60vh] overflow-y-auto">
+                {availableBuilds.map((build) => (
+                  <Card 
+                    key={build.build_id}
+                    className="border-slate-200 dark:border-slate-700 hover:border-blue-500 hover:shadow-md transition-all cursor-pointer"
+                    onClick={() => handleImportBuild(build)}
+                  >
+                    <CardContent className="p-4">
+                      <div className="flex items-start justify-between gap-4">
+                        <div className="flex-1 min-w-0">
+                          <h3 className="font-semibold text-slate-900 dark:text-white mb-1">
+                            {build.build_name}
+                          </h3>
+                          <p className="text-sm text-slate-600 dark:text-slate-400 mb-2">
+                            by {build.users?.user_name || 'Unknown'}
+                          </p>
+                          <div className="flex items-center gap-4 text-xs text-slate-500">
+                            <span>{build.components?.length || 0} components</span>
+                            <span>{formatCurrency(build.totalPrice || 0)}</span>
+                            {build.build_types && (
+                              <Badge variant="outline">{build.build_types.type_name}</Badge>
+                            )}
+                          </div>
+                        </div>
+                        <Button size="sm" onClick={(e) => {
+                          e.stopPropagation()
+                          handleImportBuild(build)
+                        }}>
+                          Import
+                        </Button>
+                      </div>
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
+            )}
+          </div>
         </DialogContent>
       </Dialog>
     </div>

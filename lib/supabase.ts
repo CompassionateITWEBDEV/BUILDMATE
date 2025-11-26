@@ -31,9 +31,43 @@ export const supabase = createClient(
       detectSessionInUrl: true,
       storage: typeof window !== 'undefined' ? window.localStorage : undefined,
       storageKey: 'buildmate-supabase-auth-token',
-    }
+      // Refresh token before it expires (refresh 5 minutes before expiration)
+      refreshTokenRotationEnabled: true,
+    },
+    global: {
+      headers: {
+        'x-client-info': 'buildmate-web',
+      },
+    },
   }
 )
+
+// Helper function to handle JWT expiration errors
+export async function handleExpiredToken() {
+  try {
+    const { data: { session }, error } = await supabase.auth.getSession();
+    if (error || !session) {
+      // No valid session, user needs to log in again
+      return null;
+    }
+    
+    // Check if session is expired
+    const expiresAt = session.expires_at;
+    if (expiresAt && expiresAt * 1000 < Date.now()) {
+      // Session expired, try to refresh
+      const { data: { session: newSession }, error: refreshError } = await supabase.auth.refreshSession();
+      if (refreshError || !newSession) {
+        return null;
+      }
+      return newSession;
+    }
+    
+    return session;
+  } catch (error) {
+    console.error('Error handling expired token:', error);
+    return null;
+  }
+}
 
 // Database Types based on your schema
 export interface Database {

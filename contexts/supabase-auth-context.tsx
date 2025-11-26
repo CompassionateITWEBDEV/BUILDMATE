@@ -45,17 +45,104 @@ export function SupabaseAuthProvider({ children }: { children: ReactNode }) {
 
         if (error) {
           console.error('Error getting session:', error);
+          // If it's a JWT expiration error, try to refresh
+          if (error.message?.includes('JWT') || error.message?.includes('expired')) {
+            console.log('🔄 Attempting to refresh expired session...');
+            const { data: { session: refreshedSession }, error: refreshError } = await supabase.auth.refreshSession();
+            if (!refreshError && refreshedSession) {
+              // Retry with refreshed session
+              const { data: profile } = await supabase
+                .from("users")
+                .select("*")
+                .eq("supabase_id", refreshedSession.user.id)
+                .single();
+              if (profile) {
+                setUser(profile as CustomUser);
+                console.log('✅ Session refreshed and profile loaded:', profile.user_name);
+                setIsLoading(false);
+                return;
+              }
+            }
+          }
           setIsLoading(false);
           return;
         }
 
         if (session) {
-          const supabaseUser = session.user;
-          const { data: profile, error: profileError } = await supabase
-            .from("users")
-            .select("*")
-            .eq("supabase_id", supabaseUser.id)
-            .single();
+          // Check if session is expired
+          const expiresAt = session.expires_at;
+          if (expiresAt && expiresAt * 1000 < Date.now()) {
+            console.log('⚠️ Session expired, refreshing...');
+            const { data: { session: refreshedSession }, error: refreshError } = await supabase.auth.refreshSession();
+            if (refreshError || !refreshedSession) {
+              console.error('❌ Failed to refresh expired session:', refreshError);
+              setUser(null);
+              setIsLoading(false);
+              return;
+            }
+            // Use refreshed session
+            const supabaseUser = refreshedSession.user;
+            const { data: profile, error: profileError } = await supabase
+              .from("users")
+              .select("*")
+              .eq("supabase_id", supabaseUser.id)
+              .single();
+
+            if (profileError) {
+              // Check if it's a JWT expiration error
+              if (profileError.message?.includes('JWT') || profileError.message?.includes('expired') || profileError.code === 'PGRST301') {
+                console.warn('⚠️ JWT expired during profile fetch - attempting to refresh session');
+                // Try to refresh the session
+                const { data: { session: newSession }, error: refreshError } = await supabase.auth.refreshSession();
+                if (refreshError || !newSession) {
+                  console.error('❌ Failed to refresh session:', refreshError);
+                  setUser(null);
+                  setIsLoading(false);
+                  return;
+                }
+                // Retry profile fetch with refreshed session
+                const { data: retryProfile } = await supabase
+                  .from("users")
+                  .select("*")
+                  .eq("supabase_id", newSession.user.id)
+                  .single();
+                if (retryProfile) {
+                  setUser(retryProfile as CustomUser);
+                  console.log('✅ Profile loaded after session refresh:', retryProfile.user_name);
+                }
+              } else {
+                // Check if error has meaningful content
+                const hasMessage = profileError?.message && typeof profileError.message === 'string' && profileError.message.trim().length > 0;
+                const hasCode = profileError?.code && typeof profileError.code === 'string' && profileError.code.trim().length > 0;
+                const hasDetails = profileError?.details && typeof profileError.details === 'string' && profileError.details.trim().length > 0;
+                const hasHint = profileError?.hint && typeof profileError.hint === 'string' && profileError.hint.trim().length > 0;
+                
+                // Check if error object is empty (no meaningful properties)
+                const isEmpty = !hasMessage && !hasCode && !hasDetails && !hasHint && 
+                               Object.keys(profileError).length === 0;
+                
+                const isNotFound = profileError.code === 'PGRST116';
+                
+                // Only log if error has meaningful content (has message, code, details, or hint)
+                if (!isEmpty && !isNotFound && (hasMessage || hasCode || hasDetails || hasHint)) {
+                  console.error('Error fetching profile:', profileError);
+                } else {
+                  // Empty error or "not found" - clear session silently without logging
+                  await supabase.auth.signOut();
+                }
+              }
+            } else if (profile) {
+              setUser(profile as CustomUser);
+              console.log('✅ Session refreshed and profile loaded:', profile.user_name);
+            }
+          } else {
+            // Session is valid, proceed normally
+            const supabaseUser = session.user;
+            const { data: profile, error: profileError } = await supabase
+              .from("users")
+              .select("*")
+              .eq("supabase_id", supabaseUser.id)
+              .single();
 
             if (profileError) {
               // Check if error has meaningful content
@@ -77,9 +164,10 @@ export function SupabaseAuthProvider({ children }: { children: ReactNode }) {
                 // Empty error or "not found" - clear session silently without logging
                 await supabase.auth.signOut();
               }
-          } else if (profile) {
-            setUser(profile as CustomUser);
-            console.log('✅ Session restored - user logged in:', profile.user_name);
+            } else if (profile) {
+              setUser(profile as CustomUser);
+              console.log('✅ Session restored - user logged in:', profile.user_name);
+            }
           }
         } else {
           console.log('ℹ️ No active session found');
@@ -103,22 +191,65 @@ export function SupabaseAuthProvider({ children }: { children: ReactNode }) {
         setUser(null);
         localStorage.removeItem('buildmate-remember-me');
         localStorage.removeItem('buildmate-session-expires');
-      } else if (session?.user) {
-        // User signed in or session refreshed - load profile
-        const { data: profile } = await supabase
-          .from("users")
-          .select("*")
-          .eq("supabase_id", session.user.id)
-          .single();
-        
-        if (profile) {
-          setUser(profile as CustomUser);
-          console.log('✅ User session active:', profile.user_name);
-        }
       } else if (event === 'TOKEN_REFRESHED') {
-        // Token refreshed - keep user logged in
+        // Token refreshed - keep user logged in and reload profile if needed
         console.log('🔄 Session token refreshed - keeping user logged in');
-        // Don't clear user on token refresh
+        if (session?.user) {
+          try {
+            const { data: profile } = await supabase
+              .from("users")
+              .select("*")
+              .eq("supabase_id", session.user.id)
+              .single();
+            
+            if (profile) {
+              setUser(profile as CustomUser);
+              console.log('✅ Profile reloaded after token refresh:', profile.user_name);
+            }
+          } catch (error) {
+            console.error('Error reloading profile after token refresh:', error);
+          }
+        }
+      } else if (session?.user) {
+        // User signed in or session exists - load profile
+        try {
+          const { data: profile, error: profileError } = await supabase
+            .from("users")
+            .select("*")
+            .eq("supabase_id", session.user.id)
+            .single();
+          
+          if (profileError) {
+            // Check if it's a JWT expiration error
+            if (profileError.message?.includes('JWT') || profileError.message?.includes('expired') || profileError.code === 'PGRST301') {
+              console.warn('⚠️ JWT expired - attempting to refresh session');
+              // Try to refresh the session
+              const { data: { session: newSession }, error: refreshError } = await supabase.auth.refreshSession();
+              if (refreshError || !newSession) {
+                console.error('❌ Failed to refresh session:', refreshError);
+                setUser(null);
+                return;
+              }
+              // Retry profile fetch with refreshed session
+              const { data: retryProfile } = await supabase
+                .from("users")
+                .select("*")
+                .eq("supabase_id", newSession.user.id)
+                .single();
+              if (retryProfile) {
+                setUser(retryProfile as CustomUser);
+                console.log('✅ Profile loaded after session refresh:', retryProfile.user_name);
+              }
+            } else {
+              console.error('Error fetching profile:', profileError);
+            }
+          } else if (profile) {
+            setUser(profile as CustomUser);
+            console.log('✅ User session active:', profile.user_name);
+          }
+        } catch (error) {
+          console.error('Error in auth state change handler:', error);
+        }
       }
       // Don't clear user on other events (like SIGNED_IN, USER_UPDATED, etc.)
     });

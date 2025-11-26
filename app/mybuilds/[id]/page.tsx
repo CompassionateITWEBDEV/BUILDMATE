@@ -32,6 +32,15 @@ import {
 import { supabase } from "@/lib/supabase"
 import { formatCurrency } from "@/lib/currency"
 import { useAuth } from "@/contexts/supabase-auth-context"
+import { getUpgradeRecommendations } from "@/lib/algorithm-service"
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog"
+import { TrendingUp, Loader2 } from "lucide-react"
 
 const categoryMap = {
   1: "CPU",
@@ -69,6 +78,10 @@ export default function BuildDetailPage() {
   const [comments, setComments] = useState<any[]>([]) // empty array initially
   const [isFollowing, setIsFollowing] = useState(false);
   const [followerCount, setFollowerCount] = useState(0);
+  const [upgradeRecommendations, setUpgradeRecommendations] = useState<any[]>([])
+  const [showUpgradeDialog, setShowUpgradeDialog] = useState(false)
+  const [isLoadingUpgrades, setIsLoadingUpgrades] = useState(false)
+  const [upgradeError, setUpgradeError] = useState<string | null>(null)
 
 
   useEffect(() => {
@@ -401,6 +414,353 @@ export default function BuildDetailPage() {
     fetchFollowerData(creator.user_id);
   };
 
+  const handleGetUpgradeRecommendations = async () => {
+    if (!build || !build.components) {
+      setUpgradeError("Build data not available")
+      setTimeout(() => setUpgradeError(null), 5000)
+      return
+    }
+
+    setIsLoadingUpgrades(true)
+    setUpgradeError(null)
+    setUpgradeRecommendations([])
+
+    try {
+      // Convert build components to upgrade API format
+      const currentBuild: any[] = []
+      Object.entries(build.components).forEach(([categoryName, components]: [string, any]) => {
+        if (Array.isArray(components) && components.length > 0) {
+          const comp = components[0] // Take first component of each category
+          const componentId = Number(String(comp.component_id).replace(/\D/g, '')) || 0
+          currentBuild.push({
+            component_id: componentId,
+            component_name: comp.component_name || comp.name || 'Unknown',
+            component_price: comp.component_price || comp.price || 0,
+            category_name: categoryName,
+          })
+        }
+      })
+
+      if (currentBuild.length === 0) {
+        setUpgradeError("No components found in this build")
+        setTimeout(() => setUpgradeError(null), 5000)
+        return
+      }
+
+      console.log("Requesting upgrade recommendations for build:", currentBuild)
+      const recommendations = await getUpgradeRecommendations(currentBuild)
+      console.log("Received upgrade recommendations:", recommendations)
+
+      if (!recommendations || recommendations.length === 0) {
+        setUpgradeError("No upgrade recommendations available for this build")
+        setTimeout(() => setUpgradeError(null), 5000)
+        return
+      }
+
+      setUpgradeRecommendations(recommendations)
+      setShowUpgradeDialog(true)
+    } catch (error: any) {
+      console.error("Error getting upgrade recommendations:", error)
+      setUpgradeError(error.message || "Failed to get upgrade recommendations")
+      setTimeout(() => setUpgradeError(null), 5000)
+    } finally {
+      setIsLoadingUpgrades(false)
+    }
+  }
+
+  const handleApplyUpgrade = async (recIndex: number, recommendedComponentName: string) => {
+    if (!build || !user) {
+      alert("Please log in to apply upgrades")
+      return
+    }
+
+    // Check if user owns this build
+    if (build.user_id !== user.user_id) {
+      alert("You can only apply upgrades to your own builds")
+      return
+    }
+
+    setIsLoadingUpgrades(true)
+
+    try {
+      // Find the component in the build that matches this recommendation
+      const rec = upgradeRecommendations[recIndex]
+      if (!rec) {
+        alert("Recommendation not found")
+        setIsLoadingUpgrades(false)
+        return
+      }
+
+      // Find matching component in build
+      let targetComponent: any = null
+      let targetBuildComponentId: number | null = null
+
+      Object.entries(build.components).forEach(([categoryName, components]: [string, any]) => {
+        if (Array.isArray(components)) {
+          const matching = components.find((comp: any) => {
+            const compName = comp.component_name || comp.name || ''
+            return compName.toLowerCase().includes(rec.current_component.toLowerCase()) ||
+                   rec.current_component.toLowerCase().includes(compName.toLowerCase())
+          })
+          if (matching) {
+            targetComponent = matching
+            // Get the build_component_id from the build_components relationship
+            targetBuildComponentId = matching.component_id || matching.build_component_id
+          }
+        }
+      })
+
+      if (!targetComponent || !targetBuildComponentId) {
+        alert("Could not find component to upgrade in this build")
+        setIsLoadingUpgrades(false)
+        return
+      }
+
+      // Find the recommended component in database - try multiple search strategies
+      let recommendedComponent: any = null
+      
+      // Strategy 1: Exact or partial name match
+      const { data: componentsByName, error: nameError } = await supabase
+        .from("components")
+        .select("*")
+        .ilike("component_name", `%${recommendedComponentName}%`)
+
+      if (!nameError && componentsByName && componentsByName.length > 0) {
+        // Try to find best match
+        recommendedComponent = componentsByName.find((comp: any) => {
+          const compName = (comp.component_name || '').toLowerCase()
+          const searchName = recommendedComponentName.toLowerCase()
+          return compName.includes(searchName) || searchName.includes(compName)
+        }) || componentsByName[0]
+      }
+
+      // Strategy 2: If not found, search by category and price range
+      if (!recommendedComponent && rec.new_price) {
+        const categoryId = targetComponent.category_id
+        const priceRange = rec.new_price * 0.9 // 10% tolerance
+        const { data: componentsByPrice, error: priceError } = await supabase
+          .from("components")
+          .select("*")
+          .eq("category_id", categoryId)
+          .gte("component_price", priceRange)
+          .order("component_price", { ascending: true })
+          .limit(5)
+
+        if (!priceError && componentsByPrice && componentsByPrice.length > 0) {
+          // Find component with name similar to recommendation
+          recommendedComponent = componentsByPrice.find((comp: any) => {
+            const compName = (comp.component_name || '').toLowerCase()
+            const searchName = recommendedComponentName.toLowerCase()
+            return compName.includes(searchName.split(' ')[0]) || searchName.includes(compName.split(' ')[0])
+          }) || componentsByPrice[0]
+        }
+      }
+
+      if (!recommendedComponent) {
+        alert(`Could not find recommended component "${recommendedComponentName}" in database. Please check if the component exists.`)
+        setIsLoadingUpgrades(false)
+        return
+      }
+
+      console.log("Applying upgrade:", {
+        from: targetComponent.component_name,
+        to: recommendedComponent.component_name,
+        oldPrice: targetComponent.component_price || targetComponent.price,
+        newPrice: recommendedComponent.component_price
+      })
+
+      // Update build_components table - find the build_component entry first
+      const { data: buildComponents, error: bcFetchError } = await supabase
+        .from("build_components")
+        .select("*")
+        .eq("build_id", build.build_id)
+        .eq("component_id", targetComponent.component_id || targetBuildComponentId)
+
+      if (bcFetchError || !buildComponents || buildComponents.length === 0) {
+        alert("Could not find build component to update")
+        setIsLoadingUpgrades(false)
+        return
+      }
+
+      const buildComponentId = buildComponents[0].build_component_id || buildComponents[0].id
+
+      // Update the component in build_components
+      const { error: updateError } = await supabase
+        .from("build_components")
+        .update({ component_id: recommendedComponent.component_id })
+        .eq("build_component_id", buildComponentId)
+
+      if (updateError) {
+        console.error("Update error:", updateError)
+        throw updateError
+      }
+
+      // Calculate new total price
+      const oldComponentPrice = Number(targetComponent.component_price || targetComponent.price || 0)
+      const newComponentPrice = Number(recommendedComponent.component_price || 0)
+      const priceDifference = newComponentPrice - oldComponentPrice
+      const newTotalPrice = (build.totalPrice || build.total_price || 0) + priceDifference
+
+      // Update build's total price
+      const { error: buildUpdateError } = await supabase
+        .from("builds")
+        .update({ total_price: newTotalPrice })
+        .eq("build_id", build.build_id)
+
+      if (buildUpdateError) {
+        console.error("Build update error:", buildUpdateError)
+        // Don't throw - the component was updated, just the price wasn't
+      }
+
+      // Refresh build data
+      const { data: buildData, error: buildError } = await supabase
+        .from("builds")
+        .select(`
+          *,
+          build_components(*, components(*))
+        `)
+        .eq("build_id", Number(params.id))
+        .single()
+
+      if (!buildError && buildData) {
+        const componentsObj = (buildData.build_components || []).reduce((acc: any, comp: any) => {
+          if (!comp.components) return acc
+          const categoryName = categoryMap[comp.components.category_id]
+          if (!categoryName) return acc
+          if (!acc[categoryName]) acc[categoryName] = []
+          acc[categoryName].push({
+            ...comp.components,
+            component_id: comp.components.component_id,
+            component_name: comp.components.component_name,
+            component_price: comp.components.component_price,
+            price: comp.components.component_price ?? 0,
+            category_id: comp.components.category_id,
+          })
+          return acc
+        }, {})
+
+        const newTotal = Object.values(componentsObj).flat().reduce((sum: number, comp: any) => {
+          return sum + (Number(comp.component_price || comp.price) || 0)
+        }, 0)
+
+        setBuild({
+          ...buildData,
+          totalPrice: newTotal,
+          total_price: newTotal,
+          components: componentsObj,
+        })
+
+        alert(`✅ Upgrade applied successfully!\n\n${targetComponent.component_name || targetComponent.name}\n→ ${recommendedComponent.component_name}\n\nPrice change: ${formatCurrency(priceDifference)}`)
+        setShowUpgradeDialog(false)
+        setUpgradeRecommendations([]) // Clear recommendations after applying
+      } else {
+        throw buildError || new Error("Failed to refresh build data")
+      }
+    } catch (error: any) {
+      console.error("Error applying upgrade:", error)
+      alert("Failed to apply upgrade: " + (error.message || "Unknown error"))
+    } finally {
+      setIsLoadingUpgrades(false)
+    }
+  }
+
+  const handleSaveAsNewBuild = async (recIndex: number, recommendedComponentName: string) => {
+    if (!build || !user) return
+
+    try {
+      const rec = upgradeRecommendations[recIndex]
+      if (!rec) return
+
+      // Find matching component in build
+      let targetComponent: any = null
+      let targetCategory: string | null = null
+
+      Object.entries(build.components).forEach(([categoryName, components]: [string, any]) => {
+        if (Array.isArray(components)) {
+          const matching = components.find((comp: any) => {
+            const compName = comp.component_name || comp.name || ''
+            return compName.toLowerCase().includes(rec.current_component.toLowerCase()) ||
+                   rec.current_component.toLowerCase().includes(compName.toLowerCase())
+          })
+          if (matching) {
+            targetComponent = matching
+            targetCategory = categoryName
+          }
+        }
+      })
+
+      if (!targetComponent || !targetCategory) {
+        alert("Could not find component to upgrade in this build")
+        return
+      }
+
+      // Find the recommended component in database
+      const { data: recommendedComponents, error: compError } = await supabase
+        .from("components")
+        .select("*")
+        .ilike("component_name", `%${recommendedComponentName}%`)
+        .limit(1)
+        .single()
+
+      if (compError || !recommendedComponents) {
+        alert("Could not find recommended component in database")
+        return
+      }
+
+      // Create new build with upgraded component
+      const buildComponents = Object.values(build.components).flat() as any[]
+      const updatedComponents = buildComponents.map((comp: any) => {
+        if (comp.component_id === targetComponent.component_id) {
+          return { ...comp, component_id: recommendedComponents.component_id }
+        }
+        return comp
+      })
+
+      // Calculate new total price
+      const newTotalPrice = updatedComponents.reduce((sum: number, comp: any) => {
+        return sum + (Number(comp.component_price || comp.price) || 0)
+      }, 0)
+
+      // Create new build
+      const { data: newBuild, error: buildError } = await supabase
+        .from("builds")
+        .insert({
+          build_name: `${build.build_name} (Upgraded)`,
+          user_id: user.user_id,
+          total_price: newTotalPrice,
+          build_type_id: build.build_type_id,
+          description: build.description || "",
+        })
+        .select("build_id")
+        .single()
+
+      if (buildError || !newBuild) {
+        throw buildError || new Error("Failed to create new build")
+      }
+
+      // Insert build_components
+      const buildComponentsRows = updatedComponents.map((comp: any) => ({
+        build_id: newBuild.build_id,
+        component_id: comp.component_id,
+      }))
+
+      const { error: bcError } = await supabase
+        .from("build_components")
+        .insert(buildComponentsRows)
+
+      if (bcError) {
+        throw bcError
+      }
+
+      alert("New upgraded build created successfully!")
+      setShowUpgradeDialog(false)
+      router.push(`/mybuilds/${newBuild.build_id}`)
+    } catch (error: any) {
+      console.error("Error saving as new build:", error)
+      alert("Failed to save as new build: " + (error.message || "Unknown error"))
+    }
+  }
+
 
   if (loading) {
     return (
@@ -472,15 +832,40 @@ export default function BuildDetailPage() {
                         </div>
                       </div>
                     </div>
-                    <p className="text-slate-600 dark:text-slate-400">{build.description}</p>
+                    <p className="text-slate-600 dark:text-slate-400">{build.description || "No description provided."}</p>
                   </div>
                   <Badge variant="secondary" className="text-lg font-bold px-3 py-1">
                     {formatCurrency(build.totalPrice)}
                   </Badge>
                 </div>
 
+                {/* Upgrade Suggestions Button - More Visible */}
+                <div className="pt-4 border-t border-slate-200 dark:border-slate-700">
+                  <Button
+                    onClick={handleGetUpgradeRecommendations}
+                    disabled={isLoadingUpgrades}
+                    variant="default"
+                    className="gap-2 w-full sm:w-auto"
+                  >
+                    {isLoadingUpgrades ? (
+                      <>
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                        Loading...
+                      </>
+                    ) : (
+                      <>
+                        <TrendingUp className="h-4 w-4" />
+                        Get Upgrade Suggestions
+                      </>
+                    )}
+                  </Button>
+                  {upgradeError && (
+                    <p className="text-sm text-red-600 mt-2">{upgradeError}</p>
+                  )}
+                </div>
+
                 {/* Tags */}
-                <div className="flex flex-wrap gap-2">
+                <div className="flex flex-wrap gap-2 pt-4">
                   {(build.tags || []).map((tag: string) => (
                     <Badge key={tag} variant="outline">
                       {tag}
@@ -678,6 +1063,105 @@ export default function BuildDetailPage() {
           </div>
         </div>
       </div>
+
+      {/* Upgrade Recommendations Dialog */}
+      <Dialog open={showUpgradeDialog} onOpenChange={setShowUpgradeDialog}>
+        <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <TrendingUp className="h-5 w-5 text-green-600" />
+              Upgrade Recommendations
+            </DialogTitle>
+            <DialogDescription>
+              Suggested component upgrades for this build
+            </DialogDescription>
+          </DialogHeader>
+          {upgradeRecommendations.length === 0 ? (
+            <div className="text-center py-8">
+              <p className="text-slate-600 dark:text-slate-400">No upgrade recommendations available.</p>
+            </div>
+          ) : (
+            <div className="space-y-4">
+              {upgradeRecommendations.map((rec, index) => (
+                <Card
+                  key={index}
+                  className={`border-slate-200 dark:border-slate-700 ${
+                    rec.recommended_upgrade ? 'hover:border-green-500 hover:shadow-md transition-all' : 'opacity-75'
+                  }`}
+                >
+                  <CardContent className="p-4">
+                    <div className="flex items-start justify-between gap-4">
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2 mb-2">
+                          <p className="text-sm font-semibold text-slate-900 dark:text-white">
+                            {rec.current_component}
+                          </p>
+                        </div>
+                        {rec.recommended_upgrade ? (
+                          <div className="space-y-2">
+                            <div className="flex items-center gap-2">
+                              <span className="text-sm text-slate-500">→</span>
+                              <p className="text-sm font-medium text-green-600 dark:text-green-400">
+                                {rec.recommended_upgrade}
+                              </p>
+                            </div>
+                            <div className="flex flex-col gap-1 ml-4">
+                              {rec.new_price && (
+                                <div className="flex items-center gap-2">
+                                  <span className="text-xs text-slate-500">New price:</span>
+                                  <span className="text-xs font-semibold text-slate-700 dark:text-slate-300">
+                                    {formatCurrency(rec.new_price)}
+                                  </span>
+                                </div>
+                              )}
+                              {rec.upgrade_cost && (
+                                <div className="flex items-center gap-2">
+                                  <span className="text-xs text-slate-500">Upgrade cost:</span>
+                                  <span className="text-xs font-semibold text-blue-600 dark:text-blue-400">
+                                    {formatCurrency(rec.upgrade_cost)}
+                                  </span>
+                                </div>
+                              )}
+                            </div>
+                          </div>
+                        ) : (
+                          <p className="text-xs text-slate-500 italic">No upgrade available for this component</p>
+                        )}
+                      </div>
+                      {rec.recommended_upgrade && (
+                        <div className="flex flex-col gap-2 flex-shrink-0">
+                          <Button
+                            size="sm"
+                            onClick={() => handleApplyUpgrade(index, rec.recommended_upgrade!)}
+                            disabled={isLoadingUpgrades}
+                          >
+                            {isLoadingUpgrades ? (
+                              <>
+                                <Loader2 className="h-3 w-3 animate-spin mr-1" />
+                                Applying...
+                              </>
+                            ) : (
+                              "Apply to This Build"
+                            )}
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => handleSaveAsNewBuild(index, rec.recommended_upgrade!)}
+                            disabled={isLoadingUpgrades}
+                          >
+                            Save as New Build
+                          </Button>
+                        </div>
+                      )}
+                    </div>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }
