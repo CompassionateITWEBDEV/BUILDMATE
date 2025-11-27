@@ -192,21 +192,25 @@ export default function DashboardPage() {
           id: `build_${build.build_id}`,
           type: "build_created",
           description: `Created '${build.build_name}'`,
+          rawTime: build.date_created,
           time: timeAgo(build.date_created),
           icon: Plus,
         });
       });
 
+
       // 2. Builds liked
-      likedBuilds.forEach((row: any) => {
+      likedBuilds.forEach((row) => {
         activity.push({
           id: `liked_${row.build.build_id}`,
           type: "build_liked",
           description: `Liked '${row.build.build_name}'`,
-          time: timeAgo(row.liked_at), // use the like timestamp
+          rawTime: row.liked_at,
+          time: timeAgo(row.liked_at),
           icon: Heart,
         });
       });
+
 
 
       // 3. Comments from build_comment table
@@ -219,11 +223,12 @@ export default function DashboardPage() {
       if (commentsError) {
         console.error("Error fetching comments:", commentsError);
       } else if (commentsData) {
-        commentsData.forEach((comment: any) => {
+        commentsData.forEach((comment) => {
           activity.push({
             id: `comment_${comment.comment_id}`,
             type: "comment",
             description: `Commented on '${comment.builds?.build_name}'`,
+            rawTime: comment.created_at,
             time: timeAgo(comment.created_at),
             icon: MessageCircle,
           });
@@ -251,6 +256,7 @@ export default function DashboardPage() {
             id: `follow_${f.user_id}`,
             type: "follow",
             description: `Followed ${followedUser?.user_name || "someone"}`,
+            rawTime: f.created_at,
             time: timeAgo(f.created_at),
             icon: Users,
           });
