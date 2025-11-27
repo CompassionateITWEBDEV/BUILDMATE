@@ -10,7 +10,7 @@ export const runtime = 'nodejs'
 // In production, use Redis or a database
 const loginVerificationCodes = new Map<string, { code: string; expiresAt: number; email: string }>()
 
-// Clean up expired codes every 10 minutes
+// Clean up expired codes every 10 minutes (codes expire after 5 minutes)
 setInterval(() => {
   const now = Date.now()
   for (const [email, data] of loginVerificationCodes.entries()) {
@@ -94,16 +94,32 @@ export async function POST(request: NextRequest) {
       )
     }
 
+    // Check if there's an existing code that hasn't expired yet
+    const existingCode = loginVerificationCodes.get(email.trim().toLowerCase())
+    if (existingCode && existingCode.expiresAt > Date.now()) {
+      const timeRemaining = Math.ceil((existingCode.expiresAt - Date.now()) / 1000 / 60)
+      console.log(`⚠️ Login code already exists for ${email}, expires in ${timeRemaining} minutes`)
+      // Don't overwrite - return the existing code info (but don't send email again)
+      return NextResponse.json({
+        success: true,
+        message: `A verification code was already sent. Please check your email. The code expires in ${timeRemaining} minute(s).`,
+        codeAlreadySent: true
+      })
+    }
+
     // Generate 6-digit verification code
     const code = Math.floor(100000 + Math.random() * 900000).toString()
-    const expiresAt = Date.now() + 10 * 60 * 1000 // 10 minutes
+    const expiresAt = Date.now() + 5 * 60 * 1000 // 5 minutes
 
     // Store code with email as key
     loginVerificationCodes.set(email.trim().toLowerCase(), {
       code,
       expiresAt,
-      email: email.trim().toLowerCase()
+      email: email.trim().toLowerCase(),
+      createdAt: Date.now() // Track when code was created
     })
+    
+    console.log(`✅ New login verification code generated for ${email}, expires at ${new Date(expiresAt).toISOString()}`)
 
     // Send email with verification code
     let transporter
@@ -143,7 +159,7 @@ export async function POST(request: NextRequest) {
             
             <div style="background: white; padding: 30px; border-radius: 8px; margin: 20px 0; box-shadow: 0 1px 3px rgba(0,0,0,0.1); text-align: center;">
               <h1 style="color: #667eea; font-size: 48px; margin: 0; letter-spacing: 8px; font-weight: bold;">${code}</h1>
-              <p style="color: #6b7280; margin-top: 10px; font-size: 14px;">This code will expire in 10 minutes</p>
+              <p style="color: #6b7280; margin-top: 10px; font-size: 14px;">This code will expire in 5 minutes</p>
             </div>
 
             <div style="background: #fef3c7; border-left: 4px solid #f59e0b; padding: 15px; margin: 20px 0; border-radius: 4px;">

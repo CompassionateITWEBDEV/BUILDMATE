@@ -2,7 +2,7 @@
 
 import * as React from "react"
 import { useState, useEffect } from "react"
-import { useRouter } from "next/navigation"
+import { useRouter, useSearchParams } from "next/navigation"
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
@@ -84,6 +84,7 @@ const categoryNames = {
 export default function BuilderPage() {
   const { user } = useAuth()
   const router = useRouter()
+  const searchParams = useSearchParams()
 
   const [selectedComponents, setSelectedComponents] = useState<Record<ComponentCategory, Component | null>>({
     cpu: null,
@@ -121,6 +122,11 @@ export default function BuilderPage() {
   const [isLoadingUpgrades, setIsLoadingUpgrades] = useState(false)
   const [showUpgradeDialog, setShowUpgradeDialog] = useState(false)
   const [algorithmError, setAlgorithmError] = useState<string | null>(null)
+
+  // Debug: Log when dialog state changes
+  useEffect(() => {
+    console.log('🔍 CSP Dialog state:', isCSPDialogOpen)
+  }, [isCSPDialogOpen])
   const [buildDescription, setBuildDescription] = useState("")
   const [showPurchasePreview, setShowPurchasePreview] = useState(false)
   const [showImportDialog, setShowImportDialog] = useState(false)
@@ -129,7 +135,9 @@ export default function BuilderPage() {
   const [isLoadingBuilds, setIsLoadingBuilds] = useState(false)
 
   const [cspPage, setCspPage] = useState(0)
-  const SOLUTIONS_PER_PAGE = 2
+  const SOLUTIONS_PER_PAGE = 10
+  const [cspHasMore, setCspHasMore] = useState(false)
+  const [isLoadingCSPPage, setIsLoadingCSPPage] = useState(false)
 
   // Category mapping from database category_id to app category
   const categoryIdToAppCategory: Record<number, ComponentCategory> = {
@@ -200,12 +208,82 @@ export default function BuilderPage() {
     fetchBuilds()
   }, [showImportDialog, importSearchTerm])
 
+  // Auto-import shared build from URL parameter
+  useEffect(() => {
+    const shareBuildId = searchParams.get('share')
+    if (!shareBuildId) return
+
+    const importSharedBuild = async () => {
+      try {
+        const buildId = Number(shareBuildId)
+        if (isNaN(buildId)) {
+          console.error("Invalid build ID in share parameter")
+          router.replace('/builder')
+          return
+        }
+
+        // Fetch the build from Supabase
+        const { data: buildData, error } = await supabase
+          .from("builds")
+          .select(`
+            *,
+            users(user_id, user_name, email),
+            build_types(build_type_id, type_name),
+            build_components(
+              component_id,
+              components(*)
+            )
+          `)
+          .eq("build_id", buildId)
+          .single()
+
+        if (error || !buildData) {
+          console.error("Error fetching shared build:", error)
+          alert("Build not found. The shared build may have been deleted.")
+          router.replace('/builder')
+          return
+        }
+
+        // Calculate total price
+        const components = buildData.build_components || []
+        const totalPrice = components.reduce((sum: number, bc: any) => {
+          return sum + (Number(bc.components?.component_price) || 0)
+        }, 0)
+
+        const build = {
+          ...buildData,
+          components,
+          totalPrice,
+        }
+
+        // Import the build using handleImportBuild logic
+        await handleImportBuild(build)
+
+        // Remove the share parameter from URL after importing
+        router.replace('/builder')
+      } catch (error) {
+        console.error("Error importing shared build:", error)
+        alert("Failed to import shared build. Please try again.")
+        router.replace('/builder')
+      }
+    }
+
+    importSharedBuild()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [searchParams])
+
   // Check if a component is compatible with currently selected components
   const isComponentCompatible = (component: Component, category: ComponentCategory): boolean => {
     // If no components are selected, show all components
     const hasSelectedComponents = Object.values(selectedComponents).some(comp => comp !== null)
     if (!hasSelectedComponents) {
       return true // Show all when nothing is selected
+    }
+
+    // If viewing the same category that's already selected, show all components in that category
+    // This allows users to change/replace their selection
+    if (selectedComponents[category] !== null) {
+      return true // Show all components of the same category
     }
 
     // CPU-Motherboard compatibility
@@ -701,7 +779,7 @@ export default function BuilderPage() {
     }))
   }
 
-  const handleGetCSPRecommendations = async () => {
+  const handleGetCSPRecommendations = async (page: number = 0) => {
     if (!budgetEnabled || budget <= 0) {
       setAlgorithmError("Please set a budget first")
       return
@@ -713,7 +791,15 @@ export default function BuilderPage() {
     }
 
     setIsLoadingCSP(true)
+    setIsLoadingCSPPage(true)
     setAlgorithmError(null)
+    
+    // Open dialog immediately when starting (for first page only)
+    if (page === 0) {
+      console.log('Opening CSP dialog...', { isCSPDialogOpen })
+      setIsCSPDialogOpen(true)
+      console.log('CSP dialog state set to true')
+    }
 
     try {
       // Build user_inputs map - extract numeric ID from component-{id} format
@@ -743,17 +829,25 @@ export default function BuilderPage() {
         userInputs["CPU Cooler"] = typeof selectedComponents.cooling.id === 'number' ? selectedComponents.cooling.id : parseInt(String(selectedComponents.cooling.id).replace(/\D/g, '')) || 0
       }
 
-      // Use algorithm service instead of direct fetch
-      const solutions = await getCSPRecommendations(budget, userInputs)
+      // Use algorithm service with pagination
+      const result = await getCSPRecommendations(budget, userInputs, page, SOLUTIONS_PER_PAGE)
       
-      setCspSolutions(solutions)
-      setCspPage(0)
-      setIsCSPDialogOpen(true)
+      if (page === 0) {
+        // First page - replace all solutions
+        setCspSolutions(result.solutions)
+      } else {
+        // Subsequent pages - append to existing solutions
+        setCspSolutions(prev => [...prev, ...result.solutions])
+      }
+      
+      setCspHasMore(result.hasMore)
+      setCspPage(page)
     } catch (error: any) {
       console.error("Error getting CSP recommendations:", error)
       setAlgorithmError(error.message || "Failed to get recommendations. Make sure Python backend is running.")
     } finally {
       setIsLoadingCSP(false)
+      setIsLoadingCSPPage(false)
     }
   }
 
@@ -1482,7 +1576,31 @@ export default function BuilderPage() {
                 </DialogContent>
               </Dialog>
 
-              <Button variant="outline" size="sm" className="text-xs sm:text-sm">
+              <Button 
+                variant="outline" 
+                size="sm" 
+                className="text-xs sm:text-sm"
+                onClick={async () => {
+                  if (savedBuildId) {
+                    // If build is saved, share the link to the saved build
+                    const shareUrl = `${window.location.origin}/builder?share=${savedBuildId}`
+                    try {
+                      await navigator.clipboard.writeText(shareUrl)
+                      alert("Build link copied to clipboard! Share this link to let others import this build.")
+                    } catch (err) {
+                      console.error("Failed to copy link:", err)
+                      alert("Failed to copy link. Please copy manually: " + shareUrl)
+                    }
+                  } else {
+                    // If build is not saved, prompt to save first
+                    const shouldSave = confirm("You need to save your build first before sharing. Would you like to save it now?")
+                    if (shouldSave) {
+                      setIsSaveDialogOpen(true)
+                    }
+                  }
+                }}
+              >
+                <Share className="h-4 w-4 sm:mr-2" />
                 <span className="hidden sm:inline">Share</span>
               </Button>
               <Button 
@@ -1613,7 +1731,10 @@ export default function BuilderPage() {
                     <Button
                       variant="outline"
                       size="sm"
-                      onClick={handleGetCSPRecommendations}
+                      onClick={() => {
+                        console.log('CSP Button clicked!', { budgetEnabled, budget, isLoadingCSP })
+                        handleGetCSPRecommendations(0)
+                      }}
                       disabled={!budgetEnabled || budget < 10000 || isLoadingCSP}
                       className="flex items-center justify-center gap-2 w-full sm:w-auto"
                       title={budgetEnabled && budget < 10000 ? "CSP requires minimum budget of ₱10,000" : ""}
@@ -1958,7 +2079,30 @@ export default function BuilderPage() {
                   >
                     {isCheckingDuplicates ? "Checking..." : "Save Build"}
                   </Button>
-                  <Button variant="outline" className="w-full bg-transparent">
+                  <Button 
+                    variant="outline" 
+                    className="w-full"
+                    onClick={async () => {
+                      if (savedBuildId) {
+                        // If build is saved, share the link to the saved build
+                        const shareUrl = `${window.location.origin}/builder?share=${savedBuildId}`
+                        try {
+                          await navigator.clipboard.writeText(shareUrl)
+                          alert("Build link copied to clipboard! Share this link to let others import this build.")
+                        } catch (err) {
+                          console.error("Failed to copy link:", err)
+                          alert("Failed to copy link. Please copy manually: " + shareUrl)
+                        }
+                      } else {
+                        // If build is not saved, prompt to save first
+                        const shouldSave = confirm("You need to save your build first before sharing. Would you like to save it now?")
+                        if (shouldSave) {
+                          setIsSaveDialogOpen(true)
+                        }
+                      }
+                    }}
+                  >
+                    <Share className="h-4 w-4 mr-2" />
                     Share Build
                   </Button>
                 </div>
@@ -2006,8 +2150,11 @@ export default function BuilderPage() {
       />
 
       {/* CSP Recommendation Checker Dialog */}
-      <Dialog open={isCSPDialogOpen} onOpenChange={setIsCSPDialogOpen}>
-        <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto">
+      <Dialog open={isCSPDialogOpen} onOpenChange={(open) => {
+        console.log('CSP Dialog onOpenChange called:', open)
+        setIsCSPDialogOpen(open)
+      }}>
+        <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto" style={{ zIndex: 9999 }}>
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <CheckCircle2 className="h-5 w-5 text-blue-600" />
@@ -2017,21 +2164,38 @@ export default function BuilderPage() {
               Compatible component combinations that fit your budget using Constraint Satisfaction Problem algorithm
             </DialogDescription>
           </DialogHeader>
-          {cspSolutions.length === 0 ? (
+          {isLoadingCSP ? (
+            <div className="text-center py-12">
+              <Loader2 className="h-8 w-8 animate-spin mx-auto mb-4 text-blue-600" />
+              <p className="text-slate-600 dark:text-slate-400 font-medium">Finding solutions...</p>
+              <p className="text-sm text-slate-500 dark:text-slate-500 mt-2">This may take up to 5 minutes. Please wait...</p>
+            </div>
+          ) : algorithmError ? (
+            <div className="text-center py-8">
+              <AlertCircle className="h-8 w-8 mx-auto mb-4 text-red-600" />
+              <p className="text-red-600 dark:text-red-400 font-medium">{algorithmError}</p>
+              <p className="text-sm text-slate-500 dark:text-slate-500 mt-2">Please check your budget and try again.</p>
+            </div>
+          ) : cspSolutions.length === 0 ? (
             <div className="text-center py-8">
               <p className="text-slate-600 dark:text-slate-400">No solutions found. Try adjusting your budget or selected components.</p>
             </div>
           ) : (
             <div className="space-y-4">
-              {cspSolutions
-                .slice(cspPage * SOLUTIONS_PER_PAGE, (cspPage + 1) * SOLUTIONS_PER_PAGE)
-                .map((solution, index) => {
+              {(() => {
+                // Get solutions for current page (already loaded)
+                const startIndex = cspPage * SOLUTIONS_PER_PAGE
+                const endIndex = startIndex + SOLUTIONS_PER_PAGE
+                const currentPageSolutions = cspSolutions.slice(startIndex, endIndex)
+                
+                return currentPageSolutions.map((solution, index) => {
                   const solutionPrice = Object.values(solution).reduce((sum: number, comp: any) => sum + (comp.price || 0), 0)
+                  const solutionNumber = cspPage * SOLUTIONS_PER_PAGE + index + 1
                   return (
-                    <Card key={index} className="border-slate-200 dark:border-slate-700">
+                    <Card key={`${cspPage}-${index}`} className="border-slate-200 dark:border-slate-700">
                       <CardHeader>
                         <div className="flex items-center justify-between">
-                          <CardTitle className="text-lg">Solution {cspPage * SOLUTIONS_PER_PAGE + index + 1}</CardTitle>
+                          <CardTitle className="text-lg">Solution {solutionNumber}</CardTitle>
                           <Badge variant="secondary" className="text-lg font-semibold">
                             {formatCurrency(solutionPrice)}
                           </Badge>
@@ -2059,23 +2223,50 @@ export default function BuilderPage() {
                       </CardContent>
                     </Card>
                   )
-              })}
+                })
+              })()}
 
               {/* Pagination Controls */}
-              <div className="flex justify-between mt-4">
+              <div className="flex justify-between items-center mt-4">
                 <Button
                   variant="outline"
-                  onClick={() => setCspPage((prev) => Math.max(prev - 1, 0))}
+                  onClick={() => {
+                    const newPage = Math.max(cspPage - 1, 0)
+                    setCspPage(newPage)
+                  }}
                   disabled={cspPage === 0}
                 >
                   Previous
                 </Button>
+                <span className="text-sm text-slate-600 dark:text-slate-400">
+                  Page {cspPage + 1} • Showing {Math.min((cspPage + 1) * SOLUTIONS_PER_PAGE, cspSolutions.length)} solutions
+                </span>
                 <Button
                   variant="outline"
-                  onClick={() => setCspPage((prev) => (prev + 1) * SOLUTIONS_PER_PAGE < cspSolutions.length ? prev + 1 : prev)}
-                  disabled={(cspPage + 1) * SOLUTIONS_PER_PAGE >= cspSolutions.length}
+                  onClick={async () => {
+                    const nextPage = cspPage + 1
+                    // Check if we need to load more solutions
+                    const currentSolutionsCount = cspSolutions.length
+                    const neededSolutions = (nextPage + 1) * SOLUTIONS_PER_PAGE
+                    
+                    if (currentSolutionsCount < neededSolutions && cspHasMore) {
+                      // Load next page of solutions from backend
+                      await handleGetCSPRecommendations(nextPage)
+                    } else {
+                      // Solutions already loaded, just change page
+                      setCspPage(nextPage)
+                    }
+                  }}
+                  disabled={!cspHasMore && (cspPage + 1) * SOLUTIONS_PER_PAGE >= cspSolutions.length}
                 >
-                  Next
+                  {isLoadingCSPPage ? (
+                    <>
+                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                      Loading...
+                    </>
+                  ) : (
+                    "Next"
+                  )}
                 </Button>
               </div>
             </div>

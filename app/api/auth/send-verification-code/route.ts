@@ -52,7 +52,7 @@ const createTransporter = () => {
 // Store verification codes temporarily (in production, use Redis or database)
 const verificationCodes = new Map<string, { code: string; expiresAt: number; email: string }>()
 
-// Clean up expired codes every 10 minutes
+// Clean up expired codes every 10 minutes (codes expire after 5 minutes)
 setInterval(() => {
   const now = Date.now()
   for (const [key, value] of verificationCodes.entries()) {
@@ -122,16 +122,32 @@ export async function POST(request: NextRequest) {
       )
     }
 
+    // Check if there's an existing code that hasn't expired yet
+    const existingCode = verificationCodes.get(email.trim().toLowerCase())
+    if (existingCode && existingCode.expiresAt > Date.now()) {
+      const timeRemaining = Math.ceil((existingCode.expiresAt - Date.now()) / 1000 / 60)
+      console.log(`⚠️ Code already exists for ${email}, expires in ${timeRemaining} minutes`)
+      // Don't overwrite - return the existing code info (but don't send email again)
+      return NextResponse.json({
+        success: true,
+        message: `A verification code was already sent. Please check your email. The code expires in ${timeRemaining} minute(s).`,
+        codeAlreadySent: true
+      })
+    }
+
     // Generate 6-digit verification code
     const code = Math.floor(100000 + Math.random() * 900000).toString()
-    const expiresAt = Date.now() + 10 * 60 * 1000 // 10 minutes
+    const expiresAt = Date.now() + 5 * 60 * 1000 // 5 minutes
 
     // Store code with email as key
     verificationCodes.set(email.trim().toLowerCase(), {
       code,
       expiresAt,
-      email: email.trim().toLowerCase()
+      email: email.trim().toLowerCase(),
+      createdAt: Date.now() // Track when code was created
     })
+    
+    console.log(`✅ New verification code generated for ${email}, expires at ${new Date(expiresAt).toISOString()}`)
 
     // Send verification code via email using Supabase SMTP
     let transporter
@@ -270,7 +286,7 @@ export async function POST(request: NextRequest) {
                   </div>
 
                   <p style="color: #6b7280; font-size: 14px; margin: 20px 0;">
-                    This code will expire in <strong>10 minutes</strong>. If you didn't request this code, please ignore this email.
+                    This code will expire in <strong>5 minutes</strong>. If you didn't request this code, please ignore this email.
                   </p>
 
                   <div style="background: #fef3c7; border-left: 4px solid #f59e0b; padding: 15px; margin: 20px 0; border-radius: 4px;">

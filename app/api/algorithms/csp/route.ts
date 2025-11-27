@@ -9,23 +9,28 @@ export const runtime = 'nodejs'
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json()
-    const { budget, user_inputs } = body
+    const { budget, user_inputs, page, limit } = body
 
     // Create AbortController for timeout
     const controller = new AbortController()
     const timeoutId = setTimeout(() => controller.abort(), 300000) // 300 second (5 minute) timeout for CSP algorithm with larger budgets
 
     try {
+      // Prepare request body for Python backend
+      const pythonRequestBody = {
+        budget,
+        user_inputs,
+        page: page !== undefined ? page : 0,
+        limit: limit !== undefined ? limit : 10,
+      }
+
       // Call Python backend
       const response = await fetch(`${PYTHON_API_URL}/api/csp`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({
-          budget,
-          user_inputs,
-        }),
+        body: JSON.stringify(pythonRequestBody),
         signal: controller.signal,
       })
 

@@ -13,22 +13,30 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    const storedData = verificationCodes.get(email.trim().toLowerCase())
+    const emailKey = email.trim().toLowerCase()
+    const storedData = verificationCodes.get(emailKey)
 
     if (!storedData) {
+      console.error(`❌ Verification code not found for ${emailKey}`)
       return NextResponse.json(
-        { error: 'Verification code not found or expired. Please request a new code.' },
+        { error: 'Verification code not found. Please request a new code.' },
         { status: 400 }
       )
     }
 
-    if (storedData.expiresAt < Date.now()) {
-      verificationCodes.delete(email.trim().toLowerCase())
+    const now = Date.now()
+    const timeRemaining = Math.ceil((storedData.expiresAt - now) / 1000)
+    
+    if (storedData.expiresAt < now) {
+      verificationCodes.delete(emailKey)
+      console.error(`❌ Verification code expired for ${emailKey}. Expired at ${new Date(storedData.expiresAt).toISOString()}`)
       return NextResponse.json(
         { error: 'Verification code has expired. Please request a new code.' },
         { status: 400 }
       )
     }
+    
+    console.log(`✅ Verifying code for ${emailKey}, ${timeRemaining} seconds remaining`)
 
     if (storedData.code !== code.trim()) {
       return NextResponse.json(

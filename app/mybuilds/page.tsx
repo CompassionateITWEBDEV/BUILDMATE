@@ -422,7 +422,19 @@ export default function BuildsPage() {
                         <MessageCircle className="h-4 w-4" />
                         <span>{build.comments || 0}</span>
                       </button>
-                      <button className="flex items-center gap-1 text-sm text-slate-500 hover:text-green-500 transition-colors">
+                      <button 
+                        className="flex items-center gap-1 text-sm text-slate-500 hover:text-green-500 transition-colors"
+                        onClick={async () => {
+                          const shareUrl = `${window.location.origin}/builder?share=${build.build_id}`
+                          try {
+                            await navigator.clipboard.writeText(shareUrl)
+                            alert("Build link copied to clipboard! Share this link to let others import this build.")
+                          } catch (err) {
+                            console.error("Failed to copy link:", err)
+                            alert("Failed to copy link. Please copy manually: " + shareUrl)
+                          }
+                        }}
+                      >
                         <Share className="h-4 w-4" />
                       </button>
                     </div>

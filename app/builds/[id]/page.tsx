@@ -773,11 +773,24 @@ export default function BuildDetailPage() {
                     <Copy className="h-4 w-4" />
                     Clone Build
                   </Button>
-                  <Button variant="outline" className="flex items-center gap-2 bg-transparent">
+                  <Button 
+                    variant="outline" 
+                    className="flex items-center gap-2"
+                    onClick={async () => {
+                      const shareUrl = `${window.location.origin}/builder?share=${build.build_id}`
+                      try {
+                        await navigator.clipboard.writeText(shareUrl)
+                        alert("Build link copied to clipboard! Share this link to let others import this build.")
+                      } catch (err) {
+                        console.error("Failed to copy link:", err)
+                        alert("Failed to copy link. Please copy manually: " + shareUrl)
+                      }
+                    }}
+                  >
                     <Share className="h-4 w-4" />
                     Share
                   </Button>
-                  <Button variant="outline" className="flex items-center gap-2 bg-transparent">
+                  <Button variant="outline" className="flex items-center gap-2">
                     <Download className="h-4 w-4" />
                     Export
                   </Button>

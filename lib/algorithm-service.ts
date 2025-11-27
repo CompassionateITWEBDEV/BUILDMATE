@@ -26,26 +26,49 @@ export interface UpgradeRecommendation {
 }
 
 /**
- * Get component recommendations using CSP algorithm
+ * Get component recommendations using CSP algorithm with pagination
  */
 export async function getCSPRecommendations(
   budget: number,
-  userInputs: Record<string, number>
-): Promise<CSPSolution[]> {
+  userInputs: Record<string, number>,
+  page: number = 0,
+  limit: number = 10
+): Promise<{ solutions: CSPSolution[], hasMore: boolean, page: number }> {
   try {
     // Create AbortController for client-side timeout (longer than server timeout)
     const controller = new AbortController()
     const timeoutId = setTimeout(() => controller.abort(), 310000) // 310 seconds (slightly longer than server timeout of 5 minutes)
     
+    // Ensure userInputs is a plain object without circular references
+    const cleanUserInputs: Record<string, number> = {}
+    for (const [key, value] of Object.entries(userInputs)) {
+      if (typeof value === 'number' && !isNaN(value) && isFinite(value)) {
+        cleanUserInputs[key] = value
+      }
+    }
+
+    // Prepare request body
+    const requestBody = {
+      budget: typeof budget === 'number' && !isNaN(budget) && isFinite(budget) ? budget : 0,
+      user_inputs: cleanUserInputs,
+      page: typeof page === 'number' && !isNaN(page) && isFinite(page) ? page : 0,
+      limit: typeof limit === 'number' && !isNaN(limit) && isFinite(limit) ? limit : 10,
+    }
+
+    let requestBodyString: string
+    try {
+      requestBodyString = JSON.stringify(requestBody)
+    } catch (error: any) {
+      console.error('Error stringifying request body:', error)
+      throw new Error('Failed to prepare request data. Please check your selected components.')
+    }
+
     const response = await fetch(`${API_BASE}/csp`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
       },
-      body: JSON.stringify({
-        budget,
-        user_inputs: userInputs,
-      }),
+      body: requestBodyString,
       signal: controller.signal,
     })
     
@@ -99,7 +122,11 @@ export async function getCSPRecommendations(
       throw new Error(data.error)
     }
     
-    return data.solutions || []
+    return {
+      solutions: data.solutions || [],
+      hasMore: data.has_more || false,
+      page: data.page || 0
+    }
   } catch (error: any) {
     console.error('Error getting CSP recommendations:', error)
     

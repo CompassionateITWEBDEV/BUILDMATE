@@ -145,6 +145,8 @@ def run_csp():
         data = request.json
         budget = data.get("budget", 0)
         user_inputs = data.get("user_inputs", {})
+        page = data.get("page", 0)  # Default to page 0
+        limit = data.get("limit", 10)  # Default to 10 solutions per page
 
         # Validate budget
         if budget <= 0:
@@ -178,28 +180,54 @@ def run_csp():
 
         solver = CSPBacktracking(components)
 
-        # Use generator to limit solutions (reduced to 10 for faster results)
+        # Calculate skip count for pagination
+        skip = page * limit
         solutions = []
         solution_count = 0
-        for i, sol in enumerate(solver.solve(budget, user_inputs)):
-            if i >= 10:  # limit to 10 solutions for faster response
+        has_more = False
+        
+        # Create generator for solutions
+        solution_generator = solver.solve(budget, user_inputs)
+        
+        # Iterate through solutions
+        for i, sol in enumerate(solution_generator):
+            # Skip solutions for previous pages
+            if i < skip:
+                continue
+            # Stop when we have enough for this page
+            if len(solutions) >= limit:
+                # We have enough solutions, check if generator has more
+                try:
+                    # Try to get one more solution to check if there are more
+                    next(solution_generator)
+                    has_more = True
+                except StopIteration:
+                    has_more = False
                 break
             solutions.append(sol)
             solution_count = i + 1
+        else:
+            # Loop completed naturally (no break) - no more solutions
+            has_more = False
 
         total_found = solution_count if solutions else 0
-        logging.info("CSP: Budget ₱%.2f, Pre-selected cost ₱%.2f, Returning %d solutions", budget, pre_selected_cost, len(solutions))
+        logging.info("CSP: Budget ₱%.2f, Page %d, Pre-selected cost ₱%.2f, Returning %d solutions, Has more: %s", 
+                     budget, page, pre_selected_cost, len(solutions), has_more)
 
         if not solutions:
             return jsonify({
                 "error": f"No compatible solutions found within budget of ₱{budget:,.2f}. Try adjusting your budget or removing some pre-selected components.",
                 "solutions": [],
-                "total_found": 0
+                "total_found": 0,
+                "has_more": False,
+                "page": page
             }), 200  # Return 200 but with error message in response
 
         return jsonify({
             "solutions": solutions,
-            "total_found": total_found
+            "total_found": total_found,
+            "has_more": has_more,
+            "page": page
         })
 
     except Exception as e:

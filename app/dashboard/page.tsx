@@ -708,7 +708,20 @@ export default function DashboardPage() {
                                   Clone
                                 </Link>
                               </Button>
-                              <Button size="sm" variant="outline">
+                              <Button 
+                                size="sm" 
+                                variant="outline"
+                                onClick={async () => {
+                                  const shareUrl = `${window.location.origin}/builder?share=${build.build_id}`
+                                  try {
+                                    await navigator.clipboard.writeText(shareUrl)
+                                    alert("Build link copied to clipboard! Share this link to let others import this build.")
+                                  } catch (err) {
+                                    console.error("Failed to copy link:", err)
+                                    alert("Failed to copy link. Please copy manually: " + shareUrl)
+                                  }
+                                }}
+                              >
                                 <Share className="h-4 w-4 mr-2" />
                                 Share
                               </Button>
