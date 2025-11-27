@@ -629,13 +629,19 @@ export default function BuildsPage() {
                               </tr>
                             </thead>
                             <tbody>
-                              {['CPU', 'GPU', 'Memory', 'Storage'].map((category) => (
-                                <tr key={category} className="border-b">
-                                  <td className="p-2 font-medium">{category}</td>
+                              {[
+                                { display: 'CPU', dbNames: ['CPU'] },
+                                { display: 'GPU', dbNames: ['GPU'] },
+                                { display: 'Memory', dbNames: ['Memory', 'RAM'] },
+                                { display: 'Storage', dbNames: ['Storage'] }
+                              ].map(({ display, dbNames }) => (
+                                <tr key={display} className="border-b">
+                                  <td className="p-2 font-medium">{display}</td>
                                   {selectedBuildsForCompare.map((build) => {
-                                    const component = build.components?.find((bc: any) => 
-                                      bc.components?.component_categories?.category_name === category
-                                    )
+                                    const component = build.components?.find((bc: any) => {
+                                      const categoryName = bc.components?.component_categories?.category_name
+                                      return categoryName && dbNames.includes(categoryName)
+                                    })
                                     return (
                                       <td key={build.build_id} className="p-2">
                                         {component?.components?.component_name || 'N/A'}

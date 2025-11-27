@@ -806,12 +806,14 @@ export default function BuildDetailPage() {
                           {category === "psu" ? "Power Supply" : category}
                         </h3>
                         <p className="text-sm text-slate-600 dark:text-slate-400">
-                          {component.brand} {component.name}
+                          {component.component_brand ? `${component.component_brand} ` : ''}{component.component_name || component.name || 'Unknown Component'}
                         </p>
-                        <div className="flex items-center gap-4 mt-1 text-xs text-slate-500">
-                          <span>★ {component.rating}</span>
-                          <span>{component.reviews} reviews</span>
-                        </div>
+                        {(component.rating || component.reviews) && (
+                          <div className="flex items-center gap-4 mt-1 text-xs text-slate-500">
+                            {component.rating && <span>★ {component.rating}</span>}
+                            {component.reviews && <span>{component.reviews} reviews</span>}
+                          </div>
+                        )}
                       </div>
                       <div className="text-right">
                         <p className="font-semibold text-slate-900 dark:text-white">{formatCurrency(component.price)}</p>

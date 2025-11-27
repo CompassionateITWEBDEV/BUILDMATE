@@ -512,6 +512,131 @@ export default function BuilderPage() {
       }
     }
 
+    // Case-Motherboard compatibility (form factor)
+    if (category === "case" && selectedComponents.motherboard) {
+      const mbFormFactor = selectedComponents.motherboard.compatibility.formFactor ||
+                          (selectedComponents.motherboard.specifications.formFactor as string) ||
+                          (selectedComponents.motherboard.specifications['Form Factor'] as string)
+      const caseFormFactor = component.compatibility.formFactor ||
+                            (component.specifications.formFactor as string) ||
+                            (component.specifications['Form Factor'] as string) ||
+                            (component.specifications['Supported Form Factors'] as string)
+      
+      if (mbFormFactor && caseFormFactor) {
+        // Normalize form factors (ATX, Micro ATX, Mini ITX, etc.)
+        const mbFormFactorLower = mbFormFactor.toLowerCase().replace(/\s+/g, '')
+        const caseFormFactorLower = caseFormFactor.toLowerCase().replace(/\s+/g, '')
+        
+        // Check if case supports the motherboard form factor
+        // Cases typically support multiple form factors (e.g., "ATX, Micro ATX, Mini ITX")
+        if (caseFormFactorLower.includes(',')) {
+          // Multiple form factors supported
+          const supportedFormFactors = caseFormFactorLower.split(',').map(f => f.trim())
+          if (!supportedFormFactors.some(f => f.includes(mbFormFactorLower) || mbFormFactorLower.includes(f))) {
+            return false
+          }
+        } else {
+          // Single form factor - must match
+          if (!caseFormFactorLower.includes(mbFormFactorLower) && !mbFormFactorLower.includes(caseFormFactorLower)) {
+            return false
+          }
+        }
+      }
+    }
+
+    if (category === "motherboard" && selectedComponents.case) {
+      const mbFormFactor = component.compatibility.formFactor ||
+                          (component.specifications.formFactor as string) ||
+                          (component.specifications['Form Factor'] as string)
+      const caseFormFactor = selectedComponents.case.compatibility.formFactor ||
+                            (selectedComponents.case.specifications.formFactor as string) ||
+                            (selectedComponents.case.specifications['Form Factor'] as string) ||
+                            (selectedComponents.case.specifications['Supported Form Factors'] as string)
+      
+      if (mbFormFactor && caseFormFactor) {
+        const mbFormFactorLower = mbFormFactor.toLowerCase().replace(/\s+/g, '')
+        const caseFormFactorLower = caseFormFactor.toLowerCase().replace(/\s+/g, '')
+        
+        if (caseFormFactorLower.includes(',')) {
+          const supportedFormFactors = caseFormFactorLower.split(',').map(f => f.trim())
+          if (!supportedFormFactors.some(f => f.includes(mbFormFactorLower) || mbFormFactorLower.includes(f))) {
+            return false
+          }
+        } else {
+          if (!caseFormFactorLower.includes(mbFormFactorLower) && !mbFormFactorLower.includes(caseFormFactorLower)) {
+            return false
+          }
+        }
+      }
+    }
+
+    // Cooling-Motherboard compatibility (when motherboard is selected, filter coolers by socket)
+    if (category === "cooling" && selectedComponents.motherboard) {
+      const mbSocket = selectedComponents.motherboard.compatibility.socket
+      if (mbSocket && mbSocket !== 'Standard') {
+        let supportedSockets: string[] = []
+        
+        // Method 1: Check compatibility.socket
+        if (component.compatibility.socket) {
+          const socketStr = component.compatibility.socket
+          if (socketStr.includes(',')) {
+            supportedSockets = socketStr.split(',').map(s => s.trim())
+          } else if (socketStr !== 'Standard') {
+            supportedSockets = [socketStr]
+          }
+        }
+        
+        // Method 2: Try parsing from Compatibility JSON
+        if (supportedSockets.length === 0) {
+          try {
+            const compatStr = component.specifications.Compatibility as string
+            if (typeof compatStr === 'string') {
+              const compat = JSON.parse(compatStr)
+              if (compat.supportedSockets) {
+                supportedSockets = Array.isArray(compat.supportedSockets) 
+                  ? compat.supportedSockets 
+                  : [compat.supportedSockets]
+              } else if (compat.supported_sockets) {
+                supportedSockets = Array.isArray(compat.supported_sockets) 
+                  ? compat.supported_sockets 
+                  : [compat.supported_sockets]
+              }
+            }
+          } catch (e) {
+            // Ignore parse errors
+          }
+        }
+        
+        // Method 3: Check specifications for supportedSockets
+        if (supportedSockets.length === 0 && component.specifications.supportedSockets) {
+          try {
+            const parsed = JSON.parse(component.specifications.supportedSockets as string)
+            if (Array.isArray(parsed)) {
+              supportedSockets = parsed
+            } else if (typeof parsed === 'string') {
+              supportedSockets = parsed.includes(',')
+                ? parsed.split(',').map(s => s.trim())
+                : [parsed]
+            }
+          } catch (e) {
+            if (Array.isArray(component.specifications.supportedSockets)) {
+              supportedSockets = component.specifications.supportedSockets as string[]
+            } else if (typeof component.specifications.supportedSockets === 'string') {
+              const socketStr = component.specifications.supportedSockets
+              supportedSockets = socketStr.includes(',')
+                ? socketStr.split(',').map(s => s.trim())
+                : [socketStr]
+            }
+          }
+        }
+        
+        // If we have socket info and it doesn't match, filter out
+        if (supportedSockets.length > 0 && !supportedSockets.includes(mbSocket)) {
+          return false
+        }
+      }
+    }
+
     // If we reach here, component is compatible (or no compatibility check applies)
     return true
   }
