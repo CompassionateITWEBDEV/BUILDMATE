@@ -61,6 +61,8 @@ export function Navigation({ variant = "default" }: NavigationProps) {
   const handleLinkClick = (href: string, label: string) => {
     if (pathname !== href) {
       startLoading(`Loading ${label.toLowerCase()}...`)
+      // Navigation will be handled by Next.js Link component
+      // Loading will be managed by LoadingProvider based on pathname change
     }
   }
 

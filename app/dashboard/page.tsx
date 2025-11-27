@@ -1,7 +1,7 @@
 "use client"
 
 import { useEffect, useState } from "react"
-import { useRouter } from "next/navigation"
+import { useRouter, usePathname } from "next/navigation"
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
@@ -35,6 +35,7 @@ import { formatCurrency } from "@/lib/currency"
 export default function DashboardPage() {
   const { user, logout, isLoading } = useAuth()
   const router = useRouter()
+  const pathname = usePathname()
   const [activeTab, setActiveTab] = useState("overview")
 
   const [userBuilds, setUserBuilds] = useState<any[]>([])
@@ -74,7 +75,7 @@ export default function DashboardPage() {
     }
 
     fetchUserBuilds()
-  }, [user, supabase])
+  }, [user, supabase, pathname]) // Refetch when pathname changes (navigation)
 
   // Fetch total likes received on user builds
   useEffect(() => {

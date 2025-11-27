@@ -42,31 +42,56 @@ export const supabase = createClient(
   }
 )
 
-// Helper function to handle JWT expiration errors
-export async function handleExpiredToken() {
+// Helper function to handle JWT expiration errors and ensure valid session
+export async function ensureValidSession() {
   try {
+    // First, try to get current session
     const { data: { session }, error } = await supabase.auth.getSession();
-    if (error || !session) {
-      // No valid session, user needs to log in again
+    
+    if (error) {
+      console.warn('⚠️ Error getting session:', error.message);
+      // Try to refresh if it's an expiration error
+      if (error.message?.includes('JWT') || error.message?.includes('expired')) {
+        console.log('🔄 Attempting to refresh expired session...');
+        const { data: { session: refreshedSession }, error: refreshError } = await supabase.auth.refreshSession();
+        if (!refreshError && refreshedSession) {
+          console.log('✅ Session refreshed successfully');
+          return refreshedSession;
+        }
+        console.error('❌ Failed to refresh session:', refreshError);
+      }
+      return null;
+    }
+    
+    if (!session) {
+      console.warn('⚠️ No active session found');
       return null;
     }
     
     // Check if session is expired
     const expiresAt = session.expires_at;
     if (expiresAt && expiresAt * 1000 < Date.now()) {
-      // Session expired, try to refresh
+      console.log('⚠️ Session expired, refreshing...');
       const { data: { session: newSession }, error: refreshError } = await supabase.auth.refreshSession();
       if (refreshError || !newSession) {
+        console.error('❌ Failed to refresh expired session:', refreshError);
         return null;
       }
+      console.log('✅ Session refreshed successfully');
       return newSession;
     }
     
+    // Session is valid
     return session;
   } catch (error) {
-    console.error('Error handling expired token:', error);
+    console.error('❌ Error ensuring valid session:', error);
     return null;
   }
+}
+
+// Legacy function name for backward compatibility
+export async function handleExpiredToken() {
+  return ensureValidSession();
 }
 
 // Database Types based on your schema
@@ -193,6 +218,7 @@ export interface Database {
           component_brand: string | null
           component_price: number | null
           component_description: string | null
+          component_image: string | null
           compatibility_information: string | null
           category_id: number
           retailer_id: number | null
@@ -204,6 +230,7 @@ export interface Database {
           component_brand?: string | null
           component_price?: number | null
           component_description?: string | null
+          component_image?: string | null
           compatibility_information?: string | null
           category_id: number
           retailer_id?: number | null
@@ -215,6 +242,7 @@ export interface Database {
           component_brand?: string | null
           component_price?: number | null
           component_description?: string | null
+          component_image?: string | null
           compatibility_information?: string | null
           category_id?: number
           retailer_id?: number | null

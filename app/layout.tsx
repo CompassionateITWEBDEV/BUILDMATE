@@ -5,6 +5,7 @@ import { GeistMono } from "geist/font/mono"
 import { SupabaseAuthProvider } from "@/contexts/supabase-auth-context"
 import { LoadingProvider } from "@/contexts/loading-context"
 import { GlobalLoading } from "@/components/global-loading"
+import { PageWrapper } from "@/components/page-wrapper"
 import { Suspense } from "react"
 import "./globals.css"
 
@@ -56,7 +57,9 @@ export default function RootLayout({
           <SupabaseAuthProvider>
             <LoadingProvider>
               <GlobalLoading />
-              {children}
+              <PageWrapper>
+                {children}
+              </PageWrapper>
             </LoadingProvider>
           </SupabaseAuthProvider>
         </Suspense>

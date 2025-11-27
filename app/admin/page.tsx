@@ -40,6 +40,15 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog"
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog"
+import { Label } from "@/components/ui/label"
 
 interface User {
   user_id: number
@@ -65,6 +74,7 @@ interface Component {
   component_brand: string | null
   component_price: number | null
   component_description: string | null
+  component_image: string | null
   component_categories?: { category_name: string }
   retailers?: { retailer_name: string }
 }
@@ -87,6 +97,12 @@ export default function AdminPage() {
     id: number | null
     name: string
   }>({ open: false, type: null, id: null, name: "" })
+  const [editImageDialog, setEditImageDialog] = useState<{
+    open: boolean
+    component: Component | null
+    imageUrl: string
+  }>({ open: false, component: null, imageUrl: "" })
+  const [isUpdatingImage, setIsUpdatingImage] = useState(false)
 
   // Check if user is admin
   useEffect(() => {
@@ -144,6 +160,32 @@ export default function AdminPage() {
       loadData()
     } catch (error) {
       console.error("Error deleting:", error)
+    }
+  }
+
+  const handleEditImage = (component: Component) => {
+    setEditImageDialog({
+      open: true,
+      component,
+      imageUrl: component.component_image || ""
+    })
+  }
+
+  const handleUpdateImage = async () => {
+    if (!editImageDialog.component) return
+
+    try {
+      setIsUpdatingImage(true)
+      await componentService.update(editImageDialog.component.component_id, {
+        component_image: editImageDialog.imageUrl || null
+      })
+      setEditImageDialog({ open: false, component: null, imageUrl: "" })
+      loadData()
+    } catch (error) {
+      console.error("Error updating component image:", error)
+      alert("Failed to update component image. Please try again.")
+    } finally {
+      setIsUpdatingImage(false)
     }
   }
 
@@ -422,9 +464,23 @@ export default function AdminPage() {
                     filteredComponents.map((component) => (
                       <div
                         key={component.component_id}
-                        className="flex items-center justify-between p-4 border rounded-lg"
+                        className="flex items-center gap-4 p-4 border rounded-lg"
                       >
-                        <div>
+                        {component.component_image ? (
+                          <img
+                            src={component.component_image}
+                            alt={component.component_name}
+                            className="w-16 h-16 object-cover rounded-lg bg-slate-100 dark:bg-slate-800 flex-shrink-0"
+                            onError={(e) => {
+                              (e.target as HTMLImageElement).src = '/placeholder.svg'
+                            }}
+                          />
+                        ) : (
+                          <div className="w-16 h-16 rounded-lg bg-slate-100 dark:bg-slate-800 flex-shrink-0 flex items-center justify-center">
+                            <span className="text-xs text-slate-400">No Image</span>
+                          </div>
+                        )}
+                        <div className="flex-1">
                           <div className="font-medium">{component.component_name}</div>
                           {component.component_brand && (
                             <div className="text-sm text-muted-foreground">Brand: {component.component_brand}</div>
@@ -432,21 +488,35 @@ export default function AdminPage() {
                           <div className="text-sm text-muted-foreground">
                             {formatCurrency(component.component_price || 0)} • {component.component_categories?.category_name}
                           </div>
+                          {component.component_image && (
+                            <div className="text-xs text-muted-foreground mt-1 truncate max-w-md">
+                              Image: {component.component_image}
+                            </div>
+                          )}
                         </div>
-                        <Button
-                          variant="destructive"
-                          size="sm"
-                          onClick={() =>
-                            setDeleteDialog({
-                              open: true,
-                              type: 'component',
-                              id: component.component_id,
-                              name: component.component_name
-                            })
-                          }
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
+                        <div className="flex gap-2">
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => handleEditImage(component)}
+                          >
+                            <Edit className="h-4 w-4" />
+                          </Button>
+                          <Button
+                            variant="destructive"
+                            size="sm"
+                            onClick={() =>
+                              setDeleteDialog({
+                                open: true,
+                                type: 'component',
+                                id: component.component_id,
+                                name: component.component_name
+                              })
+                            }
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </div>
                       </div>
                     ))
                   )}
@@ -637,6 +707,73 @@ export default function AdminPage() {
             </AlertDialogFooter>
           </AlertDialogContent>
         </AlertDialog>
+
+        {/* Edit Component Image Dialog */}
+        <Dialog open={editImageDialog.open} onOpenChange={(open) => {
+          if (!open) {
+            setEditImageDialog({ open: false, component: null, imageUrl: "" })
+          }
+        }}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Edit Component Image</DialogTitle>
+              <DialogDescription>
+                Update the image URL for {editImageDialog.component?.component_name}
+              </DialogDescription>
+            </DialogHeader>
+            <div className="space-y-4 py-4">
+              <div className="space-y-2">
+                <Label htmlFor="imageUrl">Image URL</Label>
+                <Input
+                  id="imageUrl"
+                  placeholder="https://example.com/image.jpg or Supabase Storage URL"
+                  value={editImageDialog.imageUrl}
+                  onChange={(e) => setEditImageDialog({
+                    ...editImageDialog,
+                    imageUrl: e.target.value
+                  })}
+                />
+                <p className="text-xs text-muted-foreground">
+                  Enter a full URL to an image. Can be from Supabase Storage or any external source.
+                </p>
+              </div>
+              {editImageDialog.imageUrl && (
+                <div className="space-y-2">
+                  <Label>Preview</Label>
+                  <div className="border rounded-lg p-4 bg-slate-50 dark:bg-slate-900">
+                    <img
+                      src={editImageDialog.imageUrl}
+                      alt="Preview"
+                      className="w-32 h-32 object-cover rounded-lg mx-auto"
+                      onError={(e) => {
+                        (e.target as HTMLImageElement).style.display = 'none'
+                        const parent = (e.target as HTMLImageElement).parentElement
+                        if (parent) {
+                          parent.innerHTML = '<p class="text-sm text-red-500 text-center">Invalid image URL</p>'
+                        }
+                      }}
+                    />
+                  </div>
+                </div>
+              )}
+            </div>
+            <DialogFooter>
+              <Button
+                variant="outline"
+                onClick={() => setEditImageDialog({ open: false, component: null, imageUrl: "" })}
+                disabled={isUpdatingImage}
+              >
+                Cancel
+              </Button>
+              <Button
+                onClick={handleUpdateImage}
+                disabled={isUpdatingImage}
+              >
+                {isUpdatingImage ? "Updating..." : "Update Image"}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
       </div>
     </div>
   )

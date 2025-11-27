@@ -16,14 +16,22 @@ const LoadingContext = createContext<LoadingContextType | undefined>(undefined)
 export function LoadingProvider({ children }: { children: ReactNode }) {
   const [isLoading, setIsLoading] = useState(false)
   const [loadingMessage, setLoadingMessage] = useState("Loading...")
+  const [loadingStartTime, setLoadingStartTime] = useState<number | null>(null)
   const pathname = usePathname()
+  const MIN_LOADING_TIME = 60000 // 1 minute in milliseconds
 
   // Auto-loading on route changes
   useEffect(() => {
-    // Stop loading when route changes (page has loaded)
+    // When pathname changes, start loading and track start time
+    const startTime = Date.now()
+    setLoadingStartTime(startTime)
+    setIsLoading(true)
+    
+    // Ensure minimum loading time of 1 minute
     const timer = setTimeout(() => {
       setIsLoading(false)
-    }, 100)
+      setLoadingStartTime(null)
+    }, MIN_LOADING_TIME)
 
     return () => clearTimeout(timer)
   }, [pathname])
@@ -36,6 +44,8 @@ export function LoadingProvider({ children }: { children: ReactNode }) {
   }
 
   const startLoading = (message?: string) => {
+    const startTime = Date.now()
+    setLoadingStartTime(startTime)
     setIsLoading(true)
     if (message) {
       setLoadingMessage(message)
@@ -43,7 +53,25 @@ export function LoadingProvider({ children }: { children: ReactNode }) {
   }
 
   const stopLoading = () => {
-    setIsLoading(false)
+    // Ensure minimum loading time of 1 minute
+    if (loadingStartTime) {
+      const elapsed = Date.now() - loadingStartTime
+      const remainingTime = MIN_LOADING_TIME - elapsed
+      
+      if (remainingTime > 0) {
+        // Wait for remaining time to meet minimum
+        setTimeout(() => {
+          setIsLoading(false)
+          setLoadingStartTime(null)
+        }, remainingTime)
+      } else {
+        // Already past minimum time, stop immediately
+        setIsLoading(false)
+        setLoadingStartTime(null)
+      }
+    } else {
+      setIsLoading(false)
+    }
   }
 
   return (

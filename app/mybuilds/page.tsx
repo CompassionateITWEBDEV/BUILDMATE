@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react"
 import Link from "next/link"
+import { usePathname } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
@@ -40,6 +41,7 @@ interface BuildWithDetails {
 
 export default function BuildsPage() {
   const { user } = useAuth()
+  const pathname = usePathname()
   const [builds, setBuilds] = useState<BuildWithDetails[]>([])
   const [statistics, setStatistics] = useState({ totalBuilders: 0, totalBuilds: 0, totalLikes: 0 })
   const [searchTerm, setSearchTerm] = useState("")
@@ -65,7 +67,7 @@ export default function BuildsPage() {
     return () => {
       supabase.removeChannel(buildsChannel)
     }
-  }, [])
+  }, [pathname, user]) // Refetch when pathname changes (navigation) or user changes
 
   // Fetch user's liked builds
   useEffect(() => {

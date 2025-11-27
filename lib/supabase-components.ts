@@ -21,6 +21,9 @@ function convertDbComponentToAppComponent(dbComponent: any): Component {
   const categoryMap: Record<string, ComponentCategory> = {
     'cpu': 'cpu',
     'gpu': 'gpu',
+    'graphics card': 'gpu',
+    'video card': 'gpu',
+    'graphics': 'gpu',
     'memory': 'memory',
     'ram': 'memory',
     'storage': 'storage',
@@ -28,7 +31,9 @@ function convertDbComponentToAppComponent(dbComponent: any): Component {
     'power supply': 'psu',
     'case': 'case',
     'cooling': 'cooling',
-    'cpu cooler': 'cooling'
+    'cpu cooler': 'cooling',
+    'motherboard': 'motherboard',
+    'mb': 'motherboard'
   }
   const appCategory = categoryMap[dbCategoryName] || (dbCategoryName as ComponentCategory) || 'cpu'
 
@@ -96,7 +101,7 @@ if (dbComponent.component_purpose) {
     brand: brand,
     price: Number(dbComponent.component_price) || 0,
     category: appCategory,
-    image: `/placeholder.svg`,
+    image: dbComponent.component_image || `/placeholder.svg`,
     rating: 4.5,
     reviews: Math.floor(Math.random() * 1000) + 100,
     specifications: {
@@ -130,8 +135,26 @@ if (dbComponent.component_purpose) {
 export async function getSupabaseComponents(): Promise<Component[]> {
   try {
     const dbComponents = await componentService.getAll()
-    console.log(`Fetched ${dbComponents.length} components from Supabase`, dbComponents)
-    return dbComponents.map(convertDbComponentToAppComponent)
+    console.log(`Fetched ${dbComponents.length} components from Supabase`)
+    
+    // Debug: Log category distribution
+    const categoryCounts: Record<string, number> = {}
+    dbComponents.forEach((comp: any) => {
+      const catName = comp.component_categories?.category_name || 'Unknown'
+      categoryCounts[catName] = (categoryCounts[catName] || 0) + 1
+    })
+    console.log('Category distribution:', categoryCounts)
+    
+    const converted = dbComponents.map(convertDbComponentToAppComponent)
+    
+    // Debug: Log converted category distribution
+    const convertedCategoryCounts: Record<string, number> = {}
+    converted.forEach((comp) => {
+      convertedCategoryCounts[comp.category] = (convertedCategoryCounts[comp.category] || 0) + 1
+    })
+    console.log('Converted category distribution:', convertedCategoryCounts)
+    
+    return converted
   } catch (error: any) {
     // Check if error has meaningful content
     const hasMessage = error?.message && typeof error.message === 'string' && error.message.trim().length > 0;

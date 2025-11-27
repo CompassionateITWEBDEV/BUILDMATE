@@ -9,7 +9,7 @@ export const runtime = 'nodejs'
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json()
-    const { budget, user_inputs, page, limit } = body
+    const { budget, user_inputs, page, limit, performance_category } = body
 
     // Create AbortController for timeout
     const controller = new AbortController()
@@ -17,11 +17,16 @@ export async function POST(request: NextRequest) {
 
     try {
       // Prepare request body for Python backend
-      const pythonRequestBody = {
+      const pythonRequestBody: any = {
         budget,
         user_inputs,
         page: page !== undefined ? page : 0,
         limit: limit !== undefined ? limit : 10,
+      }
+      
+      // Add performance category if specified
+      if (performance_category && performance_category !== 'all') {
+        pythonRequestBody.performance_category = performance_category
       }
 
       // Call Python backend

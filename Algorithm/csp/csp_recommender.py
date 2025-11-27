@@ -95,12 +95,14 @@ class CSPBacktracking:
         return True
 
     # Generator version of backtracking with early budget pruning
-    def backtrack(self, categories, partial_build, budget):
+    def backtrack(self, categories, partial_build, budget, min_budget_utilization=0.5):
         # Early pruning: if current partial build already exceeds budget, stop exploring
         current_cost = sum(c["price"] for c in partial_build.values() if c)
         if current_cost > budget:
             return  # Already over budget, no point continuing
         
+        # Don't filter solutions in backtracking - let API handle filtering
+        # This allows more solutions to be generated, then filtered by price range
         if not categories:
             if current_cost <= budget:
                 yield partial_build.copy()
@@ -109,14 +111,34 @@ class CSPBacktracking:
         next_cat = categories[0]
 
         if next_cat in partial_build:
-            yield from self.backtrack(categories[1:], partial_build, budget)
+            yield from self.backtrack(categories[1:], partial_build, budget, min_budget_utilization)
             return
 
-        # Sort components by price (cheapest first) to find solutions faster
+        # Get available components and sort them
+        available_components = self.by_cat.get(next_cat, [])
+        
+        # Calculate remaining budget after current selections
+        remaining_budget = budget - current_cost
+        
+        # Calculate how many categories are left (to estimate budget per category)
+        remaining_cats_count = len(categories) - 1
+        avg_budget_per_cat = remaining_budget / max(remaining_cats_count, 1) if remaining_cats_count > 0 else remaining_budget
+        
+        # PRIORITIZE EXPENSIVE COMPONENTS FIRST to find solutions closer to budget
+        # Sort by price DESCENDING (expensive first) to maximize budget utilization
         available_components = sorted(
-            self.by_cat.get(next_cat, []),
-            key=lambda c: c.get("price", float('inf'))
+            [c for c in available_components if c.get("price", 0) <= remaining_budget],
+            key=lambda c: c.get("price", float('inf')),
+            reverse=True  # EXPENSIVE FIRST - this is the key change!
         )
+        
+        # If no expensive components fit, fall back to cheaper ones
+        if not available_components:
+            available_components = sorted(
+                self.by_cat.get(next_cat, []),
+                key=lambda c: c.get("price", float('inf')),
+                reverse=True
+            )
         
         for comp in available_components:
             # Early budget check: skip if adding this component would exceed budget
@@ -125,7 +147,7 @@ class CSPBacktracking:
             
             if self.is_compatible(partial_build, comp):
                 partial_build[next_cat] = comp
-                yield from self.backtrack(categories[1:], partial_build, budget)
+                yield from self.backtrack(categories[1:], partial_build, budget, min_budget_utilization)
                 del partial_build[next_cat]
 
     def solve(self, budget, user_inputs={}):
@@ -146,4 +168,6 @@ class CSPBacktracking:
             # Empty generator - no solutions possible
 
         remaining_cats = [c for c in CATEGORY_ORDER if c not in partial_build]
-        return self.backtrack(remaining_cats, partial_build, budget)  # returns a generator
+        # Use lower min_budget_utilization (0.4 = 40% of budget) to allow more solutions
+        # But we'll filter and sort in the API to prioritize expensive ones
+        return self.backtrack(remaining_cats, partial_build, budget, min_budget_utilization=0.4)  # returns a generator

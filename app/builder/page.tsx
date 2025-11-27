@@ -1,8 +1,7 @@
 "use client"
 
-import * as React from "react"
-import { useState, useEffect } from "react"
-import { useRouter, useSearchParams } from "next/navigation"
+import React, { useState, useEffect } from "react"
+import { useRouter, useSearchParams, usePathname } from "next/navigation"
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
@@ -43,7 +42,8 @@ import {
   CheckCircle2,
   ShoppingCart,
   MapPin,
-  Download
+  Download,
+  Edit
 } from "lucide-react"
 
 import { type Component, type ComponentCategory, type PerformanceCategory, performanceCategories } from "@/lib/mock-data"
@@ -55,8 +55,8 @@ import { formatCurrency } from "@/lib/currency"
 import { getCSPRecommendations, getUpgradeRecommendations, type CSPSolution } from "@/lib/algorithm-service"
 import { getSupabaseComponents, getSupabaseComponentsByCategory } from "@/lib/supabase-components"
 import { useAuth } from "@/contexts/supabase-auth-context"
+import { componentService } from "@/lib/database"
 import { Textarea } from "@/components/ui/textarea"
-import { AvailabilityBadge } from "@/components/availability-badge"
 import { RetailerLocation } from "@/components/retailer-location"
 
 const categoryIcons = {
@@ -101,6 +101,8 @@ export default function BuilderPage() {
   const [isLoadingComponents, setIsLoadingComponents] = useState(false)
   const [fetchError, setFetchError] = useState<string | null>(null)
   const [activeCategory, setActiveCategory] = useState<ComponentCategory>("cpu")
+  const [componentPage, setComponentPage] = useState(0)
+  const COMPONENTS_PER_PAGE = 10
   const [searchTerm, setSearchTerm] = useState("")
   const [locationFilter, setLocationFilter] = useState<string>("")
   const [buildName, setBuildName] = useState("My Custom Build")
@@ -122,6 +124,8 @@ export default function BuilderPage() {
   const [isLoadingUpgrades, setIsLoadingUpgrades] = useState(false)
   const [showUpgradeDialog, setShowUpgradeDialog] = useState(false)
   const [algorithmError, setAlgorithmError] = useState<string | null>(null)
+  const [cspLoadingStartTime, setCspLoadingStartTime] = useState<number | null>(null)
+  const [cspElapsedTime, setCspElapsedTime] = useState(0)
 
   // Debug: Log when dialog state changes
   useEffect(() => {
@@ -133,6 +137,11 @@ export default function BuilderPage() {
   const [importSearchTerm, setImportSearchTerm] = useState("")
   const [availableBuilds, setAvailableBuilds] = useState<any[]>([])
   const [isLoadingBuilds, setIsLoadingBuilds] = useState(false)
+  const [selectedComponentDetails, setSelectedComponentDetails] = useState<Component | null>(null)
+  const [showComponentDetailsDialog, setShowComponentDetailsDialog] = useState(false)
+  const [editingImage, setEditingImage] = useState(false)
+  const [componentImageUrl, setComponentImageUrl] = useState("")
+  const [isUpdatingComponentImage, setIsUpdatingComponentImage] = useState(false)
 
   const [cspPage, setCspPage] = useState(0)
   const SOLUTIONS_PER_PAGE = 10
@@ -721,9 +730,24 @@ export default function BuilderPage() {
 
   const getFilteredComponents = (category: ComponentCategory) => {
     const categoryFiltered = components.filter((component) => component.category === category)
+    
+    // Debug: Log GPU components
+    if (category === 'gpu') {
+      console.log('GPU Components found:', categoryFiltered.length, categoryFiltered.map(c => ({ name: c.name, price: c.price, category: c.category })))
+    }
+
+    // Filter out components with no price (price is 0, null, or undefined)
+    const priceFiltered = categoryFiltered.filter(
+      (component) => component.price && component.price > 0
+    )
+    
+    // Debug: Log filtered GPU components
+    if (category === 'gpu') {
+      console.log('GPU Components after price filter:', priceFiltered.length)
+    }
 
     const performanceFiltered = filterComponentsByPerformance(
-      categoryFiltered,
+      priceFiltered,
       performanceCategory,
       performanceCategories[performanceCategory].requirements
     )
@@ -772,6 +796,54 @@ export default function BuilderPage() {
     }))
   }
 
+  const handleComponentClick = (component: Component, e: React.MouseEvent<HTMLDivElement>) => {
+    // If Ctrl/Cmd is pressed, open details dialog
+    if (e.ctrlKey || e.metaKey) {
+      e.preventDefault()
+      setSelectedComponentDetails(component)
+      setComponentImageUrl(component.image || "")
+      setShowComponentDetailsDialog(true)
+    } else {
+      // Normal click - select component
+      handleComponentSelect(component)
+    }
+  }
+
+  const handleUpdateComponentImage = async () => {
+    if (!selectedComponentDetails || !user || user.user_type !== 'admin') return
+
+    try {
+      setIsUpdatingComponentImage(true)
+      // Extract component ID from the component.id (format: "component-{id}")
+      const componentId = parseInt(selectedComponentDetails.id.replace('component-', ''))
+      
+      await componentService.update(componentId, {
+        component_image: componentImageUrl || null
+      })
+
+      // Update the component in the local state
+      setComponents(prev => prev.map(comp => 
+        comp.id === selectedComponentDetails.id 
+          ? { ...comp, image: componentImageUrl || "/placeholder.svg" }
+          : comp
+      ))
+
+      // Update selected component details
+      setSelectedComponentDetails({
+        ...selectedComponentDetails,
+        image: componentImageUrl || "/placeholder.svg"
+      })
+
+      setEditingImage(false)
+      alert("Component image updated successfully!")
+    } catch (error) {
+      console.error("Error updating component image:", error)
+      alert("Failed to update component image. Please try again.")
+    } finally {
+      setIsUpdatingComponentImage(false)
+    }
+  }
+
   const handleComponentRemove = (category: ComponentCategory) => {
     setSelectedComponents((prev) => ({
       ...prev,
@@ -794,6 +866,22 @@ export default function BuilderPage() {
     setIsLoadingCSPPage(true)
     setAlgorithmError(null)
     
+    // Track loading start time for timeout and elapsed time display
+    let timeInterval: NodeJS.Timeout | null = null
+    const startTime = Date.now()
+    const MIN_LOADING_TIME = page === 0 ? 120000 : 60000  // 2 minutes for first page, 1 minute for subsequent pages
+    
+    if (page === 0) {
+      setCspLoadingStartTime(startTime)
+      setCspElapsedTime(0)
+      
+      // Start elapsed time counter
+      timeInterval = setInterval(() => {
+        const elapsed = Math.floor((Date.now() - startTime) / 1000)
+        setCspElapsedTime(elapsed)
+      }, 1000)
+    }
+    
     // Open dialog immediately when starting (for first page only)
     if (page === 0) {
       console.log('Opening CSP dialog...', { isCSPDialogOpen })
@@ -803,6 +891,7 @@ export default function BuilderPage() {
 
     try {
       // Build user_inputs map - extract numeric ID from component-{id} format
+      // This includes both manually selected components and imported build components
       const userInputs: Record<string, number> = {}
       if (selectedComponents.cpu) {
         userInputs["CPU"] = typeof selectedComponents.cpu.id === 'number' ? selectedComponents.cpu.id : parseInt(String(selectedComponents.cpu.id).replace(/\D/g, '')) || 0
@@ -829,8 +918,24 @@ export default function BuilderPage() {
         userInputs["CPU Cooler"] = typeof selectedComponents.cooling.id === 'number' ? selectedComponents.cooling.id : parseInt(String(selectedComponents.cooling.id).replace(/\D/g, '')) || 0
       }
 
-      // Use algorithm service with pagination
-      const result = await getCSPRecommendations(budget, userInputs, page, SOLUTIONS_PER_PAGE)
+      // Use algorithm service with pagination, including performance category
+      const algorithmStartTime = Date.now()
+      const result = await getCSPRecommendations(
+        budget, 
+        userInputs, 
+        page, 
+        SOLUTIONS_PER_PAGE,
+        performanceCategory !== "all" ? performanceCategory : undefined
+      )
+      
+      // Ensure minimum loading time (1-2 minutes depending on page)
+      const algorithmTime = Date.now() - algorithmStartTime
+      const remainingTime = MIN_LOADING_TIME - algorithmTime
+      
+      if (remainingTime > 0) {
+        // Wait for remaining time to meet minimum loading duration
+        await new Promise(resolve => setTimeout(resolve, remainingTime))
+      }
       
       if (page === 0) {
         // First page - replace all solutions
@@ -844,10 +949,21 @@ export default function BuilderPage() {
       setCspPage(page)
     } catch (error: any) {
       console.error("Error getting CSP recommendations:", error)
-      setAlgorithmError(error.message || "Failed to get recommendations. Make sure Python backend is running.")
+      
+      // Check if it's a timeout error
+      if (error.message?.includes('timeout') || error.message?.includes('aborted') || error.message?.includes('taking too long')) {
+        setAlgorithmError("Request timed out after 3 minutes. The algorithm is taking too long. Try:\n- Reducing your budget\n- Removing some pre-selected components\n- Using a simpler build configuration")
+      } else {
+        setAlgorithmError(error.message || "Failed to get recommendations. Make sure Python backend is running.")
+      }
     } finally {
       setIsLoadingCSP(false)
       setIsLoadingCSPPage(false)
+      setCspLoadingStartTime(null)
+      setCspElapsedTime(0)
+      if (timeInterval) {
+        clearInterval(timeInterval)
+      }
     }
   }
 
@@ -1249,6 +1365,16 @@ export default function BuilderPage() {
 
       // Set imported components
       setSelectedComponents(importedComponents)
+      
+      // Add imported components to the components list if they're not already there
+      // This ensures they're available for compatibility checking and filtering
+      setComponents(prevComponents => {
+        const existingIds = new Set(prevComponents.map(c => c.id))
+        const newComponents = Object.values(importedComponents)
+          .filter((comp): comp is Component => comp !== null && !existingIds.has(comp.id))
+        return [...prevComponents, ...newComponents]
+      })
+      
       setBuildName(build.build_name || "Imported Build")
       setBuildDescription(build.description || "")
       if (build.build_type_id) {
@@ -1300,6 +1426,11 @@ export default function BuilderPage() {
     fetchComponents()
   }, [])
 
+  // Reset page when search term, filters, or category changes
+  useEffect(() => {
+    setComponentPage(0)
+  }, [searchTerm, locationFilter, performanceCategory, activeCategory])
+
 
 
 
@@ -1350,7 +1481,7 @@ export default function BuilderPage() {
                       <CardHeader>
                         <CardTitle>{buildName}</CardTitle>
                         <CardDescription>
-                          Build Type: {buildType === "1" ? "Academic" : buildType === "2" ? "Office" : buildType === "3" ? "Gaming" : "Custom"}
+                          Build Type: {buildType === "1" ? "Academic" : buildType === "3" ? "Gaming" : "Custom"}
                         </CardDescription>
                       </CardHeader>
                       <CardContent>
@@ -1373,7 +1504,6 @@ export default function BuilderPage() {
                                           <h3 className="font-semibold text-slate-900 dark:text-white">
                                             {component!.name}
                                           </h3>
-                                          <AvailabilityBadge status={component!.availabilityStatus} className="text-xs" />
                                         </div>
                                         <Badge variant="secondary" className="mt-1">
                                           {categoryName}
@@ -1514,7 +1644,6 @@ export default function BuilderPage() {
                         </SelectTrigger>
                         <SelectContent>
                           <SelectItem value="1">Academic</SelectItem>
-                          <SelectItem value="2">Office</SelectItem>
                           <SelectItem value="3">Gaming</SelectItem>
                           <SelectItem value="4">Custom</SelectItem>
                         </SelectContent>
@@ -1549,6 +1678,7 @@ export default function BuilderPage() {
                         onClick={() => {
                           setShowSuccessDialog(false)
                           router.push(`/purchase/${savedBuildId}`)
+                          router.refresh()
                         }}
                         className="w-full"
                       >
@@ -1559,6 +1689,7 @@ export default function BuilderPage() {
                         onClick={() => {
                           setShowSuccessDialog(false)
                           router.push(`/mybuilds/${savedBuildId}`)
+                          router.refresh()
                         }}
                         className="w-full"
                       >
@@ -1784,7 +1915,14 @@ export default function BuilderPage() {
                 <Tabs value={activeCategory} onValueChange={(value) => setActiveCategory(value as ComponentCategory)}>
                   <TabsList className="grid grid-cols-4 lg:grid-cols-8 mb-6 gap-1">
                     {Object.entries(categoryIcons).map(([category, Icon]) => (
-                      <TabsTrigger key={category} value={category} className="p-2 text-xs">
+                      <TabsTrigger 
+                        key={category} 
+                        value={category} 
+                        className="p-2 text-xs"
+                        onClick={() => {
+                          setComponentPage(0) // Reset page when switching categories
+                        }}
+                      >
                         <span className="text-[10px] sm:text-xs">{categoryNames[category as ComponentCategory]}</span>
                       </TabsTrigger>
                     ))}
@@ -1792,6 +1930,13 @@ export default function BuilderPage() {
 
                   {Object.keys(categoryIcons).map((category) => {
                     const filteredComponents = getFilteredComponents(category as ComponentCategory)
+                    // Use category-specific page state (reset when category changes)
+                    const currentPage = activeCategory === category ? componentPage : 0
+                    const totalPages = Math.ceil(filteredComponents.length / COMPONENTS_PER_PAGE)
+                    const startIndex = currentPage * COMPONENTS_PER_PAGE
+                    const endIndex = startIndex + COMPONENTS_PER_PAGE
+                    const paginatedComponents = filteredComponents.slice(startIndex, endIndex)
+                    
                     return (
                       <TabsContent key={category} value={category} className="space-y-4">
                         {filteredComponents.length === 0 ? (
@@ -1809,8 +1954,37 @@ export default function BuilderPage() {
                             </div>
                           </div>
                         ) : (
-                          <div className="grid gap-4">
-                            {filteredComponents.map((component) => (
+                          <>
+                            <div className="flex items-center justify-between mb-4">
+                              <p className="text-sm text-slate-600 dark:text-slate-400">
+                                Showing {startIndex + 1}-{Math.min(endIndex, filteredComponents.length)} of {filteredComponents.length} components
+                              </p>
+                              {totalPages > 1 && (
+                                <div className="flex items-center gap-2">
+                                  <Button
+                                    variant="outline"
+                                    size="sm"
+                                    onClick={() => setComponentPage(prev => Math.max(0, prev - 1))}
+                                    disabled={currentPage === 0}
+                                  >
+                                    Previous
+                                  </Button>
+                                  <span className="text-sm text-slate-600 dark:text-slate-400">
+                                    Page {currentPage + 1} of {totalPages}
+                                  </span>
+                                  <Button
+                                    variant="outline"
+                                    size="sm"
+                                    onClick={() => setComponentPage(prev => Math.min(totalPages - 1, prev + 1))}
+                                    disabled={currentPage >= totalPages - 1}
+                                  >
+                                    Next
+                                  </Button>
+                                </div>
+                              )}
+                            </div>
+                            <div className="grid gap-4">
+                              {paginatedComponents.map((component) => (
                               <Card
                                 key={component.id}
                                 className={`border-slate-200 dark:border-slate-700 cursor-pointer transition-all hover:shadow-md ${
@@ -1818,7 +1992,7 @@ export default function BuilderPage() {
                                     ? "ring-2 ring-blue-500 border-blue-500"
                                     : ""
                                 }`}
-                                onClick={() => handleComponentSelect(component)}
+                                onClick={(e) => handleComponentClick(component, e)}
                               >
                                 <CardContent className="p-3 sm:p-4">
                                   <div className="flex items-start gap-3 sm:gap-4">
@@ -1832,7 +2006,6 @@ export default function BuilderPage() {
                                         <div>
                                           <div className="flex items-start gap-2 mb-1">
                                           <h3 className="font-semibold text-slate-900 dark:text-white">{component.name}</h3>
-                                            <AvailabilityBadge status={component.availabilityStatus} className="text-xs" />
                                           </div>
                                           <p className="text-sm text-slate-600 dark:text-slate-400 mb-2">{component.brand}</p>
                                           {component.retailer && (
@@ -1874,8 +2047,9 @@ export default function BuilderPage() {
                                   </div>
                                 </CardContent>
                               </Card>
-                            ))}
-                          </div>
+                              ))}
+                            </div>
+                          </>
                         )}
                       </TabsContent>
 
@@ -2168,7 +2342,19 @@ export default function BuilderPage() {
             <div className="text-center py-12">
               <Loader2 className="h-8 w-8 animate-spin mx-auto mb-4 text-blue-600" />
               <p className="text-slate-600 dark:text-slate-400 font-medium">Finding solutions...</p>
-              <p className="text-sm text-slate-500 dark:text-slate-500 mt-2">This may take up to 5 minutes. Please wait...</p>
+              <p className="text-sm text-slate-500 dark:text-slate-500 mt-2">
+                This may take up to 3 minutes. Please wait...
+                {cspElapsedTime > 0 && (
+                  <span className="block mt-1 text-xs">
+                    Elapsed time: {Math.floor(cspElapsedTime / 60)}:{(cspElapsedTime % 60).toString().padStart(2, '0')}
+                  </span>
+                )}
+              </p>
+              {cspElapsedTime > 120 && (
+                <p className="text-xs text-amber-600 dark:text-amber-400 mt-2">
+                  Taking longer than expected. You can cancel and try with a smaller budget or fewer pre-selected components.
+                </p>
+              )}
             </div>
           ) : algorithmError ? (
             <div className="text-center py-8">
@@ -2427,6 +2613,197 @@ export default function BuilderPage() {
               </div>
             )}
           </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Component Details Dialog */}
+      <Dialog open={showComponentDetailsDialog} onOpenChange={setShowComponentDetailsDialog}>
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Info className="h-5 w-5" />
+              Component Details
+            </DialogTitle>
+            <DialogDescription>
+              {selectedComponentDetails && (
+                <>
+                  View all specifications for {selectedComponentDetails.name}
+                  {user?.user_type === 'admin' && (
+                    <span className="ml-2 text-xs">(Admin: Press Ctrl+Click on component to edit image)</span>
+                  )}
+                </>
+              )}
+            </DialogDescription>
+          </DialogHeader>
+
+          {selectedComponentDetails && (
+            <div className="space-y-6 py-4">
+              {/* Component Image Section */}
+              <div className="space-y-3">
+                <div className="flex items-center justify-between">
+                  <Label>Component Image</Label>
+                  {user?.user_type === 'admin' && (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => {
+                        setEditingImage(!editingImage)
+                        setComponentImageUrl(selectedComponentDetails.image || "")
+                      }}
+                    >
+                      <Edit className="h-4 w-4 mr-2" />
+                      {editingImage ? "Cancel" : "Edit Image"}
+                    </Button>
+                  )}
+                </div>
+                
+                {editingImage && user?.user_type === 'admin' ? (
+                  <div className="space-y-3">
+                    <Input
+                      placeholder="Enter image URL (Supabase Storage or external)"
+                      value={componentImageUrl}
+                      onChange={(e) => setComponentImageUrl(e.target.value)}
+                    />
+                    {componentImageUrl && (
+                      <div className="border rounded-lg p-4 bg-slate-50 dark:bg-slate-900">
+                        <img
+                          src={componentImageUrl}
+                          alt="Preview"
+                          className="w-32 h-32 object-cover rounded-lg mx-auto"
+                          onError={(e) => {
+                            (e.target as HTMLImageElement).style.display = 'none'
+                            const parent = (e.target as HTMLImageElement).parentElement
+                            if (parent) {
+                              parent.innerHTML = '<p class="text-sm text-red-500 text-center">Invalid image URL</p>'
+                            }
+                          }}
+                        />
+                      </div>
+                    )}
+                    <Button
+                      onClick={handleUpdateComponentImage}
+                      disabled={isUpdatingComponentImage}
+                      className="w-full"
+                    >
+                      {isUpdatingComponentImage ? "Updating..." : "Update Image"}
+                    </Button>
+                  </div>
+                ) : (
+                  <div className="border rounded-lg p-4 bg-slate-50 dark:bg-slate-900 flex justify-center">
+                    <img
+                      src={selectedComponentDetails.image || "/placeholder.svg"}
+                      alt={selectedComponentDetails.name}
+                      className="w-48 h-48 object-cover rounded-lg"
+                      onError={(e) => {
+                        (e.target as HTMLImageElement).src = '/placeholder.svg'
+                      }}
+                    />
+                  </div>
+                )}
+              </div>
+
+              {/* Component Info */}
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <Label className="text-xs text-slate-500">Name</Label>
+                  <p className="font-semibold">{selectedComponentDetails.name}</p>
+                </div>
+                <div>
+                  <Label className="text-xs text-slate-500">Brand</Label>
+                  <p className="font-semibold">{selectedComponentDetails.brand}</p>
+                </div>
+                <div>
+                  <Label className="text-xs text-slate-500">Price</Label>
+                  <p className="font-semibold text-lg">{formatCurrency(selectedComponentDetails.price)}</p>
+                </div>
+                <div>
+                  <Label className="text-xs text-slate-500">Category</Label>
+                  <p className="font-semibold capitalize">{selectedComponentDetails.category}</p>
+                </div>
+              </div>
+
+              {/* All Specifications */}
+              <div className="space-y-3">
+                <Label>All Specifications</Label>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  {Object.entries(selectedComponentDetails.specifications || {}).map(([key, value]) => (
+                    <div key={key} className="border rounded-lg p-3 bg-slate-50 dark:bg-slate-900">
+                      <Label className="text-xs text-slate-500">{key}</Label>
+                      <p className="font-medium text-sm">{String(value)}</p>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* Compatibility Info */}
+              {selectedComponentDetails.compatibility && (
+                <div className="space-y-3">
+                  <Label>Compatibility Information</Label>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    {selectedComponentDetails.compatibility.socket && (
+                      <div className="border rounded-lg p-3 bg-slate-50 dark:bg-slate-900">
+                        <Label className="text-xs text-slate-500">Socket</Label>
+                        <p className="font-medium text-sm">{selectedComponentDetails.compatibility.socket}</p>
+                      </div>
+                    )}
+                    {selectedComponentDetails.compatibility.formFactor && (
+                      <div className="border rounded-lg p-3 bg-slate-50 dark:bg-slate-900">
+                        <Label className="text-xs text-slate-500">Form Factor</Label>
+                        <p className="font-medium text-sm">{selectedComponentDetails.compatibility.formFactor}</p>
+                      </div>
+                    )}
+                    {selectedComponentDetails.compatibility.memoryType && (
+                      <div className="border rounded-lg p-3 bg-slate-50 dark:bg-slate-900">
+                        <Label className="text-xs text-slate-500">Memory Type</Label>
+                        <p className="font-medium text-sm">{selectedComponentDetails.compatibility.memoryType}</p>
+                      </div>
+                    )}
+                    {selectedComponentDetails.compatibility.powerRequirement && (
+                      <div className="border rounded-lg p-3 bg-slate-50 dark:bg-slate-900">
+                        <Label className="text-xs text-slate-500">Power Requirement</Label>
+                        <p className="font-medium text-sm">{selectedComponentDetails.compatibility.powerRequirement}W</p>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
+
+              {/* Retailer Info */}
+              {selectedComponentDetails.retailer && (
+                <div className="space-y-3">
+                  <Label>Retailer Information</Label>
+                  <div className="border rounded-lg p-4 bg-slate-50 dark:bg-slate-900">
+                    <p className="font-semibold">{selectedComponentDetails.retailer.name}</p>
+                    {selectedComponentDetails.retailer.address && (
+                      <p className="text-sm text-slate-600 dark:text-slate-400">{selectedComponentDetails.retailer.address}</p>
+                    )}
+                    {selectedComponentDetails.retailer.phone && (
+                      <p className="text-sm text-slate-600 dark:text-slate-400">{selectedComponentDetails.retailer.phone}</p>
+                    )}
+                  </div>
+                </div>
+              )}
+
+              {/* Action Buttons */}
+              <div className="flex gap-2 pt-4 border-t">
+                <Button
+                  onClick={() => {
+                    handleComponentSelect(selectedComponentDetails)
+                    setShowComponentDetailsDialog(false)
+                  }}
+                  className="flex-1"
+                >
+                  Select This Component
+                </Button>
+                <Button
+                  variant="outline"
+                  onClick={() => setShowComponentDetailsDialog(false)}
+                >
+                  Close
+                </Button>
+              </div>
+            </div>
+          )}
         </DialogContent>
       </Dialog>
     </div>

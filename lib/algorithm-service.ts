@@ -32,12 +32,13 @@ export async function getCSPRecommendations(
   budget: number,
   userInputs: Record<string, number>,
   page: number = 0,
-  limit: number = 10
+  limit: number = 10,
+  performanceCategory?: string
 ): Promise<{ solutions: CSPSolution[], hasMore: boolean, page: number }> {
   try {
-    // Create AbortController for client-side timeout (longer than server timeout)
+    // Create AbortController for client-side timeout (2-3 minutes)
     const controller = new AbortController()
-    const timeoutId = setTimeout(() => controller.abort(), 310000) // 310 seconds (slightly longer than server timeout of 5 minutes)
+    const timeoutId = setTimeout(() => controller.abort(), 180000) // 180 seconds = 3 minutes
     
     // Ensure userInputs is a plain object without circular references
     const cleanUserInputs: Record<string, number> = {}
@@ -48,11 +49,16 @@ export async function getCSPRecommendations(
     }
 
     // Prepare request body
-    const requestBody = {
+    const requestBody: any = {
       budget: typeof budget === 'number' && !isNaN(budget) && isFinite(budget) ? budget : 0,
       user_inputs: cleanUserInputs,
       page: typeof page === 'number' && !isNaN(page) && isFinite(page) ? page : 0,
       limit: typeof limit === 'number' && !isNaN(limit) && isFinite(limit) ? limit : 10,
+    }
+    
+    // Add performance category if specified
+    if (performanceCategory && performanceCategory !== 'all') {
+      requestBody.performance_category = performanceCategory
     }
 
     let requestBodyString: string

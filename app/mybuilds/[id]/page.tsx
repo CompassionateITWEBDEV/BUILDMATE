@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { useParams, useRouter } from "next/navigation"
+import { useParams, useRouter, usePathname } from "next/navigation"
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
@@ -67,6 +67,7 @@ const categoryIcons = {
 export default function BuildDetailPage() {
   const params = useParams()
   const router = useRouter()
+  const pathname = usePathname()
   const { user } = useAuth()
 
   const [build, setBuild] = useState<any>(null)
@@ -219,7 +220,7 @@ export default function BuildDetailPage() {
 
   incrementViews();
 
-  }, [params.id]);
+  }, [params.id, pathname, user]); // Refetch when params.id, pathname, or user changes
 
   const fetchComments = async () => {
     if (!params.id) return;
@@ -755,6 +756,7 @@ export default function BuildDetailPage() {
       alert("New upgraded build created successfully!")
       setShowUpgradeDialog(false)
       router.push(`/mybuilds/${newBuild.build_id}`)
+      router.refresh()
     } catch (error: any) {
       console.error("Error saving as new build:", error)
       alert("Failed to save as new build: " + (error.message || "Unknown error"))
@@ -928,7 +930,18 @@ export default function BuildDetailPage() {
                       key={`${category}-${idx}`}
                       className="flex items-center gap-4 p-4 border border-slate-200 dark:border-slate-700 rounded-lg"
                     >
-                      <Icon className="h-8 w-8 text-slate-500" />
+                      {component.image && component.image !== '/placeholder.svg' ? (
+                        <img
+                          src={component.image}
+                          alt={component.component_name || component.name || 'Component'}
+                          className="w-16 h-16 object-cover rounded-lg bg-slate-100 dark:bg-slate-800 flex-shrink-0"
+                          onError={(e) => {
+                            (e.target as HTMLImageElement).src = '/placeholder.svg'
+                          }}
+                        />
+                      ) : (
+                        <Icon className="h-8 w-8 text-slate-500 flex-shrink-0" />
+                      )}
                       <div className="flex-1">
                         <h3 className="font-medium text-slate-900 dark:text-white capitalize">
                           {category === "psu" ? "Power Supply" : category}
@@ -944,7 +957,7 @@ export default function BuildDetailPage() {
                         )}
                       </div>
                       <div className="text-right">
-                        <p className="font-semibold text-slate-900 dark:text-white">{formatCurrency(component.price)}</p>
+                        <p className="font-semibold text-slate-900 dark:text-white">{formatCurrency(component.price || component.component_price || 0)}</p>
                       </div>
                     </div>
                   ));
