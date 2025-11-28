@@ -124,8 +124,6 @@ export default function BuilderPage() {
   const [isLoadingUpgrades, setIsLoadingUpgrades] = useState(false)
   const [showUpgradeDialog, setShowUpgradeDialog] = useState(false)
   const [algorithmError, setAlgorithmError] = useState<string | null>(null)
-  const [cspLoadingStartTime, setCspLoadingStartTime] = useState<number | null>(null)
-  const [cspElapsedTime, setCspElapsedTime] = useState(0)
 
   // Debug: Log when dialog state changes
   useEffect(() => {
@@ -731,9 +729,9 @@ export default function BuilderPage() {
   const getFilteredComponents = (category: ComponentCategory) => {
     const categoryFiltered = components.filter((component) => component.category === category)
     
-    // Debug: Log GPU components
-    if (category === 'gpu') {
-      console.log('GPU Components found:', categoryFiltered.length, categoryFiltered.map(c => ({ name: c.name, price: c.price, category: c.category })))
+    // Debug: Log component counts for all categories
+    if (category === 'motherboard' || category === 'gpu' || category === 'cpu') {
+      console.log(`${category.toUpperCase()} Components found:`, categoryFiltered.length, categoryFiltered.slice(0, 3).map(c => ({ name: c.name, price: c.price, category: c.category })))
     }
 
     // Filter out components with no price (price is 0, null, or undefined)
@@ -866,22 +864,6 @@ export default function BuilderPage() {
     setIsLoadingCSPPage(true)
     setAlgorithmError(null)
     
-    // Track loading start time for timeout and elapsed time display
-    let timeInterval: NodeJS.Timeout | null = null
-    const startTime = Date.now()
-    const MIN_LOADING_TIME = page === 0 ? 120000 : 60000  // 2 minutes for first page, 1 minute for subsequent pages
-    
-    if (page === 0) {
-      setCspLoadingStartTime(startTime)
-      setCspElapsedTime(0)
-      
-      // Start elapsed time counter
-      timeInterval = setInterval(() => {
-        const elapsed = Math.floor((Date.now() - startTime) / 1000)
-        setCspElapsedTime(elapsed)
-      }, 1000)
-    }
-    
     // Open dialog immediately when starting (for first page only)
     if (page === 0) {
       console.log('Opening CSP dialog...', { isCSPDialogOpen })
@@ -919,7 +901,6 @@ export default function BuilderPage() {
       }
 
       // Use algorithm service with pagination, including performance category
-      const algorithmStartTime = Date.now()
       const result = await getCSPRecommendations(
         budget, 
         userInputs, 
@@ -927,15 +908,6 @@ export default function BuilderPage() {
         SOLUTIONS_PER_PAGE,
         performanceCategory !== "all" ? performanceCategory : undefined
       )
-      
-      // Ensure minimum loading time (1-2 minutes depending on page)
-      const algorithmTime = Date.now() - algorithmStartTime
-      const remainingTime = MIN_LOADING_TIME - algorithmTime
-      
-      if (remainingTime > 0) {
-        // Wait for remaining time to meet minimum loading duration
-        await new Promise(resolve => setTimeout(resolve, remainingTime))
-      }
       
       if (page === 0) {
         // First page - replace all solutions
@@ -959,11 +931,6 @@ export default function BuilderPage() {
     } finally {
       setIsLoadingCSP(false)
       setIsLoadingCSPPage(false)
-      setCspLoadingStartTime(null)
-      setCspElapsedTime(0)
-      if (timeInterval) {
-        clearInterval(timeInterval)
-      }
     }
   }
 
@@ -2342,19 +2309,6 @@ export default function BuilderPage() {
             <div className="text-center py-12">
               <Loader2 className="h-8 w-8 animate-spin mx-auto mb-4 text-blue-600" />
               <p className="text-slate-600 dark:text-slate-400 font-medium">Finding solutions...</p>
-              <p className="text-sm text-slate-500 dark:text-slate-500 mt-2">
-                This may take up to 3 minutes. Please wait...
-                {cspElapsedTime > 0 && (
-                  <span className="block mt-1 text-xs">
-                    Elapsed time: {Math.floor(cspElapsedTime / 60)}:{(cspElapsedTime % 60).toString().padStart(2, '0')}
-                  </span>
-                )}
-              </p>
-              {cspElapsedTime > 120 && (
-                <p className="text-xs text-amber-600 dark:text-amber-400 mt-2">
-                  Taking longer than expected. You can cancel and try with a smaller budget or fewer pre-selected components.
-                </p>
-              )}
             </div>
           ) : algorithmError ? (
             <div className="text-center py-8">

@@ -16,26 +16,54 @@ function convertDbComponentToAppComponent(dbComponent: any): Component {
     console.warn('Could not parse compatibility information:', e)
   }
 
-  // Map database category names to app category names
-  const dbCategoryName = dbComponent.component_categories?.category_name?.toLowerCase() || ''
-  const categoryMap: Record<string, ComponentCategory> = {
-    'cpu': 'cpu',
-    'gpu': 'gpu',
-    'graphics card': 'gpu',
-    'video card': 'gpu',
-    'graphics': 'gpu',
-    'memory': 'memory',
-    'ram': 'memory',
-    'storage': 'storage',
-    'psu': 'psu',
-    'power supply': 'psu',
-    'case': 'case',
-    'cooling': 'cooling',
-    'cpu cooler': 'cooling',
-    'motherboard': 'motherboard',
-    'mb': 'motherboard'
+  // Map category_id directly to app category (more reliable than category name)
+  const categoryIdMap: Record<number, ComponentCategory> = {
+    1: 'cpu',           // CPU
+    2: 'motherboard',   // Motherboard
+    3: 'memory',        // RAM
+    4: 'storage',       // Storage
+    5: 'gpu',           // GPU
+    6: 'psu',           // PSU
+    7: 'case',          // Case
+    8: 'cooling'        // Cooling
   }
-  const appCategory = categoryMap[dbCategoryName] || (dbCategoryName as ComponentCategory) || 'cpu'
+  
+  // Try category_id first (most reliable)
+  let appCategory: ComponentCategory = 'cpu' // default
+  if (dbComponent.category_id && categoryIdMap[dbComponent.category_id]) {
+    appCategory = categoryIdMap[dbComponent.category_id]
+  } else {
+    // Fallback to category name mapping if category_id not available
+    const dbCategoryName = dbComponent.component_categories?.category_name?.toLowerCase() || ''
+    const categoryNameMap: Record<string, ComponentCategory> = {
+      'cpu': 'cpu',
+      'gpu': 'gpu',
+      'graphics card': 'gpu',
+      'video card': 'gpu',
+      'graphics': 'gpu',
+      'memory': 'memory',
+      'ram': 'memory',
+      'storage': 'storage',
+      'psu': 'psu',
+      'power supply': 'psu',
+      'case': 'case',
+      'cooling': 'cooling',
+      'cpu cooler': 'cooling',
+      'motherboard': 'motherboard',
+      'mb': 'motherboard'
+    }
+    appCategory = categoryNameMap[dbCategoryName] || 'cpu'
+    
+    // Debug: Log category mapping issues
+    if (!categoryNameMap[dbCategoryName] && dbCategoryName) {
+      console.warn(`⚠️ Unknown category name: "${dbComponent.component_categories?.category_name}" (lowercase: "${dbCategoryName}") - using category_id ${dbComponent.category_id} - defaulting to "${appCategory}"`)
+    }
+  }
+  
+  // Debug: Log if category_id mapping was used
+  if (dbComponent.category_id && !categoryIdMap[dbComponent.category_id]) {
+    console.warn(`⚠️ Unknown category_id: ${dbComponent.category_id} - defaulting to "cpu"`)
+  }
 
   // Extract brand from component name (usually first part before dash)
   const brand = dbComponent.component_name?.split(' - ')[0]?.trim() || 
@@ -134,16 +162,27 @@ if (dbComponent.component_purpose) {
 // Get all components from Supabase
 export async function getSupabaseComponents(): Promise<Component[]> {
   try {
+    console.log('🔍 Fetching components from Supabase...')
     const dbComponents = await componentService.getAll()
-    console.log(`Fetched ${dbComponents.length} components from Supabase`)
+    
+    if (!dbComponents) {
+      console.warn('⚠️ componentService.getAll() returned null/undefined')
+      return []
+    }
+    
+    console.log(`✅ Fetched ${dbComponents.length} components from Supabase`)
     
     // Debug: Log category distribution
     const categoryCounts: Record<string, number> = {}
+    const categoryIdCounts: Record<number, number> = {}
     dbComponents.forEach((comp: any) => {
       const catName = comp.component_categories?.category_name || 'Unknown'
+      const catId = comp.category_id || 'Unknown'
       categoryCounts[catName] = (categoryCounts[catName] || 0) + 1
+      categoryIdCounts[catId] = (categoryIdCounts[catId] || 0) + 1
     })
-    console.log('Category distribution:', categoryCounts)
+    console.log('📊 Category distribution (by name):', categoryCounts)
+    console.log('📊 Category distribution (by ID):', categoryIdCounts)
     
     const converted = dbComponents.map(convertDbComponentToAppComponent)
     
@@ -156,21 +195,20 @@ export async function getSupabaseComponents(): Promise<Component[]> {
     
     return converted
   } catch (error: any) {
-    // Check if error has meaningful content
-    const hasMessage = error?.message && typeof error.message === 'string' && error.message.trim().length > 0;
-    const hasCode = error?.code && typeof error.code === 'string' && error.code.trim().length > 0;
-    const hasStack = error?.stack && typeof error.stack === 'string' && error.stack.trim().length > 0;
-    const hasName = error?.name && typeof error.name === 'string' && error.name.trim().length > 0;
+    // Always log errors with full details for debugging
+    console.error('❌ Error fetching components from Supabase:', {
+      error,
+      errorType: typeof error,
+      errorKeys: error ? Object.keys(error) : [],
+      errorString: String(error),
+      errorMessage: error?.message,
+      errorCode: error?.code,
+      errorDetails: error?.details,
+      errorHint: error?.hint,
+      errorStack: error?.stack?.substring(0, 300)
+    })
     
-    // Check if error object is empty (no meaningful properties)
-    const isEmpty = !hasMessage && !hasCode && !hasStack && !hasName && 
-                   (!error || (typeof error === 'object' && Object.keys(error).length === 0));
-    
-    // Only log if error has meaningful content
-    if (!isEmpty && (hasMessage || hasCode || hasStack || hasName)) {
-      console.error('Error fetching components from Supabase:', error)
-    }
-    // Silently return empty array for empty errors
+    // Return empty array on error
     return []
   }
 }

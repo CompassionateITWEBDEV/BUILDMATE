@@ -10,16 +10,29 @@ export function filterComponentsByPerformance(
   }
 
   // First, try strict filtering
+  // For gaming: Only show components that meet gaming requirements (even if they have 'all' tag)
+  // For office/academic: Show components with matching tag OR 'all' tag that meet requirements
   let filtered = components.filter((component) => {
-    return component.performanceTags.includes(performanceCategory) && 
+    const hasPerformanceTag = component.performanceTags.includes(performanceCategory)
+    const hasAllTag = component.performanceTags.includes('all')
+    
+    // For gaming: Only include if it meets gaming requirements (strict filtering)
+    if (performanceCategory === 'gaming') {
+      // Must meet gaming requirements regardless of tag
+      return meetsPerformanceRequirements(component, requirements)
+    }
+    
+    // For office/academic: Include if has matching tag OR 'all' tag AND meets requirements
+    return (hasPerformanceTag || hasAllTag) && 
            meetsPerformanceRequirements(component, requirements)
   })
 
-  // For Office and Academic categories, if no results, use fallback
-  if (filtered.length === 0 && (performanceCategory === "office" || performanceCategory === "academic")) {
-    // Fallback 1: Try with matching performance tags only (more lenient)
+  // For Gaming, Office, and Academic categories, if no results, use fallback
+  if (filtered.length === 0 && (performanceCategory === "gaming" || performanceCategory === "office" || performanceCategory === "academic")) {
+    // Fallback 1: Try with matching performance tags OR 'all' tag (more lenient)
     filtered = components.filter((component) => {
-      return component.performanceTags.includes(performanceCategory)
+      return component.performanceTags.includes(performanceCategory) || 
+             component.performanceTags.includes('all')
     })
 
     // Fallback 2: If still no results, try with basic requirements only
@@ -29,7 +42,14 @@ export function filterComponentsByPerformance(
       })
     }
 
-    // Fallback 3: If still no results, randomize and return subset (max 20)
+    // Fallback 3: If still no results, show components with 'all' tag (components without specific purpose)
+    if (filtered.length === 0) {
+      filtered = components.filter((component) => {
+        return component.performanceTags.includes('all')
+      })
+    }
+
+    // Fallback 4: If still no results, randomize and return subset (max 20)
     if (filtered.length === 0) {
       const shuffled = [...components].sort(() => Math.random() - 0.5)
       filtered = shuffled.slice(0, Math.min(20, shuffled.length))
@@ -77,15 +97,21 @@ function meetsPerformanceRequirements(component: Component, requirements: Perfor
     if (requirements.maxPsuWattage && wattage > requirements.maxPsuWattage) return false
   }
 
-  // Price requirements
-  if (requirements.minPrice && component.price < requirements.minPrice) return false
-  if (requirements.maxPrice && component.price > requirements.maxPrice) return false
+  // Price requirements - only apply to categories with specific requirements
+  // For motherboard, case, cooling: don't filter by price (they don't have gaming-specific price requirements)
+  const categoriesWithPriceRequirements = ['cpu', 'memory', 'gpu', 'storage', 'psu']
+  if (categoriesWithPriceRequirements.includes(component.category)) {
+    if (requirements.minPrice && component.price < requirements.minPrice) return false
+    if (requirements.maxPrice && component.price > requirements.maxPrice) return false
+  }
 
   // GPU requirement check
   if (requirements.requiresGpu === false && component.category === "gpu") {
     return false
   }
 
+  // For categories without specific requirements (motherboard, case, cooling):
+  // They pass as long as they don't conflict with other requirements
   return true
 }
 

@@ -16,24 +16,39 @@ const LoadingContext = createContext<LoadingContextType | undefined>(undefined)
 export function LoadingProvider({ children }: { children: ReactNode }) {
   const [isLoading, setIsLoading] = useState(false)
   const [loadingMessage, setLoadingMessage] = useState("Loading...")
-  const [loadingStartTime, setLoadingStartTime] = useState<number | null>(null)
   const pathname = usePathname()
-  const MIN_LOADING_TIME = 60000 // 1 minute in milliseconds
 
   // Auto-loading on route changes
   useEffect(() => {
-    // When pathname changes, start loading and track start time
-    const startTime = Date.now()
-    setLoadingStartTime(startTime)
+    // When pathname changes, start loading
     setIsLoading(true)
     
-    // Ensure minimum loading time of 1 minute
-    const timer = setTimeout(() => {
+    // Stop loading when page is ready
+    const handleLoad = () => {
       setIsLoading(false)
-      setLoadingStartTime(null)
-    }, MIN_LOADING_TIME)
+    }
 
-    return () => clearTimeout(timer)
+    // Check if page is already loaded
+    if (document.readyState === 'complete') {
+      // Page already loaded, stop loading after a brief delay
+      const timer = setTimeout(() => {
+        setIsLoading(false)
+      }, 100)
+      return () => clearTimeout(timer)
+    } else {
+      // Wait for page to fully load
+      window.addEventListener('load', handleLoad, { once: true })
+      
+      // Fallback: stop loading after reasonable timeout (5 seconds max)
+      const timeout = setTimeout(() => {
+        setIsLoading(false)
+      }, 5000)
+
+      return () => {
+        window.removeEventListener('load', handleLoad)
+        clearTimeout(timeout)
+      }
+    }
   }, [pathname])
 
   const setLoading = (loading: boolean, message?: string) => {
@@ -44,8 +59,6 @@ export function LoadingProvider({ children }: { children: ReactNode }) {
   }
 
   const startLoading = (message?: string) => {
-    const startTime = Date.now()
-    setLoadingStartTime(startTime)
     setIsLoading(true)
     if (message) {
       setLoadingMessage(message)
@@ -53,25 +66,7 @@ export function LoadingProvider({ children }: { children: ReactNode }) {
   }
 
   const stopLoading = () => {
-    // Ensure minimum loading time of 1 minute
-    if (loadingStartTime) {
-      const elapsed = Date.now() - loadingStartTime
-      const remainingTime = MIN_LOADING_TIME - elapsed
-      
-      if (remainingTime > 0) {
-        // Wait for remaining time to meet minimum
-        setTimeout(() => {
-          setIsLoading(false)
-          setLoadingStartTime(null)
-        }, remainingTime)
-      } else {
-        // Already past minimum time, stop immediately
-        setIsLoading(false)
-        setLoadingStartTime(null)
-      }
-    } else {
-      setIsLoading(false)
-    }
+    setIsLoading(false)
   }
 
   return (

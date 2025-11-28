@@ -1,251 +1,277 @@
-/**
- * Import motherboards from BuildCores OpenDB repository
- * Fetches at least 20 motherboards and converts them to Supabase format
- * 
- * Usage: node scripts/import-motherboards-buildcores.js
- */
-
 const https = require('https');
 const fs = require('fs');
 const path = require('path');
 
-// Configuration
-const BUILDORES_REPO = 'buildcores/buildcores-open-db';
-const BUILDORES_BASE_URL = `https://api.github.com/repos/${BUILDORES_REPO}/contents/open-db/Motherboard`;
-const MIN_MOTHERBOARDS = 20;
+const GITHUB_API_BASE = 'https://api.github.com/repos/buildcores/buildcores-open-db/contents';
+const COMPONENTS_TO_FETCH = 20;
 
-// Helper function to make GitHub API request
-function githubRequest(url) {
+// Category mapping
+const CATEGORY_INFO = {
+  categoryId: 2, // Motherboard
+  appCategory: 'motherboard'
+};
+
+// Fetch files from a GitHub directory
+async function fetchCategoryFiles(category) {
   return new Promise((resolve, reject) => {
+    const url = `${GITHUB_API_BASE}/open-db/${category}`;
+    
     https.get(url, {
       headers: {
-        'User-Agent': 'BuildMate-Component-Importer',
+        'User-Agent': 'BuildMate-Import-Script',
         'Accept': 'application/vnd.github.v3+json'
       }
     }, (res) => {
       let data = '';
-      res.on('data', (chunk) => data += chunk);
+      
+      res.on('data', (chunk) => {
+        data += chunk;
+      });
+      
       res.on('end', () => {
+        if (res.statusCode !== 200) {
+          reject(new Error(`GitHub API error: ${res.statusCode} - ${data}`));
+          return;
+        }
+        
         try {
-          resolve(JSON.parse(data));
+          const files = JSON.parse(data);
+          // Filter for JSON files only
+          const jsonFiles = files.filter(file => 
+            file.type === 'file' && file.name.endsWith('.json')
+          );
+          resolve(jsonFiles);
         } catch (e) {
-          reject(e);
+          reject(new Error(`Failed to parse GitHub response: ${e.message}`));
         }
       });
-    }).on('error', reject);
+    }).on('error', (err) => {
+      reject(err);
+    });
   });
 }
 
-// Fetch and parse a component JSON file
+// Fetch a single component file
 async function fetchComponentFile(downloadUrl) {
-  try {
-    return new Promise((resolve, reject) => {
-      https.get(downloadUrl, {
-        headers: {
-          'User-Agent': 'BuildMate-Component-Importer',
-          'Accept': 'application/vnd.github.v3.raw'
+  return new Promise((resolve, reject) => {
+    https.get(downloadUrl, {
+      headers: {
+        'User-Agent': 'BuildMate-Import-Script',
+        'Accept': 'application/vnd.github.v3.raw'
+      }
+    }, (res) => {
+      let data = '';
+      
+      res.on('data', (chunk) => {
+        data += chunk;
+      });
+      
+      res.on('end', () => {
+        if (res.statusCode !== 200) {
+          reject(new Error(`Failed to fetch file: ${res.statusCode}`));
+          return;
         }
-      }, (res) => {
-        let data = '';
-        res.on('data', (chunk) => data += chunk);
-        res.on('end', () => {
-          try {
-            const component = JSON.parse(data);
-            resolve(component);
-          } catch (e) {
-            reject(e);
-          }
-        });
-      }).on('error', reject);
+        
+        try {
+          const component = JSON.parse(data);
+          resolve(component);
+        } catch (e) {
+          reject(new Error(`Failed to parse JSON: ${e.message}`));
+        }
+      });
+    }).on('error', (err) => {
+      reject(err);
     });
-  } catch (error) {
-    console.error(`Error fetching component:`, error.message);
-    return null;
-  }
+  });
 }
 
-// Convert BuildCores motherboard to Supabase format with full compatibility info
-function convertMotherboardToSupabaseFormat(component) {
-  // Extract compatibility information
-  const compatInfo = {
-    socket: component.socket || null,
-    formFactor: component.form_factor || component.formFactor || 'Standard',
-    chipset: component.chipset || null,
-    manufacturer: component.metadata?.manufacturer || null,
-  };
-
-  // Memory compatibility
+// Convert BuildCores format to Supabase format
+function convertToSupabaseFormat(component, category, dbCategoryId) {
+  const compatInfo = {};
+  
+  // Extract metadata
+  const metadata = component.metadata || {};
+  const componentName = metadata.name || component.name || 'Unknown Motherboard';
+  
+  // Truncate name to 150 characters
+  const truncatedName = componentName.length > 150 ? componentName.substring(0, 150) : componentName;
+  
+  // Socket information
+  if (component.socket) {
+    compatInfo.socket = component.socket;
+    compatInfo.cpuSocket = component.socket;
+  }
+  
+  // Form factor
+  if (component.form_factor) {
+    compatInfo.formFactor = component.form_factor;
+  }
+  
+  // Chipset
+  if (component.chipset) {
+    compatInfo.chipset = component.chipset;
+  }
+  
+  // Memory support
   if (component.memory) {
-    compatInfo.memory = {
-      max: component.memory.max || null,
-      ram_type: component.memory.ram_type || null,
-      slots: component.memory.slots || null
-    };
-    compatInfo.memoryType = component.memory.ram_type || 'DDR4';
-    compatInfo.memorySupport = component.memory.ram_type || 'DDR4';
+    compatInfo.memory = component.memory;
+    if (component.memory.ram_type) {
+      compatInfo.memoryType = component.memory.ram_type;
+      compatInfo.ram_type = component.memory.ram_type;
+      compatInfo.memorySupport = component.memory.ram_type;
+    }
+    if (component.memory.max) {
+      compatInfo.maxMemory = component.memory.max;
+    }
+    if (component.memory.slots) {
+      compatInfo.memorySlots = component.memory.slots;
+    }
   }
-
-  // Storage compatibility
-  if (component.storage_devices) {
-    compatInfo.storage_devices = component.storage_devices;
-    const sataCount = (component.storage_devices.sata_6_gb_s || 0) + 
-                     (component.storage_devices.sata_3_gb_s || 0);
-    compatInfo.sataPorts = sataCount.toString();
-  }
-
+  
   // M.2 slots
   if (component.m2_slots && Array.isArray(component.m2_slots)) {
-    compatInfo.m2_slots = component.m2_slots;
     compatInfo.m2Slots = component.m2_slots.length.toString();
   }
-
+  
+  // SATA ports
+  if (component.storage_devices) {
+    const sata6 = component.storage_devices.sata_6_gb_s || 0;
+    const sata3 = component.storage_devices.sata_3_gb_s || 0;
+    compatInfo.sataPorts = (sata6 + sata3).toString();
+  }
+  
   // PCIe slots
   if (component.pcie_slots && Array.isArray(component.pcie_slots)) {
-    compatInfo.pcie_slots = component.pcie_slots;
+    compatInfo.pcieSlots = component.pcie_slots;
   }
-
-  // USB headers
-  if (component.usb_headers) {
-    compatInfo.usb_headers = component.usb_headers;
-  }
-
-  // Onboard Ethernet
-  if (component.onboard_ethernet && Array.isArray(component.onboard_ethernet)) {
-    compatInfo.onboard_ethernet = component.onboard_ethernet;
-  }
-
-  // Audio
-  if (component.audio) {
-    compatInfo.audio = component.audio;
-  }
-
-  // Additional features
-  compatInfo.raid_support = component.raid_support || false;
-  compatInfo.ecc_support = component.ecc_support || false;
-  compatInfo.wifi = component.metadata?.name?.toLowerCase().includes('wifi') || false;
-
-  // Determine performance category based on chipset and features
-  let performanceCategory = null;
-  const chipset = (component.chipset || '').toLowerCase();
-  const name = (component.metadata?.name || '').toLowerCase();
   
-  if (chipset.includes('z') || chipset.includes('x') || name.includes('gaming') || name.includes('rog')) {
-    performanceCategory = 'gaming';
-  } else if (chipset.includes('b') || chipset.includes('h')) {
-    performanceCategory = 'office';
-  } else {
-    performanceCategory = 'academic';
+  // WiFi
+  if (component.onboard_ethernet || component.wifi) {
+    compatInfo.wifi = true;
   }
-
+  
+  // Manufacturer
+  if (metadata.manufacturer) {
+    compatInfo.manufacturer = metadata.manufacturer;
+  }
+  
+  // Color
+  if (component.color && Array.isArray(component.color)) {
+    compatInfo.color = component.color;
+  }
+  
+  // Default price for motherboard (4000 PHP)
+  const defaultPrice = 4000;
+  
   return {
-    component_name: component.metadata?.name || component.name || 'Unknown Motherboard',
-    component_price: 0, // Needs to be set manually
+    component_name: truncatedName,
+    component_brand: metadata.manufacturer || null,
+    component_price: defaultPrice,
+    component_description: metadata.description || null,
     compatibility_information: JSON.stringify(compatInfo),
-    category_id: `(SELECT category_id FROM component_categories WHERE LOWER(category_name) = 'motherboard' LIMIT 1)`,
-    component_purpose: performanceCategory,
-    availability_status: 'in_stock'
+    category_id: dbCategoryId,
+    component_purpose: null,
+    retailer_id: null
   };
 }
 
 // Main import function
 async function importMotherboards() {
-  console.log('🚀 Starting BuildCores motherboard import...\n');
-
+  console.log('🚀 Starting Motherboard import from BuildCores OpenDB...\n');
+  
+  const sqlStatements = [];
+  let totalImported = 0;
+  let skipped = 0;
+  
   try {
-    // Fetch motherboard files from GitHub
-    console.log('📦 Fetching motherboard files from BuildCores OpenDB...');
-    const files = await githubRequest(BUILDORES_BASE_URL);
+    console.log('📦 Fetching Motherboard files from GitHub...');
+    const files = await fetchCategoryFiles('Motherboard');
+    console.log(`   Found ${files.length} motherboard files`);
     
-    // Filter for JSON files only
-    const jsonFiles = files.filter(file => 
-      file.type === 'file' && file.name.endsWith('.json')
-    );
+    const filesToProcess = files.slice(0, COMPONENTS_TO_FETCH);
+    console.log(`   Processing ${filesToProcess.length} files...\n`);
     
-    console.log(`   Found ${jsonFiles.length} motherboard files`);
-    
-    if (jsonFiles.length < MIN_MOTHERBOARDS) {
-      console.warn(`   ⚠️  Only found ${jsonFiles.length} motherboards, wanted at least ${MIN_MOTHERBOARDS}`);
-    }
-
-    const sqlStatements = [];
-    let imported = 0;
-    let skipped = 0;
-
-    // Process each motherboard file
-    for (const file of jsonFiles.slice(0, Math.max(MIN_MOTHERBOARDS, jsonFiles.length))) {
+    for (const file of filesToProcess) {
       try {
         const component = await fetchComponentFile(file.download_url);
-        if (!component || !component.socket) {
+        if (!component) {
           skipped++;
           continue;
         }
-
-        const supabaseFormat = convertMotherboardToSupabaseFormat(component);
         
-        // Generate SQL insert statement
-        const sql = `
-INSERT INTO components (
+        const supabaseFormat = convertToSupabaseFormat(
+          component,
+          'Motherboard',
+          CATEGORY_INFO.categoryId
+        );
+        
+        const escapedName = supabaseFormat.component_name.replace(/'/g, "''");
+        const escapedCompat = supabaseFormat.compatibility_information.replace(/'/g, "''");
+        
+        const sql = `INSERT INTO components (
   component_name,
   component_price,
   compatibility_information,
   category_id,
   component_purpose,
-  availability_status
+  retailer_id
 )
 SELECT 
-  ${JSON.stringify(supabaseFormat.component_name)},
+  '${escapedName}',
   ${supabaseFormat.component_price},
-  ${JSON.stringify(supabaseFormat.compatibility_information)},
-  ${supabaseFormat.category_id},
+  '${escapedCompat}'::jsonb,
+  ${CATEGORY_INFO.categoryId},
   ${supabaseFormat.component_purpose ? `'${supabaseFormat.component_purpose}'` : 'NULL'},
-  '${supabaseFormat.availability_status}'
+  ${supabaseFormat.retailer_id || 'NULL'}
 WHERE NOT EXISTS (
   SELECT 1 FROM components 
-  WHERE LOWER(component_name) = LOWER(${JSON.stringify(supabaseFormat.component_name)})
-)
-RETURNING component_id, component_name;`;
-
+  WHERE LOWER(component_name) = LOWER('${escapedName}')
+);`;
+        
         sqlStatements.push(sql);
-        imported++;
-
+        totalImported++;
+        
+        console.log(`   ✅ ${totalImported}/${filesToProcess.length}: ${supabaseFormat.component_name.substring(0, 60)}...`);
+        
         // Add delay to avoid rate limiting
-        await new Promise(resolve => setTimeout(resolve, 200));
+        await new Promise(resolve => setTimeout(resolve, 300));
       } catch (error) {
-        console.error(`   ❌ Error processing ${file.name}:`, error.message);
+        console.error(`   ⚠️  Error processing ${file.name}:`, error.message);
         skipped++;
       }
     }
-
+    
     // Write SQL file
     const sqlFile = path.join(__dirname, 'import-motherboards-buildcores.sql');
-    const sqlContent = `-- Import ${imported} motherboards from BuildCores OpenDB
+    const sqlContent = `-- Import ${totalImported} Motherboard components from BuildCores OpenDB
 -- Generated: ${new Date().toISOString()}
--- Source: https://github.com/${BUILDORES_REPO}
+-- Category: Motherboard (category_id: ${CATEGORY_INFO.categoryId})
+-- Total: ${totalImported} components
+-- Schema matches: component_name, component_price, compatibility_information (jsonb), category_id, component_purpose, retailer_id
+-- All components have default price of ₱4,000 to ensure they appear in the UI
 
 ${sqlStatements.join('\n\n')}
 
--- Update prices manually after import
--- Example: UPDATE components SET component_price = 8500 WHERE component_name = 'ASUS B760M-AYW WIFI D4 DDR4 Micro ATX';
+-- Summary:
+-- Motherboard: ${totalImported} imported, ${skipped} skipped
 `;
 
-    fs.writeFileSync(sqlFile, sqlContent);
+    fs.writeFileSync(sqlFile, sqlContent, 'utf8');
     
-    console.log(`\n✅ Import complete!`);
-    console.log(`   ✅ Imported: ${imported} motherboards`);
-    console.log(`   ⏭️  Skipped: ${skipped} motherboards`);
-    console.log(`   📄 SQL file: ${sqlFile}`);
-    console.log(`\n⚠️  Note: You need to update prices manually after import.`);
-    console.log(`   All motherboards have compatibility information for CSP and compatibility checking.`);
+    console.log(`\n✅ Complete!`);
+    console.log(`   Total: ${totalImported} motherboards imported`);
+    console.log(`   Skipped: ${skipped}`);
+    console.log(`   File: ${sqlFile}`);
+    console.log(`\n📝 Next steps:`);
+    console.log(`   1. Run the SQL file in Supabase SQL Editor`);
+    console.log(`   2. Refresh the PC Builder UI`);
+    console.log(`   3. Check the Motherboard tab - should show ${totalImported} components`);
     
   } catch (error) {
-    console.error('❌ Error during import:', error);
+    console.error('\n❌ Import failed:', error.message);
+    process.exit(1);
   }
 }
 
-// Run if executed directly
-if (require.main === module) {
-  importMotherboards().catch(console.error);
-}
-
-module.exports = { importMotherboards, convertMotherboardToSupabaseFormat };
-
+// Run the import
+importMotherboards().catch(console.error);

@@ -73,16 +73,30 @@ export const userService = {
 // Component operations
 export const componentService = {
   async getAll() {
-    const { data, error } = await supabase
-      .from('components')
-      .select(`
-        *,
-        component_categories(*),
-        retailers(*)
-      `)
-    
-    if (error) throw error
-    return data
+    try {
+      const { data, error } = await supabase
+        .from('components')
+        .select(`
+          *,
+          component_categories(*),
+          retailers(*)
+        `)
+      
+      if (error) {
+        console.error('❌ Supabase query error:', {
+          message: error.message,
+          code: error.code,
+          details: error.details,
+          hint: error.hint
+        })
+        throw error
+      }
+      
+      return data || []
+    } catch (error) {
+      console.error('❌ Error in componentService.getAll():', error)
+      throw error
+    }
   },
 
   async getByCategory(categoryId: number) {

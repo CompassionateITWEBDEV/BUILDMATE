@@ -41,6 +41,7 @@ class CSPBacktracking:
         if cat == "Motherboard" and cpu:
             if get_attr(cpu, "socket") != get_attr(new_component, "socket"):
                 return False
+
         if cat == "CPU" and mobo:
             if get_attr(new_component, "socket") != get_attr(mobo, "socket"):
                 return False
@@ -49,6 +50,7 @@ class CSPBacktracking:
         if cat == "CPU Cooler" and cpu:
             if get_attr(cpu, "socket") not in get_attr(new_component, "supported_sockets", []):
                 return False
+
         if cat == "CPU" and cooler:
             if get_attr(new_component, "socket") not in get_attr(cooler, "supported_sockets", []):
                 return False
@@ -57,6 +59,7 @@ class CSPBacktracking:
         if cat == "Memory" and mobo:
             if get_attr(new_component, "ram_type") != get_attr(mobo, "ram_type"):
                 return False
+
         if cat == "Motherboard" and ram:
             if get_attr(new_component, "ram_type") != get_attr(ram, "ram_type"):
                 return False
@@ -71,6 +74,7 @@ class CSPBacktracking:
             if get_attr(new_component, "length", 0) > get_attr(pc_case, "maxGpuLength", 0) or \
                get_attr(new_component, "height", 0) > get_attr(pc_case, "maxCoolerHeight", 0):
                 return False
+
         if cat == "Case" and gpu:
             if get_attr(gpu, "length", 0) > get_attr(new_component, "maxGpuLength", 0) or \
                get_attr(gpu, "height", 0) > get_attr(new_component, "maxCoolerHeight", 0):
@@ -80,6 +84,7 @@ class CSPBacktracking:
         if cat == "CPU Cooler" and pc_case:
             if get_attr(new_component, "height", 0) > get_attr(pc_case, "maxCoolerHeight", 0):
                 return False
+
         if cat == "Case" and cooler:
             if get_attr(cooler, "height", 0) > get_attr(new_component, "maxCoolerHeight", 0):
                 return False
@@ -103,8 +108,13 @@ class CSPBacktracking:
         
         # Don't filter solutions in backtracking - let API handle filtering
         # This allows more solutions to be generated, then filtered by price range
+        # Accept ANY solution that fits within budget, regardless of total price
+        # This ensures solutions with small component prices (₱1,235, ₱3,400, etc.) 
+        # that add up to the budget can still be found
         if not categories:
-            if current_cost <= budget:
+            # Accept solution if it's within budget (even if total is much lower)
+            # This allows combinations like ₱1,235 + ₱3,400 + ... = ₱50,000
+            if current_cost <= budget and current_cost > 0:
                 yield partial_build.copy()
             return
 

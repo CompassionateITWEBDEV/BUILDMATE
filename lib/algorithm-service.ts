@@ -36,9 +36,9 @@ export async function getCSPRecommendations(
   performanceCategory?: string
 ): Promise<{ solutions: CSPSolution[], hasMore: boolean, page: number }> {
   try {
-    // Create AbortController for client-side timeout (2-3 minutes)
+    // Create AbortController for client-side timeout (5 minutes to allow backend to collect solutions)
     const controller = new AbortController()
-    const timeoutId = setTimeout(() => controller.abort(), 180000) // 180 seconds = 3 minutes
+    const timeoutId = setTimeout(() => controller.abort(), 300000) // 300 seconds = 5 minutes
     
     // Ensure userInputs is a plain object without circular references
     const cleanUserInputs: Record<string, number> = {}

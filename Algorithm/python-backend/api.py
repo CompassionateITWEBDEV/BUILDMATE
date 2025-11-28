@@ -301,7 +301,17 @@ def run_csp():
         all_solutions = []
         max_collect = max(limit * MAX_COLLECT_MULTIPLIER, MIN_COLLECT_SOLUTIONS)
         
-        logging.info("CSP: Starting to collect solutions (max: %d)", max_collect)
+        # For budgets ₱10,000 to ₱50,000, use early stopping to return faster
+        # But ensure we collect enough to have both high and low priced solutions
+        if 10000 <= budget <= 50000:
+            early_stop_count = 100  # Stop after 100 solutions for faster response
+            min_solutions_for_range = 50  # Need at least 50 to ensure price range
+        else:
+            early_stop_count = max_collect  # Collect all for larger budgets
+            min_solutions_for_range = 100
+        
+        logging.info("CSP: Starting to collect solutions (max: %d, early stop at: %d for budgets ₱10k-₱50k)", 
+                    max_collect, early_stop_count if 10000 <= budget <= 50000 else max_collect)
         
         solution_count = 0
         for i, sol in enumerate(solution_generator):
@@ -313,9 +323,32 @@ def run_csp():
                     has_more = False
                 break
             
+            # Ensure solution has all required categories
+            missing_cats = [cat for cat in REQUIRED_CATEGORIES if cat not in sol or not sol[cat]]
+            if missing_cats:
+                continue  # Skip incomplete solutions
+            
             total_price = sum(c["price"] for c in sol.values() if c)
             all_solutions.append((total_price, sol))
             solution_count = i + 1
+            
+            # Early stopping for budgets ₱10k-₱50k: stop after collecting enough solutions
+            # But ensure we have at least min_solutions_for_range to get good price range
+            if 10000 <= budget <= 50000 and solution_count >= early_stop_count and solution_count >= min_solutions_for_range:
+                # Check if we have a good price range (both high and low)
+                if all_solutions:
+                    prices = [p for p, _ in all_solutions]
+                    price_range = max(prices) - min(prices)
+                    # If we have good range (at least 5% of budget) or enough solutions, stop
+                    if price_range >= budget * 0.05 or solution_count >= early_stop_count:
+                        logging.info("CSP: Early stopping at %d solutions (price range: ₱%.2f)", 
+                                    solution_count, price_range)
+                        try:
+                            next(solution_generator)
+                            has_more = True
+                        except StopIteration:
+                            has_more = False
+                        break
             
             if (i + 1) % 50 == 0:
                 logging.info(
@@ -332,11 +365,13 @@ def run_csp():
         # Sort by price (descending) to prioritize expensive solutions
         all_solutions.sort(key=lambda x: x[0], reverse=True)
         
-        # For small/medium budgets (< 60k), don't filter at all - show all solutions
-        # For larger budgets, apply very light filtering but always keep top solutions
-        if budget < 60000:
+        # For budgets ₱10,000 to ₱60,000, don't filter at all - show all solutions
+        # This ensures solutions with any price combination (₱1,235 + ₱3,400 + ... = budget)
+        # can be found and displayed, regardless of individual component prices
+        if 10000 <= budget < 60000:
             # Small/medium budgets: show all solutions, just sorted by price
-            logging.info("CSP: Budget < 60k, showing all %d solutions without filtering", len(all_solutions))
+            # No minimum price threshold - accept any solution that fits within budget
+            logging.info("CSP: Budget ₱10k-₱60k, showing all %d solutions without filtering (accepts any price combination)", len(all_solutions))
             # No filtering for small/medium budgets
         else:
             # Larger budgets: apply light filtering
@@ -382,13 +417,77 @@ def run_csp():
                 len(all_solutions), solution_count
             )
         
-        # Paginate
-        start_idx = skip
-        end_idx = skip + limit
-        solutions = [sol for _, sol in all_solutions[start_idx:end_idx]]
+        # Paginate - for budgets ₱10,000 to ₱50,000 on first page, ensure we include both highest and lowest priced solutions
+        if 10000 <= budget <= 50000 and len(all_solutions) > limit and page == 0:
+            # For budgets ₱10k-₱50k on first page, ALWAYS include highest and lowest prices
+            # This ensures users can see the full price range (bungkig)
+            highest_price = all_solutions[0][0]  # Most expensive
+            lowest_price = all_solutions[-1][0]  # Cheapest
+            
+            # Always include top 2-3 most expensive and bottom 2-3 cheapest
+            top_count = min(3, len(all_solutions) // 3)  # Top 3 or 1/3 of solutions
+            bottom_count = min(3, len(all_solutions) // 3)  # Bottom 3 or 1/3 of solutions
+            
+            # Get highest priced solutions
+            top_solutions = all_solutions[:top_count]
+            # Get lowest priced solutions
+            bottom_solutions = all_solutions[-bottom_count:] if len(all_solutions) > top_count else []
+            
+            # Combine highest and lowest, ensuring we have both extremes
+            combined = []
+            seen_prices = set()
+            
+            # First, add highest prices (most expensive)
+            for price, sol in top_solutions:
+                if price not in seen_prices:
+                    combined.append((price, sol))
+                    seen_prices.add(price)
+            
+            # Then, add lowest prices (cheapest) - CRITICAL to show price range (bungkig)
+            for price, sol in bottom_solutions:
+                if price not in seen_prices:
+                    combined.append((price, sol))
+                    seen_prices.add(price)
+            
+            # Fill remaining slots with middle-range solutions
+            remaining = limit - len(combined)
+            if remaining > 0:
+                middle_start = top_count
+                middle_end = len(all_solutions) - bottom_count
+                for price, sol in all_solutions[middle_start:middle_end]:
+                    if price not in seen_prices and len(combined) < limit:
+                        combined.append((price, sol))
+                        seen_prices.add(price)
+                        if len(combined) >= limit:
+                            break
+            
+            # Sort by price descending to show highest first, but include lowest
+            combined.sort(key=lambda x: x[0], reverse=True)
+            
+            # Log to verify we have both extremes (bungkig)
+            if combined:
+                final_prices = [p for p, _ in combined]
+                logging.info(
+                    "CSP: First page includes price range (bungkig) - Highest: ₱%.2f, Lowest: ₱%.2f (from %d solutions)",
+                    max(final_prices), min(final_prices), len(combined)
+                )
+            
+            solutions = [sol for _, sol in combined[:limit]]
+            # Calculate end_idx for has_more check
+            end_idx = len(combined)
+        else:
+            # For larger budgets, subsequent pages, or if we have fewer solutions than limit, use normal pagination
+            start_idx = skip
+            end_idx = skip + limit
+            solutions = [sol for _, sol in all_solutions[start_idx:end_idx]]
         
         # Determine if there are more solutions
-        if end_idx < len(all_solutions):
+        # For special pagination (₱10k-₱50k), check if we have more solutions in all_solutions
+        # For normal pagination, use end_idx
+        if 10000 <= budget <= 50000 and len(all_solutions) > limit and page == 0:
+            # Special case: check if there are more solutions beyond what we showed
+            has_more = len(all_solutions) > limit
+        elif end_idx < len(all_solutions):
             has_more = True
         elif solution_count >= max_collect:
             has_more = True
