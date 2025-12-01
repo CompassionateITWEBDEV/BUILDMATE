@@ -73,30 +73,17 @@ export const userService = {
 // Component operations
 export const componentService = {
   async getAll() {
-    try {
-      const { data, error } = await supabase
-        .from('components')
-        .select(`
-          *,
-          component_categories(*),
-          retailers(*)
-        `)
-      
-      if (error) {
-        console.error('❌ Supabase query error:', {
-          message: error.message,
-          code: error.code,
-          details: error.details,
-          hint: error.hint
-        })
-        throw error
-      }
-      
-      return data || []
-    } catch (error) {
-      console.error('❌ Error in componentService.getAll():', error)
-      throw error
-    }
+    const { data, error } = await supabase
+      .from('components')
+      .select(`
+        *,
+        component_categories(*),
+        retailers(*)
+      `)
+      .limit(2000)  // Increase limit to fetch all components
+    
+    if (error) throw error
+    return data
   },
 
   async getByCategory(categoryId: number) {

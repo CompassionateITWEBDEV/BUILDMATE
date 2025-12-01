@@ -1,0 +1,41 @@
+[33m800f1f2[m[33m ([m[1;36mHEAD[m[33m -> [m[1;32mmain[m[33m, [m[1;31morigin/main[m[33m, [m[1;31morigin/HEAD[m[33m)[m Fix CSP algorithm: Add early stopping, show both highest and lowest prices for ₱10k-₱50k budgets, fix timeout issues, improve component filtering
+[33mf9302c1[m Add component pagination, BuildCores import scripts, 1-minute page loading, and motherboard compatibility improvements
+[33mc8b0ec5[m Fix CSP dialog visibility, add pagination support, and change price display to PHP peso
+[33m1ce4da0[m Fix motherboard compatibility filtering and Memory/RAM category display in comparison table
+[33mc4b3182[m Add upgrade recommendations, import build feature, performance filtering improvements, and JWT expiration handling
+[33ma6bcc2e[m Fix compatibility filtering, error handling, and remove mock data fallbacks
+[33m4dedf8f[m Fix navigation endpoints, make preferences functional, fix price display, improve compatibility filtering
+[33m14f0352[m Implement missing use cases: User activity monitoring, Retailer reports, and User-submitted build guides
+[33mb1b6548[m Add BuildMate CPU/microchip logo SVG and update favicon references
+[33mc8b0321[m Add guide step images (1st.png through 10th.png) for PC assembly guide
+[33m1c4f93d[m Add complete PC assembly guide with 10 steps, user-provided text, and visual illustrations
+[33m78e8e28[m Fix: Remove revalidate from client components - only works in server components
+[33m340f196[m Add static generation and caching configuration to pages and API routes
+[33md186ca1[m Fix navigation issues: Add Back to Dashboard buttons, fix support redirect, remove hardcoded current build in compare
+[33m8330b6e[m Fix favicon - add icon.png and favicon.ico in app directory for proper favicon display
+[33ma467f58[m Add Purchase Preview dialog in builder page to view purchase details before saving
+[33m95a519f[m Add BuildMate logo to HTML head as favicon and Open Graph images
+[33mbee8775[m Add comprehensive troubleshooting guide for Python backend endpoint not found error
+[33mcef1b3f[m Update README and cleanup unused Python backend scripts
+[33m42bb852[m Fix session persistence - session should only clear on explicit logout, not on other auth events
+[33me373c57[m Fix JSON parsing error when Python backend returns HTML - add content-type validation and better error handling
+[33m026d489[m Add Python backend service to render.yaml and create deployment guide for CSP algorithm
+[33me0561c4[m Add SMTP environment setup guide for Render and improve email error handling
+[33m3a449db[m Add email verification step after login - requires verification code before accessing dashboard
+[33me6cfbc3[m Make builder page fully responsive for mobile devices
+[33m4abe865[m Fix category mapping for CSP solutions to prevent duplicate components in Your Build section
+[33mc36d0e0[m Add startup scripts for Python backend and update README with instructions
+[33m486d006[m Make builder page responsive for mobile devices
+[33mab8165e[m Change default retailer from Unknown to Central Juan Solution in component specifications
+[33m5fd6513[m Update retailer name from Central Juan to Central Juan Solution
+[33mc9ca846[m Filter out Compatibility description from UI display in builder page
+[33me5301d4[m Remove compatibility JSON description from component specifications
+[33m81e03c7[m Add CC to dummy.dumm.acc001@gmail.com for support ticket emails to verify delivery
+[33me325c05[m Add email notification for support tickets to sales.centraljuan.net@gmail.com
+[33m9c02535[m Fix ticket.replies rendering error - handle both array and number types
+[33m69c414c[m Add missing alert-dialog component for admin dashboard
+[33m3afd2da[m Add Render.com deployment configuration (render.yaml) and deployment guide
+[33m8fc9ed9[m Implement missing ERD features: build_guides table, component fields, admin dashboard, user history service, and DigitalOcean deployment
+[33mc964ce9[m feat: Add hero section with PC background, fade effects, and slogan; Combine login/signup into dropdown; Update footer to blue design; Update algorithm descriptions
+[33m69c6c63[m V23 Updates     - Added Liked builds     - Limited the amount of recent activity shown in the dashboard overview to 5     - Updated the design of cards in the dashboard liked builds     - Profile username, bio, website and location can now be edited     - Added description when making builds
+[33m8cb8751[m V22 Updates     - Added uploading of profile picture     - Added likes, views and comments     - Added my builds     - Added activities     - Added followers     - Added liked builds     - Added cropping of profile picture     - Login and Register now works with supabase     - Added email verification when registering

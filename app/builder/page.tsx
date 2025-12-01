@@ -124,6 +124,7 @@ export default function BuilderPage() {
   const [isLoadingUpgrades, setIsLoadingUpgrades] = useState(false)
   const [showUpgradeDialog, setShowUpgradeDialog] = useState(false)
   const [algorithmError, setAlgorithmError] = useState<string | null>(null)
+  const [cspLoadingStartTime, setCspLoadingStartTime] = useState<number | null>(null)
 
   // Debug: Log when dialog state changes
   useEffect(() => {
@@ -287,14 +288,12 @@ export default function BuilderPage() {
       return true // Show all when nothing is selected
     }
 
-    // If viewing the same category that's already selected, show all components in that category
-    // This allows users to change/replace their selection
-    if (selectedComponents[category] !== null) {
-      return true // Show all components of the same category
-    }
+    // Note: We removed the "show all if same category" logic to properly check compatibility
+    // even when replacing components in the same category
 
     // CPU-Motherboard compatibility
     if (category === "motherboard" && selectedComponents.cpu) {
+      // Skip checking against itself if we're replacing the motherboard
       const cpuSocket = selectedComponents.cpu.compatibility.socket
       const mbSocket = component.compatibility.socket
       if (cpuSocket && mbSocket && cpuSocket !== mbSocket) {
@@ -303,6 +302,7 @@ export default function BuilderPage() {
     }
 
     if (category === "cpu" && selectedComponents.motherboard) {
+      // When viewing CPUs, check against the selected motherboard
       const cpuSocket = component.compatibility.socket
       const mbSocket = selectedComponents.motherboard.compatibility.socket
       if (cpuSocket && mbSocket && cpuSocket !== mbSocket) {
@@ -729,9 +729,9 @@ export default function BuilderPage() {
   const getFilteredComponents = (category: ComponentCategory) => {
     const categoryFiltered = components.filter((component) => component.category === category)
     
-    // Debug: Log component counts for all categories
-    if (category === 'motherboard' || category === 'gpu' || category === 'cpu') {
-      console.log(`${category.toUpperCase()} Components found:`, categoryFiltered.length, categoryFiltered.slice(0, 3).map(c => ({ name: c.name, price: c.price, category: c.category })))
+    // Debug: Log GPU components
+    if (category === 'gpu') {
+      console.log('GPU Components found:', categoryFiltered.length, categoryFiltered.map(c => ({ name: c.name, price: c.price, category: c.category })))
     }
 
     // Filter out components with no price (price is 0, null, or undefined)
@@ -864,6 +864,15 @@ export default function BuilderPage() {
     setIsLoadingCSPPage(true)
     setAlgorithmError(null)
     
+    // Track loading start time for timeout
+    let timeInterval: NodeJS.Timeout | null = null
+    const startTime = Date.now()
+    const MIN_LOADING_TIME = page === 0 ? 120000 : 60000  // 2 minutes for first page, 1 minute for subsequent pages
+    
+    if (page === 0) {
+      setCspLoadingStartTime(startTime)
+    }
+    
     // Open dialog immediately when starting (for first page only)
     if (page === 0) {
       console.log('Opening CSP dialog...', { isCSPDialogOpen })
@@ -901,6 +910,7 @@ export default function BuilderPage() {
       }
 
       // Use algorithm service with pagination, including performance category
+      const algorithmStartTime = Date.now()
       const result = await getCSPRecommendations(
         budget, 
         userInputs, 
@@ -908,6 +918,15 @@ export default function BuilderPage() {
         SOLUTIONS_PER_PAGE,
         performanceCategory !== "all" ? performanceCategory : undefined
       )
+      
+      // Ensure minimum loading time (1-2 minutes depending on page)
+      const algorithmTime = Date.now() - algorithmStartTime
+      const remainingTime = MIN_LOADING_TIME - algorithmTime
+      
+      if (remainingTime > 0) {
+        // Wait for remaining time to meet minimum loading duration
+        await new Promise(resolve => setTimeout(resolve, remainingTime))
+      }
       
       if (page === 0) {
         // First page - replace all solutions
@@ -931,6 +950,10 @@ export default function BuilderPage() {
     } finally {
       setIsLoadingCSP(false)
       setIsLoadingCSPPage(false)
+      setCspLoadingStartTime(null)
+      if (timeInterval) {
+        clearInterval(timeInterval)
+      }
     }
   }
 
@@ -1410,7 +1433,7 @@ export default function BuilderPage() {
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
             <div className="flex items-center gap-2 sm:gap-4">
               <Button variant="ghost" size="sm" asChild>
-                <Link href={user ? "/dashboard" : "/"}>
+                <Link href="/">
                   <ArrowLeft className="h-4 w-4 sm:mr-2" />
                   <span className="hidden sm:inline">Back</span>
                 </Link>
@@ -2140,7 +2163,9 @@ export default function BuilderPage() {
                 <CardDescription>Selected components</CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
-                {Object.entries(selectedComponents).map(([category, component]) => {
+                {/* Display components in proper order matching CSP category order */}
+                {(['cpu', 'motherboard', 'cooling', 'memory', 'storage', 'gpu', 'case', 'psu'] as ComponentCategory[]).map((category) => {
+                  const component = selectedComponents[category]
                   const Icon = categoryIcons[category as ComponentCategory]
                   return (
                     <div key={category} className="flex items-center justify-between">
@@ -2309,6 +2334,9 @@ export default function BuilderPage() {
             <div className="text-center py-12">
               <Loader2 className="h-8 w-8 animate-spin mx-auto mb-4 text-blue-600" />
               <p className="text-slate-600 dark:text-slate-400 font-medium">Finding solutions...</p>
+              <p className="text-sm text-slate-500 dark:text-slate-500 mt-2">
+                This may take up to 3 minutes. Please wait...
+              </p>
             </div>
           ) : algorithmError ? (
             <div className="text-center py-8">

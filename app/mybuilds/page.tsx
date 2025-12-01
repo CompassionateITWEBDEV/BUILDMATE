@@ -9,7 +9,7 @@ import { Badge } from "@/components/ui/badge"
 import { Input } from "@/components/ui/input"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
-import { Cpu, Heart, MessageCircle, Share, Search, Monitor, Users, Eye, BarChart3 } from "lucide-react"
+import { Cpu, Heart, MessageCircle, Share, Search, Monitor, Users, Eye, BarChart3, ShoppingCart } from "lucide-react"
 import { buildService, buildComponentService } from "@/lib/database"
 import { formatCurrency, PRICE_RANGES } from "@/lib/currency"
 import { useAuth } from "@/contexts/supabase-auth-context"
@@ -441,6 +441,17 @@ export default function BuildsPage() {
                       </button>
                     </div>
                     <div className="flex items-center gap-2">
+                      <Button 
+                        size="sm" 
+                        variant="default"
+                        className="text-xs"
+                        asChild
+                      >
+                        <Link href={`/purchase/${build.build_id}`}>
+                          <ShoppingCart className="h-3 w-3 mr-1" />
+                          Purchase
+                        </Link>
+                      </Button>
                       <Button size="sm" variant="outline" asChild className="text-xs bg-transparent">
                         <Link href={`/compare?add=${build.build_id}`}>
                           <BarChart3 className="h-3 w-3 mr-1" />

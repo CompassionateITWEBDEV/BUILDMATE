@@ -91,35 +91,48 @@ export default function BuildsPage() {
     try {
       setLoading(true)
       setError(null)
-      const allBuilds = await buildService.getAll()
-      const buildsWithDetails = await Promise.all(
-        allBuilds.map(async (build) => {
-          try {
-            const components = await buildComponentService.getBuildComponents(build.build_id)
-            const totalPrice = components.reduce((sum, bc: any) => sum + (Number(bc.components?.component_price) || 0), 0)
-            const { count: commentsCount } = await supabase
-              .from('build_comments')
-              .select('*', { count: 'exact', head: true })
-              .eq('build_id', build.build_id)
-            return {
-              ...build,
-              components,
-              totalPrice,
-              comments: commentsCount || build.comments || 0,
-              likes: build.likes || 0,
-              views: build.views || 0
-            }
-          } catch (err) {
-            console.error(err)
-            return { ...build, components: [], totalPrice: 0, comments: 0, likes: 0, views: 0 }
-          }
-        })
+      
+      // Add timeout to prevent infinite loading
+      const timeoutPromise = new Promise((_, reject) => 
+        setTimeout(() => reject(new Error('Loading timeout')), 10000) // 10 second timeout
       )
+      
+      const fetchPromise = buildService.getAll().then(async (allBuilds) => {
+        const buildsWithDetails = await Promise.all(
+          allBuilds.map(async (build) => {
+            try {
+              const components = await buildComponentService.getBuildComponents(build.build_id)
+              const totalPrice = components.reduce((sum, bc: any) => sum + (Number(bc.components?.component_price) || 0), 0)
+              const { count: commentsCount } = await supabase
+                .from('build_comments')
+                .select('*', { count: 'exact', head: true })
+                .eq('build_id', build.build_id)
+              return {
+                ...build,
+                components,
+                totalPrice,
+                comments: commentsCount || build.comments || 0,
+                likes: build.likes || 0,
+                views: build.views || 0
+              }
+            } catch (err) {
+              console.error(err)
+              return { ...build, components: [], totalPrice: 0, comments: 0, likes: 0, views: 0 }
+            }
+          })
+        )
+        return buildsWithDetails
+      })
+      
+      const buildsWithDetails = await Promise.race([fetchPromise, timeoutPromise]) as BuildWithDetails[]
       setBuilds(buildsWithDetails)
     } catch (err: any) {
-      console.error(err)
+      console.error('Error fetching builds:', err)
       setError(err.message || 'Failed to load builds')
+      // Even on error, clear loading state
+      setBuilds([])
     } finally {
+      // ALWAYS clear loading state
       setLoading(false)
     }
   }

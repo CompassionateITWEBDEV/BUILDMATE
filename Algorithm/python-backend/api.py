@@ -78,7 +78,7 @@ CATEGORY_MAP_CSP = {
 # Configuration
 DEFAULT_PAGE_SIZE = 10
 MAX_COLLECT_MULTIPLIER = 20
-MIN_COLLECT_SOLUTIONS = 500
+MIN_COLLECT_SOLUTIONS = 1500  # Increased from 500 to 1500 since we limited components
 
 
 # Utility Functions
@@ -171,6 +171,10 @@ def validate_csp_request(data):
     if budget <= 0:
         return False, "Budget must be greater than 0"
     
+    # Minimum budget requirement of 15,000 pesos
+    if budget < 15000:
+        return False, f"Budget must be at least ₱15,000.00 (current: ₱{budget:,.2f})"
+    
     return True, None
 
 
@@ -184,6 +188,55 @@ def health_check():
         "message": "Python backend is running",
         "service": "BuildMate Algorithm API"
     }), 200
+
+
+@app.route('/api/debug/components', methods=['GET'])
+def debug_components():
+    """Debug endpoint to check component availability."""
+    try:
+        raw_components = csp_db.fetch_all_components()
+        components = [transform_component_for_csp(comp) for comp in raw_components]
+        
+        # Filter valid components
+        valid_components = [c for c in components if c.get("price", 0) > 0]
+        
+        # Group by category
+        by_category = {}
+        for comp in valid_components:
+            cat = comp.get("category", "Unknown")
+            if cat not in by_category:
+                by_category[cat] = []
+            by_category[cat].append({
+                "id": comp.get("id"),
+                "name": comp.get("name"),
+                "price": comp.get("price", 0)
+            })
+        
+        # Calculate stats
+        stats = {}
+        for cat, comps in by_category.items():
+            prices = [c["price"] for c in comps]
+            stats[cat] = {
+                "count": len(comps),
+                "min_price": min(prices) if prices else 0,
+                "max_price": max(prices) if prices else 0,
+                "avg_price": sum(prices) / len(prices) if prices else 0
+            }
+        
+        return jsonify({
+            "total_components": len(valid_components),
+            "total_raw": len(raw_components),
+            "categories": stats,
+            "required_categories": REQUIRED_CATEGORIES,
+            "missing_categories": [cat for cat in REQUIRED_CATEGORIES if cat not in by_category]
+        }), 200
+        
+    except Exception as e:
+        logging.error("Error in debug endpoint: %s", e, exc_info=True)
+        return jsonify({
+            "error": "Internal server error",
+            "message": str(e)
+        }), 500
 
 
 @app.route('/', methods=['GET'])
@@ -256,6 +309,49 @@ def run_csp():
         raw_components = csp_db.fetch_all_components(performance_category=performance_category)
         components = [transform_component_for_csp(comp) for comp in raw_components]
         
+        # Filter out components with invalid prices (0, null, or negative)
+        valid_components = []
+        invalid_count = 0
+        for comp in components:
+            price = comp.get("price", 0)
+            if price and price > 0:
+                valid_components.append(comp)
+            else:
+                invalid_count += 1
+        
+        components = valid_components
+        
+        # Log component distribution by category
+        category_counts = {}
+        price_ranges = {}
+        for comp in components:
+            cat = comp.get("category", "Unknown")
+            category_counts[cat] = category_counts.get(cat, 0) + 1
+            
+            # Track price ranges per category
+            if cat not in price_ranges:
+                price_ranges[cat] = {"min": float('inf'), "max": 0, "prices": []}
+            price = comp.get("price", 0)
+            price_ranges[cat]["prices"].append(price)
+            if price < price_ranges[cat]["min"]:
+                price_ranges[cat]["min"] = price
+            if price > price_ranges[cat]["max"]:
+                price_ranges[cat]["max"] = price
+        
+        logging.info(
+            "CSP: Loaded %d valid components (filtered out %d with invalid prices). Distribution: %s",
+            len(components), invalid_count, category_counts
+        )
+        
+        # Log price ranges for debugging
+        for cat, ranges in price_ranges.items():
+            if ranges["prices"]:
+                avg_price = sum(ranges["prices"]) / len(ranges["prices"])
+                logging.info(
+                    "CSP: Category '%s' - Min: ₱%.2f, Max: ₱%.2f, Avg: ₱%.2f, Count: %d",
+                    cat, ranges["min"], ranges["max"], avg_price, len(ranges["prices"])
+                )
+        
         if performance_category and performance_category != 'all':
             logging.info(
                 "CSP: Filtering by performance category '%s', found %d components",
@@ -301,17 +397,7 @@ def run_csp():
         all_solutions = []
         max_collect = max(limit * MAX_COLLECT_MULTIPLIER, MIN_COLLECT_SOLUTIONS)
         
-        # For budgets ₱10,000 to ₱50,000, use early stopping to return faster
-        # But ensure we collect enough to have both high and low priced solutions
-        if 10000 <= budget <= 50000:
-            early_stop_count = 100  # Stop after 100 solutions for faster response
-            min_solutions_for_range = 50  # Need at least 50 to ensure price range
-        else:
-            early_stop_count = max_collect  # Collect all for larger budgets
-            min_solutions_for_range = 100
-        
-        logging.info("CSP: Starting to collect solutions (max: %d, early stop at: %d for budgets ₱10k-₱50k)", 
-                    max_collect, early_stop_count if 10000 <= budget <= 50000 else max_collect)
+        logging.info("CSP: Starting to collect solutions (max: %d)", max_collect)
         
         solution_count = 0
         for i, sol in enumerate(solution_generator):
@@ -323,32 +409,9 @@ def run_csp():
                     has_more = False
                 break
             
-            # Ensure solution has all required categories
-            missing_cats = [cat for cat in REQUIRED_CATEGORIES if cat not in sol or not sol[cat]]
-            if missing_cats:
-                continue  # Skip incomplete solutions
-            
             total_price = sum(c["price"] for c in sol.values() if c)
             all_solutions.append((total_price, sol))
             solution_count = i + 1
-            
-            # Early stopping for budgets ₱10k-₱50k: stop after collecting enough solutions
-            # But ensure we have at least min_solutions_for_range to get good price range
-            if 10000 <= budget <= 50000 and solution_count >= early_stop_count and solution_count >= min_solutions_for_range:
-                # Check if we have a good price range (both high and low)
-                if all_solutions:
-                    prices = [p for p, _ in all_solutions]
-                    price_range = max(prices) - min(prices)
-                    # If we have good range (at least 5% of budget) or enough solutions, stop
-                    if price_range >= budget * 0.05 or solution_count >= early_stop_count:
-                        logging.info("CSP: Early stopping at %d solutions (price range: ₱%.2f)", 
-                                    solution_count, price_range)
-                        try:
-                            next(solution_generator)
-                            has_more = True
-                        except StopIteration:
-                            has_more = False
-                        break
             
             if (i + 1) % 50 == 0:
                 logging.info(
@@ -362,52 +425,23 @@ def run_csp():
         
         logging.info("CSP: Finished collecting %d solutions", len(all_solutions))
         
-        # Sort by price (descending) to prioritize expensive solutions
+        # Sort by price (descending) to prioritize solutions close to budget
         all_solutions.sort(key=lambda x: x[0], reverse=True)
         
-        # For budgets ₱10,000 to ₱60,000, don't filter at all - show all solutions
-        # This ensures solutions with any price combination (₱1,235 + ₱3,400 + ... = budget)
-        # can be found and displayed, regardless of individual component prices
-        if 10000 <= budget < 60000:
-            # Small/medium budgets: show all solutions, just sorted by price
-            # No minimum price threshold - accept any solution that fits within budget
-            logging.info("CSP: Budget ₱10k-₱60k, showing all %d solutions without filtering (accepts any price combination)", len(all_solutions))
-            # No filtering for small/medium budgets
+        # Filter solutions to show a reasonable price range (65-100% of budget)
+        # This prevents showing extremely cheap builds when user has a higher budget
+        min_budget = budget * 0.65  # Show builds from 65% to 100% of budget
+        filtered_solutions = [(price, sol) for price, sol in all_solutions if price >= min_budget]
+        
+        # If no solutions in the 65-100% range, fallback to all solutions
+        if not filtered_solutions:
+            filtered_solutions = all_solutions
+            logging.info("CSP: No solutions in 65-100%% range, showing all %d solutions", len(all_solutions))
         else:
-            # Larger budgets: apply light filtering
-            min_budget_utilization = get_min_budget_utilization(budget)
-            min_price_threshold = budget * min_budget_utilization
-            
-            filtered_solutions = [
-                (price, sol) for price, sol in all_solutions
-                if price >= min_price_threshold
-            ]
-            
-            # CRITICAL: Always keep top solutions even if they don't pass filter
-            # This ensures we show something if solutions exist
-            if len(filtered_solutions) == 0 and all_solutions:
-                # No solutions passed filter, but we have solutions - show top ones
-                logging.warning(
-                    "CSP: No solutions passed filter (min: ₱%.2f), keeping top %d solutions",
-                    min_price_threshold, limit * 3
-                )
-                filtered_solutions = all_solutions[:limit * 3]
-            elif len(filtered_solutions) < limit and all_solutions:
-                # Some solutions passed filter, but not enough - add top solutions
-                logging.info(
-                    "CSP: Only %d solutions passed filter, adding top solutions to reach %d",
-                    len(filtered_solutions), limit * 2
-                )
-                # Combine filtered and top solutions, remove duplicates
-                filtered_prices = {price for price, _ in filtered_solutions}
-                for price, sol in all_solutions:
-                    if price not in filtered_prices and len(filtered_solutions) < limit * 2:
-                        filtered_solutions.append((price, sol))
-                        filtered_prices.add(price)
-                # Re-sort
-                filtered_solutions = sorted(filtered_solutions, key=lambda x: x[0], reverse=True)
-            
-            all_solutions = filtered_solutions if filtered_solutions else all_solutions
+            logging.info("CSP: Filtered to %d solutions in range ₱%.2f - ₱%.2f (65-100%% of budget)", 
+                        len(filtered_solutions), min_budget, budget)
+        
+        all_solutions = filtered_solutions
         
         if all_solutions:
             logging.info(
@@ -417,77 +451,13 @@ def run_csp():
                 len(all_solutions), solution_count
             )
         
-        # Paginate - for budgets ₱10,000 to ₱50,000 on first page, ensure we include both highest and lowest priced solutions
-        if 10000 <= budget <= 50000 and len(all_solutions) > limit and page == 0:
-            # For budgets ₱10k-₱50k on first page, ALWAYS include highest and lowest prices
-            # This ensures users can see the full price range (bungkig)
-            highest_price = all_solutions[0][0]  # Most expensive
-            lowest_price = all_solutions[-1][0]  # Cheapest
-            
-            # Always include top 2-3 most expensive and bottom 2-3 cheapest
-            top_count = min(3, len(all_solutions) // 3)  # Top 3 or 1/3 of solutions
-            bottom_count = min(3, len(all_solutions) // 3)  # Bottom 3 or 1/3 of solutions
-            
-            # Get highest priced solutions
-            top_solutions = all_solutions[:top_count]
-            # Get lowest priced solutions
-            bottom_solutions = all_solutions[-bottom_count:] if len(all_solutions) > top_count else []
-            
-            # Combine highest and lowest, ensuring we have both extremes
-            combined = []
-            seen_prices = set()
-            
-            # First, add highest prices (most expensive)
-            for price, sol in top_solutions:
-                if price not in seen_prices:
-                    combined.append((price, sol))
-                    seen_prices.add(price)
-            
-            # Then, add lowest prices (cheapest) - CRITICAL to show price range (bungkig)
-            for price, sol in bottom_solutions:
-                if price not in seen_prices:
-                    combined.append((price, sol))
-                    seen_prices.add(price)
-            
-            # Fill remaining slots with middle-range solutions
-            remaining = limit - len(combined)
-            if remaining > 0:
-                middle_start = top_count
-                middle_end = len(all_solutions) - bottom_count
-                for price, sol in all_solutions[middle_start:middle_end]:
-                    if price not in seen_prices and len(combined) < limit:
-                        combined.append((price, sol))
-                        seen_prices.add(price)
-                        if len(combined) >= limit:
-                            break
-            
-            # Sort by price descending to show highest first, but include lowest
-            combined.sort(key=lambda x: x[0], reverse=True)
-            
-            # Log to verify we have both extremes (bungkig)
-            if combined:
-                final_prices = [p for p, _ in combined]
-                logging.info(
-                    "CSP: First page includes price range (bungkig) - Highest: ₱%.2f, Lowest: ₱%.2f (from %d solutions)",
-                    max(final_prices), min(final_prices), len(combined)
-                )
-            
-            solutions = [sol for _, sol in combined[:limit]]
-            # Calculate end_idx for has_more check
-            end_idx = len(combined)
-        else:
-            # For larger budgets, subsequent pages, or if we have fewer solutions than limit, use normal pagination
-            start_idx = skip
-            end_idx = skip + limit
-            solutions = [sol for _, sol in all_solutions[start_idx:end_idx]]
+        # Paginate
+        start_idx = skip
+        end_idx = skip + limit
+        solutions = [sol for _, sol in all_solutions[start_idx:end_idx]]
         
         # Determine if there are more solutions
-        # For special pagination (₱10k-₱50k), check if we have more solutions in all_solutions
-        # For normal pagination, use end_idx
-        if 10000 <= budget <= 50000 and len(all_solutions) > limit and page == 0:
-            # Special case: check if there are more solutions beyond what we showed
-            has_more = len(all_solutions) > limit
-        elif end_idx < len(all_solutions):
+        if end_idx < len(all_solutions):
             has_more = True
         elif solution_count >= max_collect:
             has_more = True
@@ -506,20 +476,21 @@ def run_csp():
             # Provide more helpful error message
             if solution_count == 0:
                 error_msg = (
-                    f"No compatible solutions found within budget of ₱{budget:,.2f}. "
+                    f"No compatible PC builds found within your budget of ₱{budget:,.2f}.\n\n"
                     "This might be due to:\n"
-                    "- Compatibility constraints between components\n"
-                    "- Limited component availability\n"
-                    "- Budget too low for required components\n\n"
-                    "Try:\n"
-                    "- Increasing your budget\n"
-                    "- Removing pre-selected components\n"
-                    "- Checking component compatibility"
+                    "- Compatibility constraints between components (CPU socket, RAM type, power requirements)\n"
+                    "- Pre-selected components limiting available options\n"
+                    "- Insufficient budget for a complete 8-component PC build\n\n"
+                    "Suggestions:\n"
+                    "- Try increasing your budget to at least ₱20,000 - ₱25,000 for entry-level builds\n"
+                    "- Remove any pre-selected components to see more options\n"
+                    "- Select a different performance category\n\n"
+                    f"Minimum budget required: ₱15,000.00"
                 )
             else:
                 error_msg = (
-                    f"Found {solution_count} solutions but none passed the filters. "
-                    f"Try adjusting your budget or component selections."
+                    f"Found {solution_count} potential solutions but they don't meet all requirements. "
+                    f"Try adjusting your budget or removing pre-selected components."
                 )
             
             logging.warning(

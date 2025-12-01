@@ -18,37 +18,9 @@ export function LoadingProvider({ children }: { children: ReactNode }) {
   const [loadingMessage, setLoadingMessage] = useState("Loading...")
   const pathname = usePathname()
 
-  // Auto-loading on route changes
+  // Auto-loading on route changes - removed to prevent unnecessary waiting
   useEffect(() => {
-    // When pathname changes, start loading
-    setIsLoading(true)
-    
-    // Stop loading when page is ready
-    const handleLoad = () => {
-      setIsLoading(false)
-    }
-
-    // Check if page is already loaded
-    if (document.readyState === 'complete') {
-      // Page already loaded, stop loading after a brief delay
-      const timer = setTimeout(() => {
-        setIsLoading(false)
-      }, 100)
-      return () => clearTimeout(timer)
-    } else {
-      // Wait for page to fully load
-      window.addEventListener('load', handleLoad, { once: true })
-      
-      // Fallback: stop loading after reasonable timeout (5 seconds max)
-      const timeout = setTimeout(() => {
-        setIsLoading(false)
-      }, 5000)
-
-      return () => {
-        window.removeEventListener('load', handleLoad)
-        clearTimeout(timeout)
-      }
-    }
+    // Loading is now controlled manually, not on route changes
   }, [pathname])
 
   const setLoading = (loading: boolean, message?: string) => {
@@ -91,4 +63,3 @@ export function useLoading() {
   }
   return context
 }
-
