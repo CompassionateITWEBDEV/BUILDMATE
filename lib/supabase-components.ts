@@ -154,41 +154,44 @@ export async function getSupabaseComponents(): Promise<Component[]> {
     })
     console.log('Converted category distribution:', convertedCategoryCounts)
     
-    // LIMIT CPU components to 40 for performance
+    // LIMIT CPU components to 50 with mix of cheap and expensive for all budgets
     const cpuComponents = converted.filter(c => c.category === 'cpu')
     const gpuComponents = converted.filter(c => c.category === 'gpu')
     const memoryComponents = converted.filter(c => c.category === 'memory')
     const otherComponents = converted.filter(c => !['cpu', 'gpu', 'memory'].includes(c.category))
     
     let limitedCpuComponents = cpuComponents
-    if (cpuComponents.length > 40) {
-      // Keep top 40 CPUs sorted by price (descending)
-      limitedCpuComponents = cpuComponents
-        .sort((a, b) => b.price - a.price)
-        .slice(0, 40)
-      console.log(`Limited CPUs from ${cpuComponents.length} to ${limitedCpuComponents.length} components`)
+    if (cpuComponents.length > 50) {
+      // Keep 25 cheapest + 25 most expensive CPUs to support all budgets
+      const sortedCpus = cpuComponents.sort((a, b) => a.price - b.price)
+      const cheapCpus = sortedCpus.slice(0, 25)
+      const expensiveCpus = sortedCpus.slice(-25)
+      limitedCpuComponents = [...cheapCpus, ...expensiveCpus]
+      console.log(`Limited CPUs from ${cpuComponents.length} to ${limitedCpuComponents.length} components (25 cheap + 25 expensive)`)
     }
     
-    // LIMIT GPU/Graphics Card components to 40 for performance
+    // LIMIT GPU/Graphics Card components to 50 with mix of cheap and expensive
     let limitedGpuComponents = gpuComponents
-    if (gpuComponents.length > 40) {
-      // Keep top 40 GPUs sorted by price (descending)
-      limitedGpuComponents = gpuComponents
-        .sort((a, b) => b.price - a.price)
-        .slice(0, 40)
-      console.log(`Limited GPUs from ${gpuComponents.length} to ${limitedGpuComponents.length} components`)
+    if (gpuComponents.length > 50) {
+      // Keep 25 cheapest + 25 most expensive GPUs to support all budgets
+      const sortedGpus = gpuComponents.sort((a, b) => a.price - b.price)
+      const cheapGpus = sortedGpus.slice(0, 25)
+      const expensiveGpus = sortedGpus.slice(-25)
+      limitedGpuComponents = [...cheapGpus, ...expensiveGpus]
+      console.log(`Limited GPUs from ${gpuComponents.length} to ${limitedGpuComponents.length} components (25 cheap + 25 expensive)`)
     }
     
-    // LIMIT RAM/Memory components: min 12, max 40
+    // LIMIT RAM/Memory components: min 12, max 50 with mix of prices
     let limitedMemoryComponents = memoryComponents
     if (memoryComponents.length < 12) {
       console.warn(`⚠️ Only ${memoryComponents.length} RAM/Memory components found. Expected at least 12.`)
-    } else if (memoryComponents.length > 40) {
-      // Keep top 40 RAM modules sorted by price (descending)
-      limitedMemoryComponents = memoryComponents
-        .sort((a, b) => b.price - a.price)
-        .slice(0, 40)
-      console.log(`Limited RAM from ${memoryComponents.length} to ${limitedMemoryComponents.length} components`)
+    } else if (memoryComponents.length > 50) {
+      // Keep 25 cheapest + 25 most expensive RAM modules
+      const sortedMemory = memoryComponents.sort((a, b) => a.price - b.price)
+      const cheapMemory = sortedMemory.slice(0, 25)
+      const expensiveMemory = sortedMemory.slice(-25)
+      limitedMemoryComponents = [...cheapMemory, ...expensiveMemory]
+      console.log(`Limited RAM from ${memoryComponents.length} to ${limitedMemoryComponents.length} components (25 cheap + 25 expensive)`)
     } else {
       console.log(`✅ RAM/Memory components: ${memoryComponents.length}`)
     }

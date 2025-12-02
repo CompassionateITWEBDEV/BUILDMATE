@@ -3,6 +3,8 @@ CATEGORY_ORDER = [
     "Storage", "Video Card", "Case", "Power Supply"
 ]
 
+import random
+
 class CSPBacktracking:
     def __init__(self, components):
         self.components = components
@@ -173,11 +175,12 @@ class CSPBacktracking:
             yield from self.backtrack(categories[1:], partial_build, budget)
             return
 
-        # Sort components by price (cheapest first) to find solutions faster
-        available_components = sorted(
-            self.by_cat.get(next_cat, []),
-            key=lambda c: c.get("price", float('inf'))
-        )
+        # Get components for this category and shuffle for variety
+        # This creates diverse builds with different price points
+        available_components = list(self.by_cat.get(next_cat, []))
+        
+        # Shuffle to get variety in solutions (mix of expensive, mid-range, budget)
+        random.shuffle(available_components)
         
         # Filter out components with invalid prices
         available_components = [c for c in available_components if c.get("price", 0) > 0]

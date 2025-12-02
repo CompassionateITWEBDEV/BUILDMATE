@@ -962,9 +962,24 @@ export default function BuilderPage() {
     // Map solution categories to ComponentCategory keys
     const newSelected: Record<ComponentCategory, Component | null> = { ...selectedComponents }
 
+    // Category mapping from CSP solution to ComponentCategory
+    const categoryMapping: Record<string, ComponentCategory> = {
+      'cpu': 'cpu',
+      'motherboard': 'motherboard',
+      'cpu cooler': 'cooling',
+      'memory': 'memory',
+      'storage': 'storage',
+      'video card': 'gpu',
+      'case': 'case',
+      'power supply': 'psu',
+    }
+
     Object.entries(solution).forEach(([category, comp]: [string, any]) => {
-      // Convert the solution category string to your ComponentCategory keys if needed
-      const key = category.toLowerCase() as ComponentCategory
+      // Convert the solution category string to ComponentCategory keys
+      const normalizedCategory = category.toLowerCase()
+      const key = categoryMapping[normalizedCategory] || normalizedCategory as ComponentCategory
+      
+      if (key) {
         newSelected[key] = {
           id: comp.id,
           name: comp.name,
@@ -975,9 +990,10 @@ export default function BuilderPage() {
           rating: comp.rating || 0,
           reviews: comp.reviews || 0,
           specifications: comp.specifications || {},
-          compatibility: comp.compatibility || {}, // << add this
+          compatibility: comp.compatibility || {},
           performanceTags: comp.performanceTags || ['all'] as PerformanceCategory[],
         }
+      }
     })
 
     setSelectedComponents(newSelected)
@@ -2163,9 +2179,7 @@ export default function BuilderPage() {
                 <CardDescription>Selected components</CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
-                {/* Display components in proper order matching CSP category order */}
-                {(['cpu', 'motherboard', 'cooling', 'memory', 'storage', 'gpu', 'case', 'psu'] as ComponentCategory[]).map((category) => {
-                  const component = selectedComponents[category]
+                {Object.entries(selectedComponents).map(([category, component]) => {
                   const Icon = categoryIcons[category as ComponentCategory]
                   return (
                     <div key={category} className="flex items-center justify-between">

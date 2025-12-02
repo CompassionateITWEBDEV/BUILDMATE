@@ -238,23 +238,41 @@ export class CompatibilityChecker {
       return
     }
 
-    // Get PSU wattage from compatibility or specifications
-    const psuWattage = psu.compatibility.powerRequirement || 
-                      Number.parseInt(psu.specifications.Wattage as string) ||
-                      Number.parseInt(psu.specifications.wattage as string) ||
-                      this.getWattageFromCompatibility(psu) ||
-                      0
+    // Get PSU wattage from multiple sources
+    let psuWattage = 0
+    
+    // Try compatibility.powerRequirement first (set during component conversion)
+    if (psu.compatibility.powerRequirement) {
+      psuWattage = psu.compatibility.powerRequirement
+    }
+    
+    // Try specifications fields
+    if (psuWattage === 0) {
+      // Try different specification fields
+      psuWattage = Number.parseInt(psu.specifications.Wattage as string) ||
+                  Number.parseInt(psu.specifications.wattage as string) ||
+                  Number.parseInt(psu.specifications['wattage'] as string) ||
+                  0
+    }
+    
+    // Try parsing from compatibility JSON
+    if (psuWattage === 0) {
+      psuWattage = this.getWattageFromCompatibility(psu) || 0
+    }
     
     const recommendedWattage = Math.ceil(totalPowerDraw * 1.2) // 20% headroom
 
     if (psuWattage === 0) {
-      issues.push({
-        type: "warning",
-        category: "psu",
-        message: "Power supply wattage information not available",
-        affectedComponents: ["psu"],
-        suggestion: `Ensure power supply has at least ${recommendedWattage}W capacity`,
-      })
+      // Only show warning if power requirement is significant
+      if (totalPowerDraw > 0) {
+        issues.push({
+          type: "warning",
+          category: "psu",
+          message: "Power supply wattage information not available",
+          affectedComponents: ["psu"],
+          suggestion: `Ensure power supply has at least ${recommendedWattage}W capacity`,
+        })
+      }
     } else if (psuWattage < totalPowerDraw) {
       issues.push({
         type: "error",
@@ -468,8 +486,12 @@ export class CompatibilityChecker {
           }
           break
         case "warning":
-          // Warnings: moderate penalty
-          if (isEarlyBuild) {
+          // Only penalize warnings about actual incompatibilities, not missing information
+          if (issue.message.includes("information not available") || 
+              issue.message.includes("not available")) {
+            // Don't penalize for missing information - these are data issues, not compatibility issues
+            score -= 0
+          } else if (isEarlyBuild) {
             score -= 15 // More significant when few components
           } else {
             score -= 10 // Standard warning penalty
