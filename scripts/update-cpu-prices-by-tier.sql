@@ -182,3 +182,7 @@ WHERE category_id = 1
 ORDER BY tier, component_price
 LIMIT 50;
 
+
+
+
+

@@ -150,3 +150,7 @@ WHERE category_id = 1
 GROUP BY component_purpose
 ORDER BY avg_price;
 
+
+
+
+

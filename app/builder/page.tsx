@@ -1675,39 +1675,57 @@ export default function BuilderPage() {
                       Build Saved Successfully!
                     </DialogTitle>
                     <DialogDescription>
-                      Your build has been saved. You can now view details and proceed to purchase.
+                      Your build "{buildName}" has been saved. What would you like to do next?
                     </DialogDescription>
                   </DialogHeader>
                   <div className="space-y-4">
-                    <div className="flex flex-col gap-2">
+                    <div className="p-4 bg-slate-50 dark:bg-slate-800 rounded-lg">
+                      <div className="flex justify-between items-center mb-2">
+                        <span className="font-medium">Total Price:</span>
+                        <span className="text-xl font-bold text-blue-600">{formatCurrency(totalPrice)}</span>
+                      </div>
+                    </div>
+
+                    <div className="flex flex-col gap-3">
+                      {/* Primary Action: Purchase Now */}
                       <Button
                         onClick={() => {
                           setShowSuccessDialog(false)
                           router.push(`/purchase/${savedBuildId}`)
                           router.refresh()
                         }}
-                        className="w-full"
+                        size="lg"
+                        className="w-full bg-green-600 hover:bg-green-700 text-white"
                       >
-                        View Purchase Details
+                        <ShoppingCart className="mr-2 h-5 w-5" />
+                        Purchase Build Now
                       </Button>
-                      <Button
-                        variant="outline"
-                        onClick={() => {
-                          setShowSuccessDialog(false)
-                          router.push(`/mybuilds/${savedBuildId}`)
-                          router.refresh()
-                        }}
-                        className="w-full"
-                      >
-                        View Build Details
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        onClick={() => setShowSuccessDialog(false)}
-                        className="w-full"
-                      >
-                        Continue Building
-                      </Button>
+
+                      {/* Secondary Actions */}
+                      <div className="flex flex-col gap-2">
+                        <Button
+                          variant="outline"
+                          onClick={() => {
+                            setShowSuccessDialog(false)
+                            router.push(`/mybuilds/${savedBuildId}`)
+                            router.refresh()
+                          }}
+                          className="w-full"
+                        >
+                          View Build Details
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          onClick={() => setShowSuccessDialog(false)}
+                          className="w-full"
+                        >
+                          Save Only - Continue Building
+                        </Button>
+                      </div>
+                    </div>
+
+                    <div className="text-center text-xs text-slate-500 mt-2">
+                      You can always purchase this build later from "My Builds"
                     </div>
                   </div>
                 </DialogContent>

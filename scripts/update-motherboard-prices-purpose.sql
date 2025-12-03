@@ -6,6 +6,28 @@
 -- High-end Motherboards: ₱15,000 - ₱40,000+
 -- ============================================================
 
+-- ============================================================
+-- ADD MISSING COLUMNS IF THEY DON'T EXIST
+-- ============================================================
+-- Add component_image column
+ALTER TABLE components 
+ADD COLUMN IF NOT EXISTS component_image TEXT;
+
+-- Add component_brand column
+ALTER TABLE components 
+ADD COLUMN IF NOT EXISTS component_brand TEXT;
+
+-- Add component_purpose column
+ALTER TABLE components 
+ADD COLUMN IF NOT EXISTS component_purpose TEXT;
+
+-- Add comments to explain the fields
+COMMENT ON COLUMN components.component_image IS 'URL or Supabase Storage path to the component image';
+COMMENT ON COLUMN components.component_brand IS 'Brand or manufacturer of the component';
+COMMENT ON COLUMN components.component_purpose IS 'Intended use: academic, office, or gaming';
+
+-- ============================================================
+
 -- First, let's see current motherboard prices
 SELECT 
     component_name,
@@ -221,4 +243,119 @@ FROM components
 WHERE category_id = 2
 ORDER BY component_purpose, component_price
 LIMIT 30;
+
+-- ============================================================
+-- UPDATE ALL COMPONENT IMAGES WITH PLACEHOLDERS
+-- ============================================================
+-- Using placeholder images that display component info
+-- Format: https://via.placeholder.com/400x400/COLOR/ffffff?text=COMPONENT+NAME
+
+-- ============================================================
+-- CPU IMAGES (Category ID: 1)
+-- ============================================================
+-- Blue background for CPUs
+UPDATE components 
+SET component_image = 'https://via.placeholder.com/400x400/0066cc/ffffff?text=' || 
+                     REPLACE(REPLACE(REPLACE(SUBSTRING(component_name, 1, 30), ' ', '+'), '/', '-'), '&', 'and')
+WHERE category_id = 1  -- CPU
+AND component_image IS NULL;
+
+-- ============================================================
+-- MOTHERBOARD IMAGES (Category ID: 2)
+-- ============================================================
+-- Green background for Motherboards
+UPDATE components 
+SET component_image = 'https://via.placeholder.com/400x400/00aa44/ffffff?text=' || 
+                     REPLACE(REPLACE(REPLACE(SUBSTRING(component_name, 1, 30), ' ', '+'), '/', '-'), '&', 'and')
+WHERE category_id = 2  -- Motherboard
+AND component_image IS NULL;
+
+-- ============================================================
+-- RAM/MEMORY IMAGES (Category ID: 3)
+-- ============================================================
+-- Purple background for RAM
+UPDATE components 
+SET component_image = 'https://via.placeholder.com/400x400/9933cc/ffffff?text=' || 
+                     REPLACE(REPLACE(REPLACE(SUBSTRING(component_name, 1, 30), ' ', '+'), '/', '-'), '&', 'and')
+WHERE category_id = 3  -- RAM
+AND component_image IS NULL;
+
+-- ============================================================
+-- STORAGE IMAGES (Category ID: 4)
+-- ============================================================
+-- Orange background for Storage
+UPDATE components 
+SET component_image = 'https://via.placeholder.com/400x400/ff8800/ffffff?text=' || 
+                     REPLACE(REPLACE(REPLACE(SUBSTRING(component_name, 1, 30), ' ', '+'), '/', '-'), '&', 'and')
+WHERE category_id = 4  -- Storage
+AND component_image IS NULL;
+
+-- ============================================================
+-- GPU/VIDEO CARD IMAGES (Category ID: 5)
+-- ============================================================
+-- Red background for GPUs
+UPDATE components 
+SET component_image = 'https://via.placeholder.com/400x400/cc0000/ffffff?text=' || 
+                     REPLACE(REPLACE(REPLACE(SUBSTRING(component_name, 1, 30), ' ', '+'), '/', '-'), '&', 'and')
+WHERE category_id = 5  -- GPU
+AND component_image IS NULL;
+
+-- ============================================================
+-- PSU/POWER SUPPLY IMAGES (Category ID: 6)
+-- ============================================================
+-- Yellow/Gold background for PSU
+UPDATE components 
+SET component_image = 'https://via.placeholder.com/400x400/ffaa00/ffffff?text=' || 
+                     REPLACE(REPLACE(REPLACE(SUBSTRING(component_name, 1, 30), ' ', '+'), '/', '-'), '&', 'and')
+WHERE category_id = 6  -- PSU
+AND component_image IS NULL;
+
+-- ============================================================
+-- CASE IMAGES (Category ID: 7)
+-- ============================================================
+-- Gray background for Cases
+UPDATE components 
+SET component_image = 'https://via.placeholder.com/400x400/666666/ffffff?text=' || 
+                     REPLACE(REPLACE(REPLACE(SUBSTRING(component_name, 1, 30), ' ', '+'), '/', '-'), '&', 'and')
+WHERE category_id = 7  -- Case
+AND component_image IS NULL;
+
+-- ============================================================
+-- COOLING IMAGES (Category ID: 8)
+-- ============================================================
+-- Cyan/Light Blue background for Cooling
+UPDATE components 
+SET component_image = 'https://via.placeholder.com/400x400/00ccff/ffffff?text=' || 
+                     REPLACE(REPLACE(REPLACE(SUBSTRING(component_name, 1, 30), ' ', '+'), '/', '-'), '&', 'and')
+WHERE category_id = 8  -- Cooling
+AND component_image IS NULL;
+
+-- ============================================================
+-- VERIFY ALL COMPONENTS WITH IMAGES
+-- ============================================================
+-- Check image coverage by category
+SELECT 
+    cc.category_id,
+    cc.category_name,
+    COUNT(*) as total_components,
+    COUNT(c.component_image) as components_with_images,
+    COUNT(*) - COUNT(c.component_image) as components_without_images,
+    ROUND(COUNT(c.component_image) * 100.0 / COUNT(*), 2) as coverage_percentage
+FROM components c
+JOIN component_categories cc ON c.category_id = cc.category_id
+GROUP BY cc.category_id, cc.category_name
+ORDER BY cc.category_id;
+
+-- Show sample components by category with image status
+SELECT 
+    cc.category_name,
+    c.component_name,
+    CASE WHEN c.component_image IS NOT NULL THEN 'Has Image' ELSE 'No Image' END as image_status,
+    c.component_image
+FROM components c
+JOIN component_categories cc ON c.category_id = cc.category_id
+ORDER BY cc.category_name, c.component_name
+LIMIT 100;
+
+
 

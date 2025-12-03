@@ -94,3 +94,7 @@ WHERE category_id = 8
 ORDER BY component_price DESC
 LIMIT 40;
 
+
+
+
+
