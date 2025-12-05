@@ -435,11 +435,11 @@ export default function GuideDetailPage() {
               </CardHeader>
             </Card>
 
-            {/* Build Guide Video */}
+            {/* Build Guide Animation */}
             {isPcAssemblyGuide && (
               <Card>
                 <CardHeader>
-                  <CardTitle className="text-xl mb-2 font-semibold">Video Build Guide</CardTitle>
+                  <CardTitle className="text-xl mb-2 font-semibold">Build Guide Animation</CardTitle>
                   <CardDescription className="text-slate-600 dark:text-slate-400">Watch the complete PC assembly process step-by-step</CardDescription>
                 </CardHeader>
                 <CardContent>

@@ -30,7 +30,7 @@ export function PageWrapper({ children }: PageWrapperProps) {
   }, [pathname, stopLoading])
   
   // Use pathname as key to force remount when route changes
-  // The wrapper div has no styling to avoid affecting layout
-  return <div key={pathname}>{children}</div>
+  // Add top padding to account for fixed header
+  return <div key={pathname} className="pt-20">{children}</div>
 }
 
