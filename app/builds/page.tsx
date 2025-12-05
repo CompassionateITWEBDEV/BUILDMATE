@@ -436,7 +436,7 @@ export default function BuildsPage() {
                         size="sm"
                         className="h-auto p-0 text-slate-500 hover:text-green-500"
                         onClick={async () => {
-                          const url = `${window.location.origin}/builds/${build.build_id}`
+                          const url = typeof window !== 'undefined' ? `${window.location.origin}/builds/${build.build_id}` : ''
                           try {
                             await navigator.clipboard.writeText(url)
                             alert("Build link copied to clipboard!")

@@ -719,7 +719,7 @@ export default function DashboardPage() {
                                 size="sm" 
                                 variant="outline"
                                 onClick={async () => {
-                                  const shareUrl = `${window.location.origin}/builder?share=${build.build_id}`
+                                  const shareUrl = typeof window !== 'undefined' ? `${window.location.origin}/builder?share=${build.build_id}` : ''
                                   try {
                                     await navigator.clipboard.writeText(shareUrl)
                                     alert("Build link copied to clipboard! Share this link to let others import this build.")

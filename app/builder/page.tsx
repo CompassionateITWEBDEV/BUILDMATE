@@ -1738,7 +1738,7 @@ export default function BuilderPage() {
                 onClick={async () => {
                   if (savedBuildId) {
                     // If build is saved, share the link to the saved build
-                    const shareUrl = `${window.location.origin}/builder?share=${savedBuildId}`
+                    const shareUrl = typeof window !== 'undefined' ? `${window.location.origin}/builder?share=${savedBuildId}` : ''
                     try {
                       await navigator.clipboard.writeText(shareUrl)
                       alert("Build link copied to clipboard! Share this link to let others import this build.")
@@ -2283,7 +2283,7 @@ export default function BuilderPage() {
                     onClick={async () => {
                       if (savedBuildId) {
                         // If build is saved, share the link to the saved build
-                        const shareUrl = `${window.location.origin}/builder?share=${savedBuildId}`
+                        const shareUrl = typeof window !== 'undefined' ? `${window.location.origin}/builder?share=${savedBuildId}` : ''
                         try {
                           await navigator.clipboard.writeText(shareUrl)
                           alert("Build link copied to clipboard! Share this link to let others import this build.")

@@ -215,7 +215,9 @@ export default function SupportPage() {
     // Redirect to profile to view tickets
     setTimeout(() => {
       setSubmitSuccess(false)
-      window.location.href = "/profile"
+      if (typeof window !== 'undefined') {
+        window.location.href = "/profile"
+      }
     }, 2000)
   }
 
