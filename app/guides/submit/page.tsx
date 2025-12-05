@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { useAuth } from "@/contexts/supabase-auth-context"
 import { useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
@@ -27,8 +27,13 @@ export default function SubmitGuidePage() {
     tools: ""
   })
 
+  useEffect(() => {
+    if (!user) {
+      router.push("/login")
+    }
+  }, [user, router])
+
   if (!user) {
-    router.push("/login")
     return null
   }
 
