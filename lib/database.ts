@@ -82,7 +82,21 @@ export const componentService = {
       `)
       .limit(2000)  // Increase limit to fetch all components
     
-    if (error) throw error
+    if (error) {
+      console.error('Supabase query error in componentService.getAll():', {
+        message: error.message,
+        code: error.code,
+        details: error.details,
+        hint: error.hint
+      })
+      throw error
+    }
+    
+    if (!data) {
+      console.warn('No data returned from components query')
+      return []
+    }
+    
     return data
   },
 

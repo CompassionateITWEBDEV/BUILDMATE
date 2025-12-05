@@ -1703,24 +1703,24 @@ export default function BuilderPage() {
 
                       {/* Secondary Actions */}
                       <div className="flex flex-col gap-2">
-                        <Button
-                          variant="outline"
-                          onClick={() => {
-                            setShowSuccessDialog(false)
-                            router.push(`/mybuilds/${savedBuildId}`)
-                            router.refresh()
-                          }}
-                          className="w-full"
-                        >
-                          View Build Details
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          onClick={() => setShowSuccessDialog(false)}
-                          className="w-full"
-                        >
+                      <Button
+                        variant="outline"
+                        onClick={() => {
+                          setShowSuccessDialog(false)
+                          router.push(`/mybuilds/${savedBuildId}`)
+                          router.refresh()
+                        }}
+                        className="w-full"
+                      >
+                        View Build Details
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        onClick={() => setShowSuccessDialog(false)}
+                        className="w-full"
+                      >
                           Save Only - Continue Building
-                        </Button>
+                      </Button>
                       </div>
                     </div>
 

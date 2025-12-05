@@ -296,3 +296,7 @@ class CSPBacktracking:
                 yield solution
 
 
+
+
+
+

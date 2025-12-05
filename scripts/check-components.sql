@@ -34,3 +34,7 @@ LIMIT 20;
 SELECT * FROM component_categories ORDER BY category_id;
 
 
+
+
+
+

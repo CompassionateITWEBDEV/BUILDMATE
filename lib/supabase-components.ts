@@ -135,7 +135,20 @@ if (dbComponent.component_purpose) {
 export async function getSupabaseComponents(): Promise<Component[]> {
   try {
     const dbComponents = await componentService.getAll()
+    
+    // Check if we actually got components
+    if (!dbComponents || !Array.isArray(dbComponents)) {
+      console.error('Invalid response from componentService.getAll():', dbComponents)
+      return []
+    }
+    
     console.log(`Fetched ${dbComponents.length} components from Supabase`)
+    
+    // If no components, return empty array
+    if (dbComponents.length === 0) {
+      console.warn('⚠️ No components found in database')
+      return []
+    }
     
     // Debug: Log category distribution
     const categoryCounts: Record<string, number> = {}
@@ -205,21 +218,17 @@ export async function getSupabaseComponents(): Promise<Component[]> {
     
     return [...limitedCpuComponents, ...limitedGpuComponents, ...limitedMemoryComponents, ...otherComponents]
   } catch (error: any) {
-    // Check if error has meaningful content
-    const hasMessage = error?.message && typeof error.message === 'string' && error.message.trim().length > 0;
-    const hasCode = error?.code && typeof error.code === 'string' && error.code.trim().length > 0;
-    const hasStack = error?.stack && typeof error.stack === 'string' && error.stack.trim().length > 0;
-    const hasName = error?.name && typeof error.name === 'string' && error.name.trim().length > 0;
+    // Log the full error for debugging
+    console.error('Error fetching components from Supabase:', {
+      message: error?.message,
+      code: error?.code,
+      details: error?.details,
+      hint: error?.hint,
+      statusCode: error?.statusCode,
+      fullError: error
+    })
     
-    // Check if error object is empty (no meaningful properties)
-    const isEmpty = !hasMessage && !hasCode && !hasStack && !hasName && 
-                   (!error || (typeof error === 'object' && Object.keys(error).length === 0));
-    
-    // Only log if error has meaningful content
-    if (!isEmpty && (hasMessage || hasCode || hasStack || hasName)) {
-      console.error('Error fetching components from Supabase:', error)
-    }
-    // Silently return empty array for empty errors
+    // Return empty array on error
     return []
   }
 }

@@ -1,6 +1,7 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
+import dynamic from "next/dynamic"
 import { useParams, useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
@@ -18,6 +19,9 @@ import {
   Wrench,
   Lightbulb,
 } from "lucide-react"
+
+// Use CSS-based 3D animation (more reliable than React Three Fiber)
+import { PC3DCSSAnimation } from "@/components/pc-3d-css-animation"
 
 // Complete guide steps with user-provided content and images
 const guideSteps = [
@@ -320,6 +324,11 @@ export default function GuideDetailPage() {
   const [currentStep, setCurrentStep] = useState(1)
   const [completedSteps, setCompletedSteps] = useState<number[]>([])
   const [isPlaying, setIsPlaying] = useState(false)
+  const [isMounted, setIsMounted] = useState(false)
+
+  useEffect(() => {
+    setIsMounted(true)
+  }, [])
 
   // Guide data - check if it's the PC assembly guide
   const isPcAssemblyGuide = params.id === "beginner-gaming-build" || params.id === "pc-assembly-guide"
@@ -426,16 +435,40 @@ export default function GuideDetailPage() {
               </CardHeader>
             </Card>
 
+            {/* Build Guide Video */}
+            {isPcAssemblyGuide && (
+              <Card>
+                <CardHeader>
+                  <CardTitle className="text-xl mb-2 font-semibold">Video Build Guide</CardTitle>
+                  <CardDescription className="text-slate-600 dark:text-slate-400">Watch the complete PC assembly process step-by-step</CardDescription>
+                </CardHeader>
+                <CardContent>
+                  {/* Build Guide GIF */}
+                  <div className="w-full aspect-video rounded-lg overflow-hidden border border-slate-200 dark:border-slate-700 bg-slate-900 flex items-center justify-center">
+                    <img
+                      src="/build-guide.gif"
+                      alt="PC Build Guide Animation"
+                      className="w-full h-full object-contain"
+                      loading="eager"
+                    />
+                  </div>
+                  <p className="text-xs text-slate-500 dark:text-slate-400 mt-2 text-center">
+                    Complete step-by-step PC assembly guide
+                  </p>
+                </CardContent>
+              </Card>
+            )}
+
             {/* Current Step */}
             {currentStepData && (
               <Card>
                 <CardHeader>
                   <div className="flex items-center justify-between">
                     <div>
-                      <CardTitle className="text-xl">
+                      <CardTitle className="text-2xl font-bold tracking-tight">
                         Step {currentStep}: {currentStepData.title}
                       </CardTitle>
-                      <CardDescription className="mt-2">{currentStepData.description}</CardDescription>
+                      <CardDescription className="mt-2 text-base font-normal">{currentStepData.description}</CardDescription>
                     </div>
                     <div className="flex items-center gap-2">
                       <Badge variant={currentStepData.difficulty === "Easy" ? "secondary" : "default"}>
@@ -449,8 +482,10 @@ export default function GuideDetailPage() {
                   {/* Step Content */}
                   {currentStepData.content && (
                     <div className="prose prose-slate dark:prose-invert max-w-none">
-                      <div className="whitespace-pre-line text-slate-700 dark:text-slate-300 leading-relaxed">
-                        {currentStepData.content}
+                      <div className="whitespace-pre-line text-slate-700 dark:text-slate-300 leading-relaxed text-base font-normal tracking-normal">
+                        <div className="space-y-3 [&>ul]:space-y-2 [&>ul]:ml-6 [&>ul]:list-disc [&>ol]:space-y-2 [&>ol]:ml-6 [&>ol]:list-decimal">
+                          {currentStepData.content}
+                        </div>
                       </div>
                     </div>
                   )}
@@ -470,8 +505,8 @@ export default function GuideDetailPage() {
                   {/* Tools Required */}
                   {currentStepData.tools.length > 0 && (
                     <div>
-                      <h4 className="font-medium mb-2 flex items-center gap-2">
-                        <Wrench className="h-4 w-4" />
+                      <h4 className="font-semibold text-lg mb-3 flex items-center gap-2 text-slate-900 dark:text-slate-100">
+                        <Wrench className="h-5 w-5" />
                         Tools Required
                       </h4>
                       <div className="flex flex-wrap gap-2">
@@ -487,15 +522,15 @@ export default function GuideDetailPage() {
                   {/* Tips */}
                   {currentStepData.tips.length > 0 && (
                     <div>
-                      <h4 className="font-medium mb-2 flex items-center gap-2">
-                        <Lightbulb className="h-4 w-4 text-yellow-500" />
+                      <h4 className="font-semibold text-lg mb-3 flex items-center gap-2 text-slate-900 dark:text-slate-100">
+                        <Lightbulb className="h-5 w-5 text-yellow-500" />
                         Pro Tips
                       </h4>
-                      <div className="space-y-2">
+                      <div className="space-y-2.5">
                         {currentStepData.tips.map((tip, index) => (
-                          <div key={index} className="flex items-start gap-2">
+                          <div key={index} className="flex items-start gap-2.5">
                             <Info className="h-4 w-4 text-blue-500 mt-0.5 flex-shrink-0" />
-                            <p className="text-sm text-slate-600 dark:text-slate-400">{tip}</p>
+                            <p className="text-base text-slate-700 dark:text-slate-300 leading-relaxed">{tip}</p>
                           </div>
                         ))}
                       </div>
@@ -505,18 +540,18 @@ export default function GuideDetailPage() {
                   {/* Warnings */}
                   {currentStepData.warnings.length > 0 && (
                     <div>
-                      <h4 className="font-medium mb-2 flex items-center gap-2">
-                        <AlertTriangle className="h-4 w-4 text-red-500" />
+                      <h4 className="font-semibold text-lg mb-3 flex items-center gap-2 text-slate-900 dark:text-slate-100">
+                        <AlertTriangle className="h-5 w-5 text-red-500" />
                         Important Warnings
                       </h4>
-                      <div className="space-y-2">
+                      <div className="space-y-2.5">
                         {currentStepData.warnings.map((warning, index) => (
                           <div
                             key={index}
-                            className="flex items-start gap-2 p-3 bg-red-50 dark:bg-red-900/20 rounded-lg"
+                            className="flex items-start gap-2.5 p-3.5 bg-red-50 dark:bg-red-900/20 rounded-lg"
                           >
                             <AlertTriangle className="h-4 w-4 text-red-500 mt-0.5 flex-shrink-0" />
-                            <p className="text-sm text-red-700 dark:text-red-300">{warning}</p>
+                            <p className="text-base text-red-700 dark:text-red-300 leading-relaxed font-medium">{warning}</p>
                           </div>
                         ))}
                       </div>

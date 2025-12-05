@@ -164,3 +164,7 @@ ORDER BY cc.category_id;
 SELECT COUNT(*) as total_components FROM components;
 
 
+
+
+
+

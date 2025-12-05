@@ -21,3 +21,7 @@ SET category_name = EXCLUDED.category_name;
 SELECT * FROM component_categories ORDER BY category_id;
 
 
+
+
+
+

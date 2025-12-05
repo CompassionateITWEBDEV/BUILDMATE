@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import Link from "next/link"
 import { usePathname, useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
@@ -51,10 +51,22 @@ interface NavigationProps {
 
 export function Navigation({ variant = "default" }: NavigationProps) {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
+  const [isScrolled, setIsScrolled] = useState(false)
   const { user, logout } = useAuth()
   const pathname = usePathname()
   const router = useRouter()
   const { startLoading, stopLoading } = useLoading()
+
+  // Handle scroll effect like Facebook
+  useEffect(() => {
+    const handleScroll = () => {
+      const scrollPosition = window.scrollY
+      setIsScrolled(scrollPosition > 10)
+    }
+
+    window.addEventListener('scroll', handleScroll, { passive: true })
+    return () => window.removeEventListener('scroll', handleScroll)
+  }, [])
 
   const isActive = (path: string) => pathname === path
 
@@ -90,7 +102,11 @@ export function Navigation({ variant = "default" }: NavigationProps) {
 
   if (variant === "minimal") {
     return (
-      <header className="border-b bg-white/80 backdrop-blur-sm dark:bg-slate-900/80">
+      <header className={`sticky top-0 z-50 border-b transition-all duration-200 ${
+        isScrolled 
+          ? 'bg-white/98 backdrop-blur-md dark:bg-slate-900/98 shadow-md' 
+          : 'bg-white/95 backdrop-blur-sm dark:bg-slate-900/95 shadow-sm'
+      }`}>
         <div className="container mx-auto px-4 py-4">
           <div className="flex items-center justify-between">
             <Link href="/" className="flex items-center gap-2">
@@ -169,7 +185,11 @@ export function Navigation({ variant = "default" }: NavigationProps) {
 
   if (variant === "dashboard") {
     return (
-      <header className="border-b bg-white/80 backdrop-blur-sm dark:bg-slate-900/80">
+      <header className={`sticky top-0 z-50 border-b transition-all duration-200 ${
+        isScrolled 
+          ? 'bg-white/98 backdrop-blur-md dark:bg-slate-900/98 shadow-md' 
+          : 'bg-white/95 backdrop-blur-sm dark:bg-slate-900/95 shadow-sm'
+      }`}>
         <div className="container mx-auto px-4 py-4">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-4">
@@ -268,7 +288,11 @@ export function Navigation({ variant = "default" }: NavigationProps) {
 
   // Default variant
   return (
-    <header className="border-b bg-white/80 backdrop-blur-sm dark:bg-slate-900/80">
+    <header className={`sticky top-0 z-50 border-b transition-all duration-200 ${
+      isScrolled 
+        ? 'bg-white/98 backdrop-blur-md dark:bg-slate-900/98 shadow-md' 
+        : 'bg-white/95 backdrop-blur-sm dark:bg-slate-900/95 shadow-sm'
+    }`}>
       <div className="container mx-auto px-4 py-4">
         <div className="flex items-center justify-between">
           <Link href="/" className="flex items-center gap-2">

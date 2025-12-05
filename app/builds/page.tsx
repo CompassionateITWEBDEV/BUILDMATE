@@ -232,19 +232,19 @@ export default function BuildsPage() {
       {/* Page Header */}
       <div className="border-b bg-white/80 backdrop-blur-sm dark:bg-slate-900/80">
         <div className="container mx-auto px-4 py-4">
-          <div className="flex items-center justify-between">
+          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
             <div>
-              <h1 className="text-2xl font-bold text-slate-900 dark:text-white">Community Builds</h1>
-              <p className="text-slate-600 dark:text-slate-400">Discover amazing PC builds from our community</p>
+              <h1 className="text-xl sm:text-2xl font-bold text-slate-900 dark:text-white">Community Builds</h1>
+              <p className="text-sm text-slate-600 dark:text-slate-400">Discover amazing PC builds from our community</p>
             </div>
-            <div className="flex gap-2">
-              <Link href="/dashboard">
-                <Button variant="outline" size="sm">
+            <div className="flex flex-wrap gap-2 w-full sm:w-auto">
+              <Link href="/dashboard" className="flex-1 sm:flex-none">
+                <Button variant="outline" size="sm" className="w-full sm:w-auto">
                   <ArrowLeft className="h-4 w-4 mr-2" />
-                  Back to Home
+                  Back
                 </Button>
               </Link>
-              <Button asChild>
+              <Button asChild className="flex-1 sm:flex-none">
                 <Link href="/builder">Create Build</Link>
               </Button>
             </div>
@@ -260,8 +260,8 @@ export default function BuildsPage() {
         )}
 
         {/* Stats */}
-        <div className="mb-8">
-          <div className="flex items-center gap-6 text-sm text-slate-600 dark:text-slate-400">
+        <div className="mb-6 sm:mb-8">
+          <div className="flex flex-wrap items-center gap-4 sm:gap-6 text-sm text-slate-600 dark:text-slate-400">
             <div className="flex items-center gap-1">
               <Users className="h-4 w-4" />
               <span>{formatNumber(statistics.totalBuilders)} builders</span>
@@ -285,7 +285,7 @@ export default function BuildsPage() {
 
           {/* Browse Tab */}
           <TabsContent value="browse" className="space-y-6">
-        <div className="flex flex-col lg:flex-row gap-4 mb-8">
+        <div className="flex flex-col gap-4 mb-6 sm:mb-8">
           <div className="flex-1 relative">
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-slate-400" />
             <Input
@@ -295,9 +295,9 @@ export default function BuildsPage() {
               onChange={(e) => setSearchTerm(e.target.value)}
             />
           </div>
-          <div className="flex gap-2">
+          <div className="flex flex-col sm:flex-row gap-2">
             <Select value={sortBy} onValueChange={setSortBy}>
-              <SelectTrigger className="w-40">
+              <SelectTrigger className="w-full sm:w-48">
                 <SelectValue placeholder="Sort by" />
               </SelectTrigger>
               <SelectContent>
@@ -309,7 +309,7 @@ export default function BuildsPage() {
               </SelectContent>
             </Select>
             <Select value={priceFilter} onValueChange={setPriceFilter}>
-              <SelectTrigger className="w-32">
+              <SelectTrigger className="w-full sm:w-40">
                 <SelectValue placeholder="Price" />
               </SelectTrigger>
               <SelectContent>
@@ -322,7 +322,7 @@ export default function BuildsPage() {
           </div>
         </div>
 
-        <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
           {filteredBuilds.map((build) => {
             const creator = build.users
             const isLiked = likedBuilds.includes(build.build_id)
@@ -407,7 +407,7 @@ export default function BuildsPage() {
                   </div>
 
                   {/* Actions */}
-                  <div className="flex items-center justify-between pt-2 border-t border-slate-100 dark:border-slate-700">
+                  <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 pt-2 border-t border-slate-100 dark:border-slate-700">
                     <div className="flex items-center gap-3">
                       <Button
                         variant="ghost"
@@ -449,11 +449,11 @@ export default function BuildsPage() {
                         <Share className="h-4 w-4" />
                       </Button>
                     </div>
-                    <div className="flex items-center gap-2">
+                    <div className="flex items-center gap-2 w-full sm:w-auto">
                       <Button 
                         size="sm" 
                         variant="outline" 
-                        className="text-xs bg-transparent"
+                        className="text-xs bg-transparent flex-1 sm:flex-none"
                         onClick={() => {
                           if (selectedBuildsForCompare.length >= 3) {
                             alert("You can compare up to 3 builds at once")
@@ -470,7 +470,7 @@ export default function BuildsPage() {
                         <BarChart3 className="h-3 w-3 mr-1" />
                         Compare
                       </Button>
-                      <Button size="sm" variant="outline" asChild className="text-xs bg-transparent">
+                      <Button size="sm" variant="outline" asChild className="text-xs bg-transparent flex-1 sm:flex-none">
                         <Link href={`/builds/${build.build_id}`}>View Details</Link>
                       </Button>
                     </div>
