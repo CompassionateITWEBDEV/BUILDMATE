@@ -63,7 +63,11 @@ export const toast = {
       icon: <CheckCircle2 className="h-5 w-5" />,
       action: {
         label: 'View',
-        onClick: () => window.location.href = '/mybuilds'
+        onClick: () => {
+          if (typeof window !== 'undefined') {
+            window.location.href = '/mybuilds'
+          }
+        }
       }
     })
   },
