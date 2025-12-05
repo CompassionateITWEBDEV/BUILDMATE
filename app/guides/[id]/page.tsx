@@ -435,11 +435,26 @@ export default function GuideDetailPage() {
               </CardHeader>
             </Card>
 
-            {/* Build Guide Animation */}
+            {/* 3D Animation */}
+            {isPcAssemblyGuide && isMounted && (
+              <Card>
+                <CardHeader>
+                  <CardTitle className="text-xl mb-2 font-semibold">3D Build Guide Animation</CardTitle>
+                  <CardDescription className="text-slate-600 dark:text-slate-400">
+                    Interactive 3D visualization of PC components. Rotate, zoom, and explore the build process step-by-step.
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <PC3DCSSAnimation currentStep={currentStep} />
+                </CardContent>
+              </Card>
+            )}
+
+            {/* Build Guide Video */}
             {isPcAssemblyGuide && (
               <Card>
                 <CardHeader>
-                  <CardTitle className="text-xl mb-2 font-semibold">Build Guide Animation</CardTitle>
+                  <CardTitle className="text-xl mb-2 font-semibold">Video Build Guide</CardTitle>
                   <CardDescription className="text-slate-600 dark:text-slate-400">Watch the complete PC assembly process step-by-step</CardDescription>
                 </CardHeader>
                 <CardContent>

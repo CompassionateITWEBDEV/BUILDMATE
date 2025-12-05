@@ -102,48 +102,29 @@ export function Navigation({ variant = "default" }: NavigationProps) {
 
   if (variant === "minimal") {
     return (
-      <header className={`fixed top-0 left-0 right-0 z-50 border-b transition-all duration-200 ${
+      <header className={`sticky top-0 z-50 border-b transition-all duration-200 ${
         isScrolled 
           ? 'bg-white/98 backdrop-blur-md dark:bg-slate-900/98 shadow-md' 
           : 'bg-white/95 backdrop-blur-sm dark:bg-slate-900/95 shadow-sm'
       }`}>
         <div className="container mx-auto px-4 py-4">
           <div className="flex items-center justify-between">
-            <div className="flex items-center gap-6">
-              <Link href="/" className="flex items-center gap-2">
-                <Cpu className="h-8 w-8 text-blue-600" />
-                <h1 className="text-2xl font-bold text-slate-900 dark:text-white">BuildMate</h1>
-              </Link>
-              
-              {/* Desktop Navigation - Directly in header */}
-              <nav className="hidden lg:flex items-center gap-6">
-                {mainNavItems.map((item) => (
-                  <Link
-                    key={item.href}
-                    href={item.href}
-                    onClick={() => handleLinkClick(item.href, item.label)}
-                    className={`flex items-center gap-2 text-sm font-medium transition-colors hover:text-slate-900 dark:hover:text-white ${
-                      isActive(item.href)
-                        ? "text-slate-900 dark:text-white"
-                        : "text-slate-600 dark:text-slate-300"
-                    }`}
-                  >
-                    <item.icon className="h-4 w-4" />
-                    {item.label}
-                  </Link>
-                ))}
-              </nav>
-            </div>
+            <Link href="/" className="flex items-center gap-2">
+              <Cpu className="h-8 w-8 text-blue-600" />
+              <h1 className="text-2xl font-bold text-slate-900 dark:text-white">BuildMate</h1>
+            </Link>
             <div className="flex items-center gap-2">
               {user ? (
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
                     <Button variant="ghost" className="relative h-8 w-8 rounded-full">
                       <Avatar className="h-8 w-8">
-                        <AvatarImage src={user.avatar_url || "/placeholder.svg"} />
-                        <AvatarFallback>
-                          {(user.user_name || user.email || "U").charAt(0).toUpperCase()}
-                        </AvatarFallback>
+                        <Avatar>
+                          <AvatarImage src={user.avatar_url || "/placeholder.svg"} />
+                          <AvatarFallback>
+                            {(user.user_name || user.email || "U").charAt(0).toUpperCase()}
+                          </AvatarFallback>
+                        </Avatar>
                       </Avatar>
                     </Button>
                   </DropdownMenuTrigger>
@@ -155,35 +136,45 @@ export function Navigation({ variant = "default" }: NavigationProps) {
                       </div>
                     </DropdownMenuLabel>
                     <DropdownMenuSeparator />
-                    {userNavItems.map((item) => (
-                      <DropdownMenuItem key={item.href} asChild>
-                        <Link href={item.href} onClick={() => handleLinkClick(item.href, item.label)}>
-                          <item.icon className="mr-2 h-4 w-4" />
-                          {item.label}
-                        </Link>
-                      </DropdownMenuItem>
-                    ))}
+                    <DropdownMenuItem asChild>
+                      <Link href="/dashboard" onClick={() => handleLinkClick("/dashboard", "Dashboard")}>
+                        Dashboard
+                      </Link>
+                    </DropdownMenuItem>
+                    <DropdownMenuItem asChild>
+                      <Link href="/profile" onClick={() => handleLinkClick("/profile", "Profile")}>
+                        Profile
+                      </Link>
+                    </DropdownMenuItem>
                     <DropdownMenuSeparator />
                     <DropdownMenuItem onClick={handleLogout}>
-                      <LogOut className="mr-2 h-4 w-4" />
                       Log out
                     </DropdownMenuItem>
                   </DropdownMenuContent>
                 </DropdownMenu>
               ) : (
-                <div className="hidden md:flex items-center gap-2">
-                  <Button variant="ghost" size="sm" asChild>
-                    <Link href="/login" onClick={() => handleLinkClick("/login", "Login")}>
-                      <LogIn className="mr-2 h-4 w-4" />
-                      Login
-                    </Link>
-                  </Button>
-                  <Button variant="default" size="sm" asChild>
-                    <Link href="/register" onClick={() => handleLinkClick("/register", "Sign Up")}>
-                      Sign Up
-                    </Link>
-                  </Button>
-                </div>
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button variant="outline">
+                      <User className="mr-2 h-4 w-4" />
+                      Account
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent className="w-48" align="end" forceMount>
+                    <DropdownMenuItem asChild>
+                      <Link href="/login" onClick={() => handleLinkClick("/login", "Login")}>
+                        <LogIn className="mr-2 h-4 w-4" />
+                        Login
+                      </Link>
+                    </DropdownMenuItem>
+                    <DropdownMenuItem asChild>
+                      <Link href="/register" onClick={() => handleLinkClick("/register", "Sign Up")}>
+                        <Plus className="mr-2 h-4 w-4" />
+                        Sign Up
+                      </Link>
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
               )}
             </div>
           </div>
@@ -194,31 +185,30 @@ export function Navigation({ variant = "default" }: NavigationProps) {
 
   if (variant === "dashboard") {
     return (
-      <header className={`fixed top-0 left-0 right-0 z-50 border-b transition-all duration-200 ${
+      <header className={`sticky top-0 z-50 border-b transition-all duration-200 ${
         isScrolled 
           ? 'bg-white/98 backdrop-blur-md dark:bg-slate-900/98 shadow-md' 
           : 'bg-white/95 backdrop-blur-sm dark:bg-slate-900/95 shadow-sm'
       }`}>
         <div className="container mx-auto px-4 py-4">
           <div className="flex items-center justify-between">
-            <div className="flex items-center gap-6">
+            <div className="flex items-center gap-4">
               <Link href="/" className="flex items-center gap-2">
                 <Cpu className="h-8 w-8 text-blue-600" />
                 <h1 className="text-2xl font-bold text-slate-900 dark:text-white">BuildMate</h1>
               </Link>
-              <nav className="hidden lg:flex items-center gap-6">
+              <nav className="hidden md:flex items-center gap-6">
                 {mainNavItems.map((item) => (
                   <Link
                     key={item.href}
                     href={item.href}
                     onClick={() => handleLinkClick(item.href, item.label)}
-                    className={`flex items-center gap-2 text-sm font-medium transition-colors hover:text-slate-900 dark:hover:text-white ${
+                    className={`text-sm font-medium transition-colors hover:text-slate-900 dark:hover:text-white ${
                       isActive(item.href)
                         ? "text-slate-900 dark:text-white"
                         : "text-slate-600 dark:text-slate-300"
                     }`}
                   >
-                    <item.icon className="h-4 w-4" />
                     {item.label}
                   </Link>
                 ))}
@@ -226,54 +216,68 @@ export function Navigation({ variant = "default" }: NavigationProps) {
             </div>
             <div className="flex items-center gap-2">
               {user ? (
+                <div className="flex items-center gap-3">
+                  <Button variant="outline" size="sm" asChild>
+                    <Link href="/builder" onClick={() => handleLinkClick("/builder", "PC Builder")}>
+                      New Build
+                    </Link>
+                  </Button>
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button variant="ghost" className="relative h-8 w-8 rounded-full">
+                        <Avatar>
+                          <AvatarImage src={user.avatar_url || "/placeholder.svg"} />
+                          <AvatarFallback>
+                            {(user.user_name || user.email || "U").charAt(0).toUpperCase()}
+                          </AvatarFallback>
+                        </Avatar>
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent className="w-56" align="end" forceMount>
+                      <DropdownMenuLabel className="font-normal">
+                        <div className="flex flex-col space-y-1">
+                          <p className="text-sm font-medium leading-none">{user.user_name}</p>
+                          <p className="text-xs leading-none text-muted-foreground">{user.email}</p>
+                        </div>
+                      </DropdownMenuLabel>
+                      <DropdownMenuSeparator />
+                      {userNavItems.map((item) => (
+                        <DropdownMenuItem key={item.href} asChild>
+                          <Link href={item.href} onClick={() => handleLinkClick(item.href, item.label)}>
+                            {item.label}
+                          </Link>
+                        </DropdownMenuItem>
+                      ))}
+                      <DropdownMenuSeparator />
+                      <DropdownMenuItem onClick={handleLogout}>
+                        Log out
+                      </DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+                </div>
+              ) : (
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
-                    <Button variant="ghost" className="relative h-8 w-8 rounded-full">
-                      <Avatar>
-                        <AvatarImage src={user.avatar_url || "/placeholder.svg"} />
-                        <AvatarFallback>
-                          {(user.user_name || user.email || "U").charAt(0).toUpperCase()}
-                        </AvatarFallback>
-                      </Avatar>
+                    <Button variant="outline">
+                      <User className="mr-2 h-4 w-4" />
+                      Account
                     </Button>
                   </DropdownMenuTrigger>
-                  <DropdownMenuContent className="w-56" align="end" forceMount>
-                    <DropdownMenuLabel className="font-normal">
-                      <div className="flex flex-col space-y-1">
-                        <p className="text-sm font-medium leading-none">{user.user_name}</p>
-                        <p className="text-xs leading-none text-muted-foreground">{user.email}</p>
-                      </div>
-                    </DropdownMenuLabel>
-                    <DropdownMenuSeparator />
-                    {userNavItems.map((item) => (
-                      <DropdownMenuItem key={item.href} asChild>
-                        <Link href={item.href} onClick={() => handleLinkClick(item.href, item.label)}>
-                          <item.icon className="mr-2 h-4 w-4" />
-                          {item.label}
-                        </Link>
-                      </DropdownMenuItem>
-                    ))}
-                    <DropdownMenuSeparator />
-                    <DropdownMenuItem onClick={handleLogout}>
-                      <LogOut className="mr-2 h-4 w-4" />
-                      Log out
+                  <DropdownMenuContent className="w-48" align="end" forceMount>
+                    <DropdownMenuItem asChild>
+                      <Link href="/login" onClick={() => handleLinkClick("/login", "Login")}>
+                        <LogIn className="mr-2 h-4 w-4" />
+                        Login
+                      </Link>
+                    </DropdownMenuItem>
+                    <DropdownMenuItem asChild>
+                      <Link href="/register" onClick={() => handleLinkClick("/register", "Sign Up")}>
+                        <Plus className="mr-2 h-4 w-4" />
+                        Sign Up
+                      </Link>
                     </DropdownMenuItem>
                   </DropdownMenuContent>
                 </DropdownMenu>
-              ) : (
-                <div className="hidden md:flex items-center gap-2">
-                  <Button variant="ghost" size="sm" asChild>
-                    <Link href="/login" onClick={() => handleLinkClick("/login", "Login")}>
-                      <LogIn className="mr-2 h-4 w-4" />
-                      Login
-                    </Link>
-                  </Button>
-                  <Button variant="default" size="sm" asChild>
-                    <Link href="/register" onClick={() => handleLinkClick("/register", "Sign Up")}>
-                      Sign Up
-                    </Link>
-                  </Button>
-                </div>
               )}
             </div>
           </div>
@@ -284,50 +288,56 @@ export function Navigation({ variant = "default" }: NavigationProps) {
 
   // Default variant
   return (
-    <header className={`fixed top-0 left-0 right-0 z-50 border-b transition-all duration-200 ${
+    <header className={`sticky top-0 z-50 border-b transition-all duration-200 ${
       isScrolled 
         ? 'bg-white/98 backdrop-blur-md dark:bg-slate-900/98 shadow-md' 
         : 'bg-white/95 backdrop-blur-sm dark:bg-slate-900/95 shadow-sm'
     }`}>
       <div className="container mx-auto px-4 py-4">
         <div className="flex items-center justify-between">
-          <div className="flex items-center gap-6">
-            <Link href="/" className="flex items-center gap-2">
-              <Cpu className="h-8 w-8 text-blue-600" />
-              <h1 className="text-2xl font-bold text-slate-900 dark:text-white">BuildMate</h1>
-            </Link>
-            
-            {/* Desktop Navigation - Directly in header */}
-            <nav className="hidden lg:flex items-center gap-6">
-              {mainNavItems.map((item) => (
-                <Link
-                  key={item.href}
-                  href={item.href}
-                  onClick={() => handleLinkClick(item.href, item.label)}
-                  className={`flex items-center gap-2 text-sm font-medium transition-colors hover:text-slate-900 dark:hover:text-white ${
-                    isActive(item.href)
-                      ? "text-slate-900 dark:text-white"
-                      : "text-slate-600 dark:text-slate-300"
-                  }`}
-                >
-                  <item.icon className="h-4 w-4" />
-                  {item.label}
-                </Link>
-              ))}
-            </nav>
-          </div>
+          <Link href="/" className="flex items-center gap-2">
+            <Cpu className="h-8 w-8 text-blue-600" />
+            <h1 className="text-2xl font-bold text-slate-900 dark:text-white">BuildMate</h1>
+          </Link>
+          
+          {/* Desktop Navigation */}
+          <nav className="hidden md:flex items-center gap-6">
+            {mainNavItems.map((item) => (
+              <Link
+                key={item.href}
+                href={item.href}
+                onClick={() => handleLinkClick(item.href, item.label)}
+                className={`flex items-center gap-2 text-sm font-medium transition-colors hover:text-slate-900 dark:hover:text-white ${
+                  isActive(item.href)
+                    ? "text-slate-900 dark:text-white"
+                    : "text-slate-600 dark:text-slate-300"
+                }`}
+              >
+                <item.icon className="h-4 w-4" />
+                {item.label}
+              </Link>
+            ))}
+          </nav>
 
           <div className="flex items-center gap-2">
             {user ? (
               <div className="flex items-center gap-3">
+                <Button variant="outline" size="sm" asChild>
+                  <Link href="/builder" onClick={() => handleLinkClick("/builder", "PC Builder")}>
+                    <Plus className="h-4 w-4 mr-2" />
+                    New Build
+                  </Link>
+                </Button>
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
                     <Button variant="ghost" className="relative h-8 w-8 rounded-full">
                       <Avatar className="h-8 w-8">
-                        <AvatarImage src={user.avatar_url || "/placeholder.svg"} />
-                        <AvatarFallback>
-                          {(user.user_name || user.email || "U").charAt(0).toUpperCase()}
-                        </AvatarFallback>
+                        <Avatar>
+                          <AvatarImage src={user.avatar_url || "/placeholder.svg"} />
+                          <AvatarFallback>
+                            {(user.user_name || user.email || "U").charAt(0).toUpperCase()}
+                          </AvatarFallback>
+                        </Avatar>
                       </Avatar>
                     </Button>
                   </DropdownMenuTrigger>
@@ -349,26 +359,34 @@ export function Navigation({ variant = "default" }: NavigationProps) {
                     ))}
                     <DropdownMenuSeparator />
                     <DropdownMenuItem onClick={handleLogout}>
-                      <LogOut className="mr-2 h-4 w-4" />
                       Log out
                     </DropdownMenuItem>
                   </DropdownMenuContent>
                 </DropdownMenu>
               </div>
             ) : (
-              <div className="hidden md:flex items-center gap-2">
-                <Button variant="ghost" size="sm" asChild>
-                  <Link href="/login" onClick={() => handleLinkClick("/login", "Login")}>
-                    <LogIn className="mr-2 h-4 w-4" />
-                    Login
-                  </Link>
-                </Button>
-                <Button variant="default" size="sm" asChild>
-                  <Link href="/register" onClick={() => handleLinkClick("/register", "Sign Up")}>
-                    Sign Up
-                  </Link>
-                </Button>
-              </div>
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="outline">
+                    <User className="mr-2 h-4 w-4" />
+                    Account
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent className="w-48" align="end" forceMount>
+                  <DropdownMenuItem asChild>
+                    <Link href="/login" onClick={() => handleLinkClick("/login", "Login")}>
+                      <LogIn className="mr-2 h-4 w-4" />
+                      Login
+                    </Link>
+                  </DropdownMenuItem>
+                  <DropdownMenuItem asChild>
+                    <Link href="/register" onClick={() => handleLinkClick("/register", "Sign Up")}>
+                      <Plus className="mr-2 h-4 w-4" />
+                      Sign Up
+                    </Link>
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
             )}
 
             {/* Mobile Menu */}
