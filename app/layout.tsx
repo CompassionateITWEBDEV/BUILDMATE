@@ -6,6 +6,7 @@ import { SupabaseAuthProvider } from "@/contexts/supabase-auth-context"
 import { LoadingProvider } from "@/contexts/loading-context"
 import { GlobalLoading } from "@/components/global-loading"
 import { PageWrapper } from "@/components/page-wrapper"
+import { Toaster } from "sonner"
 import { Suspense } from "react"
 import "./globals.css"
 
@@ -57,6 +58,18 @@ export default function RootLayout({
           <SupabaseAuthProvider>
             <LoadingProvider>
               <GlobalLoading />
+              <Toaster 
+                position="top-right"
+                richColors
+                closeButton
+                duration={4000}
+                toastOptions={{
+                  style: {
+                    background: 'white',
+                  },
+                  className: 'dark:bg-slate-800 dark:text-white dark:border-slate-700',
+                }}
+              />
               <PageWrapper>
                 {children}
               </PageWrapper>

@@ -73,60 +73,86 @@ export const userService = {
 // Component operations
 export const componentService = {
   async getAll() {
-    const { data, error } = await supabase
-      .from('components')
-      .select(`
-        *,
-        component_categories(*),
-        retailers(*)
-      `)
-      .limit(2000)  // Increase limit to fetch all components
-    
-    if (error) {
-      console.error('Supabase query error in componentService.getAll():', {
-        message: error.message,
-        code: error.code,
-        details: error.details,
-        hint: error.hint
-      })
-      throw error
-    }
-    
-    if (!data) {
-      console.warn('No data returned from components query')
+    try {
+      const { data, error } = await supabase
+        .from('components')
+        .select(`
+          *,
+          component_categories(*),
+          retailers(*)
+        `)
+        .limit(2000)  // Increase limit to fetch all components
+      
+      if (error) {
+        console.error('Supabase query error in componentService.getAll():', {
+          message: error.message,
+          code: error.code,
+          details: error.details,
+          hint: error.hint
+        })
+        
+        // Return empty array instead of throwing to prevent app crash
+        return []
+      }
+      
+      if (!data) {
+        console.warn('No data returned from components query')
+        return []
+      }
+      
+      console.log(`✅ Successfully fetched ${data.length} components from Supabase`)
+      return data
+    } catch (err) {
+      console.error('Unexpected error in componentService.getAll():', err)
       return []
     }
-    
-    return data
   },
 
   async getByCategory(categoryId: number) {
-    const { data, error } = await supabase
-      .from('components')
-      .select(`
-        *,
-        component_categories(*),
-        retailers(*)
-      `)
-      .eq('category_id', categoryId)
-    
-    if (error) throw error
-    return data
+    try {
+      const { data, error } = await supabase
+        .from('components')
+        .select(`
+          *,
+          component_categories(*),
+          retailers(*)
+        `)
+        .eq('category_id', categoryId)
+      
+      if (error) {
+        console.error(`Error fetching components for category ${categoryId}:`, error)
+        return []
+      }
+      
+      return data || []
+    } catch (err) {
+      console.error('Unexpected error in componentService.getByCategory():', err)
+      return []
+    }
   },
 
   async getById(componentId: number) {
-    const { data, error } = await supabase
-      .from('components')
-      .select(`
-        *,
-        component_categories(*),
-        retailers(*)
-      `)
-      .eq('component_id', componentId)
-      .single()
-    
-    if (error) throw error
-    return data
+    try {
+      const { data, error } = await supabase
+        .from('components')
+        .select(`
+          *,
+          component_categories(*),
+          retailers(*)
+        `)
+        .eq('component_id', componentId)
+        .single()
+      
+      if (error) {
+        console.error(`Error fetching component ${componentId}:`, error)
+        return null
+      }
+      
+      return data
+    } catch (err) {
+      console.error('Unexpected error in componentService.getById():', err)
+      return null
+    }
   },
 
   async create(component: Database['public']['Tables']['components']['Insert']) {
