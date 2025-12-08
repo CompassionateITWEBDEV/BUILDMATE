@@ -57,6 +57,25 @@ export function Navigation({ variant = "default" }: NavigationProps) {
   const router = useRouter()
   const { startLoading, stopLoading } = useLoading()
 
+  // Get page title based on current pathname
+  const getPageTitle = () => {
+    if (pathname === '/builder') return 'PC Builder'
+    if (pathname === '/builds') return 'Community Builds'
+    if (pathname?.startsWith('/builds/')) return 'Build Details'
+    if (pathname === '/guides') return 'Build Guides'
+    if (pathname?.startsWith('/guides/')) return 'Build Guide'
+    if (pathname === '/support') return 'Support'
+    if (pathname === '/dashboard') return 'Dashboard'
+    if (pathname === '/profile') return 'Profile'
+    if (pathname === '/mybuilds') return 'My Builds'
+    if (pathname?.startsWith('/mybuilds/')) return 'Build Details'
+    if (pathname === '/likedbuilds') return 'Liked Builds'
+    if (pathname === '/admin') return 'Admin Dashboard'
+    if (pathname === '/login') return 'Login'
+    if (pathname === '/register') return 'Register'
+    return 'BuildMate'
+  }
+
   // Handle scroll effect like Facebook
   useEffect(() => {
     const handleScroll = () => {
@@ -111,7 +130,7 @@ export function Navigation({ variant = "default" }: NavigationProps) {
           <div className="flex items-center justify-between">
             <Link href="/" className="flex items-center gap-2">
               <Cpu className="h-8 w-8 text-blue-600" />
-              <h1 className="text-2xl font-bold text-slate-900 dark:text-white">BuildMate</h1>
+              <h1 className="text-2xl font-bold text-slate-900 dark:text-white">{getPageTitle()}</h1>
             </Link>
             <div className="flex items-center gap-2">
               {user ? (
@@ -195,7 +214,7 @@ export function Navigation({ variant = "default" }: NavigationProps) {
             <div className="flex items-center gap-4">
               <Link href="/" className="flex items-center gap-2">
                 <Cpu className="h-8 w-8 text-blue-600" />
-                <h1 className="text-2xl font-bold text-slate-900 dark:text-white">BuildMate</h1>
+                <h1 className="text-2xl font-bold text-slate-900 dark:text-white">{getPageTitle()}</h1>
               </Link>
               <nav className="hidden md:flex items-center gap-6">
                 {mainNavItems.map((item) => (
@@ -297,7 +316,7 @@ export function Navigation({ variant = "default" }: NavigationProps) {
         <div className="flex items-center justify-between">
           <Link href="/" className="flex items-center gap-2">
             <Cpu className="h-8 w-8 text-blue-600" />
-            <h1 className="text-2xl font-bold text-slate-900 dark:text-white">BuildMate</h1>
+            <h1 className="text-2xl font-bold text-slate-900 dark:text-white">{getPageTitle()}</h1>
           </Link>
           
           {/* Desktop Navigation */}

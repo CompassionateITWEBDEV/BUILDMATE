@@ -1,0 +1,54 @@
+1. Prepare the Case
+
+Start by getting your PC case ready. Remove the back, front, and side panels so you have full access to everything. This makes installation smoother and prevents you from bumping into cramped spaces later on. Keep the screws in a safe spot—you’ll need them again at the end.
+
+2. Install the Motherboard
+
+Place the case on its side and check that the standoffs are already installed in the correct positions. Carefully lower the motherboard into the case, aligning it with the I/O shield and the standoffs. Once everything lines up, screw the motherboard down firmly but not too tight—you don’t wanna crack it.
+
+3. Install the CPU
+
+Find the CPU socket on your motherboard and lift the retention arm. Look for the small triangle marker on both the CPU and the socket—they’re your alignment guide. Gently place the CPU in without forcing it. Once it sits flat, lower the arm back into place.
+
+4. Apply Thermal Paste & Install CPU Cooler
+
+Put a pea-sized drop of thermal paste in the middle of the CPU. Then mount your CPU cooler according to its bracket system. Secure it firmly so it makes full contact with the CPU. After mounting, plug the cooler’s fan connector into the CPU_FAN header on the motherboard.
+
+5. Install the RAM
+
+Locate the RAM slots and open the clips. Align the RAM stick with the notch and push down until both clips snap into place. If you have two sticks, check the motherboard manual for the correct dual-channel slots.
+
+6. Install the SSD
+
+If you’re using an M.2 SSD, find the M.2 slot on the motherboard, insert the SSD at a slight angle, then push it down and screw it in.
+For SATA SSDs, mount them in their designated tray or bracket, then connect the SATA data cable to the motherboard and the SATA power cable from the PSU.
+
+7. Install the GPU
+
+Find the PCIe x16 slot on the motherboard and pop open the expansion slot covers at the back of the case. Align the GPU with the PCIe slot and press it down until it clicks. Screw the GPU bracket to the case to keep it locked in place.
+
+8. Install the Fans
+
+Position your case fans based on airflow (intake at the front/bottom, exhaust at the back/top). Screw them into place and make sure the cables are reachable for later connections.
+
+9. Install the PSU
+
+Slide the power supply into its compartment, usually at the bottom or top of the case depending on the design. Secure it with screws and make sure the fan is facing the correct direction for airflow.
+
+10. Connect All Cables
+• Fans → Motherboard
+
+Plug each fan into the SYS_FAN or CHA_FAN headers. If you’re using a hub or splitter, follow its instructions.
+
+• Motherboard → PSU
+
+Connect the main 24-pin motherboard power cable.
+Connect the 8-pin (or 4+4 pin) CPU power cable to the motherboard’s EPS header.
+
+• GPU → PSU
+
+If your GPU needs extra power, connect the 6-pin, 8-pin, or multiple PCIe power connectors from the PSU.
+
+11. Reattach All Panels
+
+Once everything is connected and organized, reinstall the back, front, and side panels. Make sure nothing is pinched or blocking airflow. When the case is all closed up, your build is ready for power-on testing.

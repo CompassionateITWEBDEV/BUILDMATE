@@ -1,0 +1,358 @@
+BUILD GUIDE STEPS 2-11
+========================
+
+STEP 2: PREPARE THE CASE
+-------------------------
+Title: Prepare the PC Case
+Description: Open the case and install necessary standoffs
+Duration: 10 minutes
+Difficulty: Easy
+Tools: Screwdriver, Motherboard standoffs
+
+Content:
+1. Remove both side panels from the case
+2. Lay the case on its side for easy access
+3. Locate the motherboard mounting area
+4. Install motherboard standoffs in the correct positions
+   - Match the standoff positions with your motherboard size (ATX, Micro-ATX, etc.)
+   - Hand-tighten the standoffs - don't use excessive force
+5. Remove any unnecessary drive cages to improve airflow
+6. Check that the I/O shield is ready (comes with motherboard)
+
+Tips:
+- Only install standoffs where your motherboard has mounting holes
+- Extra standoffs can cause electrical shorts
+- Keep all screws organized in a small container
+
+Warnings:
+- Never skip standoffs - they prevent motherboard shorts
+- Don't force standoffs - they should screw in smoothly
+- Remove protective film from case windows if present
+
+Image: /2nd-case.png
+
+
+STEP 3: INSTALL I/O SHIELD AND PREPARE MOTHERBOARD
+---------------------------------------------------
+Title: Install I/O Shield and Prepare Motherboard
+Description: Install the I/O shield and prepare motherboard for installation
+Duration: 5 minutes
+Difficulty: Easy
+Tools: None (hands only)
+
+Content:
+1. Take the I/O shield from your motherboard box
+2. From inside the case, push the I/O shield into the rectangular opening at the back
+3. Make sure it snaps firmly into place on all four sides
+4. Press all edges until you hear clicks
+5. Check that no metal tabs are bent inward (they can block ports)
+6. Place the motherboard nearby for the next step
+
+Tips:
+- The I/O shield only fits one way - don't force it
+- Some I/O shields have foam padding - keep it in place
+- Ensure all port cutouts align properly
+
+Warnings:
+- Sharp edges on I/O shield - handle carefully
+- Make sure it's fully seated before proceeding
+- Metal tabs should point away from where ports will be
+
+Image: /3rd-io.png
+
+
+STEP 4: INSTALL CPU ON MOTHERBOARD
+-----------------------------------
+Title: Install the Processor (CPU)
+Description: Install the CPU onto the motherboard socket
+Duration: 10 minutes
+Difficulty: Medium
+Tools: None (very gentle hands)
+
+Content:
+1. Place motherboard on its box (anti-static surface)
+2. Locate the CPU socket (large square with lots of pins/contacts)
+3. Lift the retention arm/lever
+4. For Intel: Lift the metal bracket
+   For AMD: Just lift the lever
+5. Align the CPU with the socket:
+   - Look for the golden triangle on CPU corner
+   - Match it with the triangle on the socket
+6. Gently place the CPU - it should drop in with NO FORCE
+7. Lower the retention arm back down
+
+Tips:
+- Never touch the bottom of the CPU (the pins/contacts)
+- The CPU should sit perfectly flat
+- If it doesn't drop in easily, you have the wrong orientation
+
+Warnings:
+- DO NOT FORCE THE CPU - it should seat naturally
+- Never touch the socket pins
+- Static electricity can damage the CPU - ground yourself first
+
+Image: /4th-cpu.png
+
+
+STEP 5: APPLY THERMAL PASTE AND INSTALL CPU COOLER
+--------------------------------------------------
+Title: Apply Thermal Paste and Install CPU Cooler
+Description: Apply thermal paste and mount the CPU cooler
+Duration: 15 minutes
+Difficulty: Medium
+Tools: Thermal paste (if not pre-applied), Screwdriver
+
+Content:
+1. Check if your cooler has pre-applied thermal paste
+   - If YES: Skip to step 3
+   - If NO: Continue to step 2
+2. Apply thermal paste to CPU:
+   - Put a small pea-sized dot in the center of the CPU
+   - Don't spread it - the cooler will do that
+3. Remove any protective stickers from cooler base
+4. Align the cooler with the mounting brackets
+5. For Intel: Push down plastic push-pins in X pattern
+   For AMD: Screw down in X pattern
+6. Connect the CPU fan cable to CPU_FAN header on motherboard
+   - Look for "CPU_FAN" label near the CPU socket
+
+Tips:
+- Less is more with thermal paste - pea-sized is enough
+- Tighten screws in X pattern (diagonal) for even pressure
+- The cooler should be firm but you shouldn't need excessive force
+
+Warnings:
+- Too much thermal paste can cause overheating
+- Make sure the cooler is firmly attached
+- Don't forget to plug in the CPU fan cable!
+
+Image: /5th-cooler.png
+
+
+STEP 6: INSTALL RAM MEMORY
+---------------------------
+Title: Install RAM (Memory Modules)
+Description: Install RAM sticks into motherboard slots
+Duration: 5 minutes
+Difficulty: Easy
+Tools: None
+
+Content:
+1. Locate the RAM slots (usually 2 or 4 slots near the CPU)
+2. Open the locking clips on both ends of the slot
+3. Check your motherboard manual for correct slot configuration
+   - For 2 sticks: Usually use slots 2 and 4 (skip slot 1 and 3)
+   - This enables dual-channel mode for better performance
+4. Align the notch on the RAM stick with the notch in the slot
+5. Press down firmly on both ends until the clips snap back up
+6. You should hear a distinct "click" when properly seated
+
+Tips:
+- Match the notch - RAM only goes in one way
+- Press straight down with even pressure on both ends
+- The clips should automatically lock when fully seated
+
+Warnings:
+- Don't force at an angle - press straight down
+- Ensure RAM is fully seated - check both ends
+- Verify RAM speed matches your motherboard's capability
+
+Image: /6th-ram.png
+
+
+STEP 7: INSTALL M.2 SSD STORAGE
+--------------------------------
+Title: Install M.2 SSD
+Description: Install M.2 NVMe SSD for fast storage
+Duration: 5 minutes
+Difficulty: Easy
+Tools: Small screwdriver
+
+Content:
+1. Locate the M.2 slot on your motherboard
+   - Usually below the CPU or between CPU and GPU area
+   - Check motherboard manual if unsure
+2. Remove the M.2 screw and standoff if present
+3. Carefully insert the M.2 SSD at a 30-degree angle
+4. The gold contacts should fully insert into the slot
+5. Press down gently on the other end
+6. Secure with the M.2 screw
+7. Don't overtighten - just snug
+
+Tips:
+- Some motherboards have heatsinks for M.2 - use them if available
+- The SSD should sit flat when screwed down
+- Check which M.2 slot supports NVMe (faster than SATA)
+
+Warnings:
+- Don't force the SSD - it should slide in smoothly
+- The screw is tiny - don't lose it!
+- Ensure the SSD is NVMe for best performance
+
+Image: /7th-ssd.png
+
+
+STEP 8: MOUNT MOTHERBOARD INTO CASE
+------------------------------------
+Title: Install Motherboard into Case
+Description: Mount the prepared motherboard into the PC case
+Duration: 15 minutes
+Difficulty: Medium
+Tools: Screwdriver, Motherboard screws
+
+Content:
+1. Verify all standoffs are in correct positions
+2. Carefully lower the motherboard into the case
+3. Align the back ports with the I/O shield cutouts
+4. Push gently to ensure I/O shield is properly seated
+5. Align motherboard holes with standoffs
+6. Insert screws and hand-tighten first (don't fully tighten yet)
+7. Once all screws are in, tighten in a star/diagonal pattern
+8. Don't overtighten - just snug and secure
+
+Tips:
+- It may take a few attempts to align everything
+- The motherboard should sit flat against standoffs
+- All mounting holes should have screws
+
+Warnings:
+- Don't force the motherboard - adjust I/O shield if needed
+- Missing standoffs can cause motherboard to flex
+- Overtightening can crack the motherboard
+
+Image: /8th-mobo-install.png
+
+
+STEP 9: INSTALL POWER SUPPLY (PSU)
+-----------------------------------
+Title: Install the Power Supply
+Description: Mount the PSU and route main cables
+Duration: 15 minutes
+Difficulty: Medium
+Tools: Screwdriver, PSU screws
+
+Content:
+1. Identify PSU mounting location (usually bottom or top rear)
+2. Determine fan orientation:
+   - If PSU at bottom with vent: Fan facing DOWN (intake from outside)
+   - If PSU at top: Fan facing UP (intake from inside case)
+3. Slide PSU into position
+4. Align screw holes
+5. Secure with 4 screws from outside the case
+6. Route the main cables through cable management holes:
+   - 24-pin ATX power (largest cable)
+   - 8-pin CPU power (4+4 cable)
+7. Leave cables loose for now - we'll connect them later
+
+Tips:
+- Fan should intake cool air from outside case when possible
+- Route cables behind motherboard tray for clean look
+- Don't plug in PSU yet - wait until everything is installed
+
+Warnings:
+- Make sure PSU switch is set to OFF
+- Don't plug into wall outlet yet
+- Check that voltage switch matches your country (110V or 220V)
+
+Image: /9th-psu.png
+
+
+STEP 10: INSTALL GRAPHICS CARD (GPU)
+-------------------------------------
+Title: Install Graphics Card
+Description: Install the GPU into PCIe slot
+Duration: 10 minutes
+Difficulty: Medium
+Tools: Screwdriver
+
+Content:
+1. Locate the PCIe x16 slot (top/long slot, usually closest to CPU)
+2. Remove the corresponding slot covers from the back of the case
+   - Usually 2 or 3 slots depending on GPU size
+3. Press down the PCIe slot locking clip
+4. Align the GPU with the slot
+5. Press down firmly until you hear a click
+   - The locking clip should snap back up
+6. Secure the GPU bracket to the case with screws
+7. Don't connect power cables yet - next step
+
+Tips:
+- Remove GPU from anti-static bag just before installation
+- The GPU should be level and fully seated
+- Large GPUs may sag - consider a support bracket
+
+Warnings:
+- Don't force the GPU - it should slide in smoothly
+- Ensure the locking clip fully engages
+- Check GPU power requirements (6-pin, 8-pin, or both)
+
+Image: /10th-gpu.png
+
+
+STEP 11: CONNECT ALL POWER CABLES AND CASE CONNECTORS
+------------------------------------------------------
+Title: Connect All Cables
+Description: Connect power cables and front panel connectors
+Duration: 20 minutes
+Difficulty: Medium-Hard
+Tools: None (patience required!)
+
+Content:
+POWER CABLES:
+1. Connect 24-pin ATX power to motherboard (largest connector)
+2. Connect 8-pin CPU power (near top of motherboard, labeled "CPU_PWR")
+3. Connect GPU power cables (6-pin and/or 8-pin as required)
+4. Connect SATA power to any SATA drives if you have them
+
+CASE CABLES (Front Panel Connectors):
+Check motherboard manual for exact location (usually bottom-right)
+
+5. Connect USB 3.0 header (blue connector from case to "USB 3.0" on motherboard)
+6. Connect USB 2.0 header (from case to "USB" on motherboard)
+7. Connect HD Audio header (from case to "AUDIO" on motherboard)
+8. Connect front panel connectors (small cables):
+   - PWR_SW (Power Switch) - most important!
+   - RESET_SW (Reset Switch)
+   - PWR_LED+ and PWR_LED- (Power LED)
+   - HDD_LED+ and HDD_LED- (Activity LED)
+
+FANS:
+9. Connect case fans to CHA_FAN or SYS_FAN headers
+
+Tips:
+- Take a photo of motherboard manual's connector diagram
+- Power cables only fit one way - don't force
+- Front panel connectors are tiny - use tweezers if needed
+- +/- polarity matters for LEDs (but won't damage if wrong)
+
+Warnings:
+- Double-check CPU power cable (8-pin) is NOT a PCIe cable
+- Make sure all power connectors click into place
+- Don't bend pins on front panel connectors
+- PWR_SW must be connected or PC won't turn on
+
+Image: /11th-cables.png
+
+
+FINAL STEP: CLOSE CASE AND FIRST BOOT
+--------------------------------------
+1. Tuck all excess cables behind the motherboard tray
+2. Do a final visual check:
+   ✓ All power cables connected
+   ✓ All fans connected
+   ✓ RAM fully seated
+   ✓ GPU fully seated and secured
+   ✓ No loose screws inside case
+
+3. Replace side panels and secure with screws
+4. Connect monitor to GPU (NOT motherboard!)
+5. Connect keyboard and mouse
+6. Plug PSU into wall outlet
+7. Turn on PSU switch (back of PSU)
+8. Press the power button!
+
+If it boots to BIOS: SUCCESS! 🎉
+If not: Check power cables first (most common issue)
+
+Congratulations! You've built your first PC!
+

@@ -249,23 +249,6 @@ export default function BuildsPage() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 dark:from-slate-900 dark:to-slate-800">
       
-      {/* Page Header */}
-      <div className="border-b bg-white/80 backdrop-blur-sm dark:bg-slate-900/80">
-        <div className="container mx-auto px-4 py-4">
-          <div className="flex items-center justify-between">
-            <div>
-              <h1 className="text-2xl font-bold text-slate-900 dark:text-white">Your Builds</h1>
-              <p className="text-slate-600 dark:text-slate-400">These are all the PC builds you've created</p>
-            </div>
-            <div className="flex gap-2">
-              <Button asChild>
-                <Link href="/builder">Create Build</Link>
-              </Button>
-            </div>
-          </div>
-        </div>
-      </div>
-
       <div className="container mx-auto px-4 py-8">
         {error && (
           <div className="mb-4 p-4 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg">

@@ -5,7 +5,6 @@ import { useRouter } from "next/navigation"
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
 import { Card, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { Navigation } from "@/components/navigation"
 import { WelcomeScreen } from "@/components/welcome-screen"
 import { useAuth } from "@/contexts/supabase-auth-context"
 import { Cpu, HardDrive, Monitor, Zap, Users, BookOpen, Star } from "lucide-react"
@@ -49,9 +48,6 @@ export default function HomePage() {
     <>
       {showWelcome && <WelcomeScreen onComplete={handleWelcomeComplete} />}
       <div className={`min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 dark:from-slate-900 dark:to-slate-800 transition-opacity duration-1000 ${isFaded ? 'opacity-100' : 'opacity-0'}`}>
-        <div className={`transition-opacity duration-1000 ${isFaded ? 'opacity-100 animate-fade-in-up' : 'opacity-0'}`}>
-          <Navigation />
-        </div>
 
         {/* Hero Section with Background */}
         <section className={`relative py-32 md:py-40 overflow-hidden transition-opacity duration-1000 ${isFaded ? 'opacity-100 animate-fade-in-up animation-delay-200' : 'opacity-0'}`}>

@@ -92,44 +92,58 @@ export default function BuildsPage() {
       setLoading(true)
       setError(null)
       
-      // Add timeout to prevent infinite loading
-      const timeoutPromise = new Promise((_, reject) => 
-        setTimeout(() => reject(new Error('Loading timeout')), 10000) // 10 second timeout
+      console.log('🔍 Fetching builds from database...')
+      
+      // Fetch builds - no timeout, just proper loading
+      const allBuilds = await buildService.getAll()
+      
+      console.log(`✅ Fetched ${allBuilds.length} builds from database`)
+      
+      if (!allBuilds || allBuilds.length === 0) {
+        console.warn('⚠️ No builds found in database')
+        setBuilds([])
+        setLoading(false)
+        return
+      }
+      
+      // Limit to 30 builds for better performance
+      const limitedBuilds = allBuilds.slice(0, 30)
+      
+      // Fetch all build details immediately - no delay
+      const buildsWithDetails = await Promise.all(
+        limitedBuilds.map(async (build) => {
+          try {
+            const components = await buildComponentService.getBuildComponents(build.build_id)
+            const totalPrice = components.reduce((sum, bc: any) => sum + (Number(bc.components?.component_price) || 0), 0) || build.total_price || 0
+            return {
+              ...build,
+              components,
+              totalPrice,
+              comments: build.comments || 0,
+              likes: build.likes || 0,
+              views: build.views || 0
+            }
+          } catch (err) {
+            console.error(`Error processing build ${build.build_id}:`, err)
+            // Return build with stored price if component fetch fails
+            return { 
+              ...build, 
+              components: [], 
+              totalPrice: build.total_price || 0, 
+              comments: build.comments || 0, 
+              likes: build.likes || 0, 
+              views: build.views || 0 
+            }
+          }
+        })
       )
       
-      const fetchPromise = buildService.getAll().then(async (allBuilds) => {
-        const buildsWithDetails = await Promise.all(
-          allBuilds.map(async (build) => {
-            try {
-              const components = await buildComponentService.getBuildComponents(build.build_id)
-              const totalPrice = components.reduce((sum, bc: any) => sum + (Number(bc.components?.component_price) || 0), 0)
-              const { count: commentsCount } = await supabase
-                .from('build_comments')
-                .select('*', { count: 'exact', head: true })
-                .eq('build_id', build.build_id)
-              return {
-                ...build,
-                components,
-                totalPrice,
-                comments: commentsCount || build.comments || 0,
-                likes: build.likes || 0,
-                views: build.views || 0
-              }
-            } catch (err) {
-              console.error(err)
-              return { ...build, components: [], totalPrice: 0, comments: 0, likes: 0, views: 0 }
-            }
-          })
-        )
-        return buildsWithDetails
-      })
-      
-      const buildsWithDetails = await Promise.race([fetchPromise, timeoutPromise]) as BuildWithDetails[]
+      console.log(`✅ Successfully loaded ${buildsWithDetails.length} builds with components`)
       setBuilds(buildsWithDetails)
+      
     } catch (err: any) {
-      console.error('Error fetching builds:', err)
-      setError(err.message || 'Failed to load builds')
-      // Even on error, clear loading state
+      console.error('❌ Error fetching builds:', err)
+      setError(err.message || 'Failed to load builds. Please check your database connection.')
       setBuilds([])
     } finally {
       // ALWAYS clear loading state
@@ -229,29 +243,6 @@ export default function BuildsPage() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 dark:from-slate-900 dark:to-slate-800">
       
-      {/* Page Header */}
-      <div className="border-b bg-white/80 backdrop-blur-sm dark:bg-slate-900/80">
-        <div className="container mx-auto px-4 py-4">
-          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-            <div>
-              <h1 className="text-xl sm:text-2xl font-bold text-slate-900 dark:text-white">Community Builds</h1>
-              <p className="text-sm text-slate-600 dark:text-slate-400">Discover amazing PC builds from our community</p>
-            </div>
-            <div className="flex flex-wrap gap-2 w-full sm:w-auto">
-              <Link href="/dashboard" className="flex-1 sm:flex-none">
-                <Button variant="outline" size="sm" className="w-full sm:w-auto">
-                  <ArrowLeft className="h-4 w-4 mr-2" />
-                  Back
-                </Button>
-              </Link>
-              <Button asChild className="flex-1 sm:flex-none">
-                <Link href="/builder">Create Build</Link>
-              </Button>
-            </div>
-          </div>
-        </div>
-      </div>
-
       <div className="container mx-auto px-4 py-8">
         {error && (
           <div className="mb-4 p-4 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg">

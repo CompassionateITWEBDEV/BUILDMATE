@@ -20,9 +20,6 @@ import {
   Lightbulb,
 } from "lucide-react"
 
-// Use CSS-based 3D animation (more reliable than React Three Fiber)
-import { PC3DCSSAnimation } from "@/components/pc-3d-css-animation"
-
 // Complete guide steps with user-provided content and images
 const guideSteps = [
   {
@@ -54,266 +51,322 @@ Double-check that nothing is missing. It's way easier to spot problems early.`,
       "Keep component boxes nearby for easy access",
     ],
     warnings: ["Avoid working on carpeted surfaces to prevent static buildup"],
-    image: "/1st.png",
+    image: "/1. Prepare the Case.gif",
     completed: false,
   },
   {
     id: 2,
-    title: "Install the CPU on the Motherboard",
-    description: "Carefully install the processor into the motherboard socket with proper alignment",
+    title: "Prepare the PC Case",
+    description: "Open the case and install necessary standoffs",
     duration: "10 minutes",
-    difficulty: "Medium",
-    tools: ["Anti-static protection"],
-    content: `Place the motherboard on its box or an anti-static mat.
-
-1. Open the CPU socket lever.
-2. Align the golden triangle on the CPU with the matching triangle on the socket.
-3. Gently lower the CPU into place—no force needed.
-4. Lock the CPU using the lever.
-
-If it doesn't fit easily, stop and realign. Never press down on a CPU.`,
+    difficulty: "Easy",
+    tools: ["Screwdriver", "Motherboard standoffs"],
+    content: `1. Remove both side panels from the case
+2. Lay the case on its side for easy access
+3. Locate the motherboard mounting area
+4. Install motherboard standoffs in the correct positions
+   - Match the standoff positions with your motherboard size (ATX, Micro-ATX, etc.)
+   - Hand-tighten the standoffs - don't use excessive force
+5. Remove any unnecessary drive cages to improve airflow
+6. Check that the I/O shield is ready (comes with motherboard)`,
     tips: [
-      "Handle CPU by edges only - never touch pins or contacts",
-      "CPU will only fit one way - don't force it",
-      "The golden triangle is your alignment guide",
+      "Only install standoffs where your motherboard has mounting holes",
+      "Extra standoffs can cause electrical shorts",
+      "Keep all screws organized in a small container",
     ],
     warnings: [
-      "NEVER force the CPU - it should drop in easily",
-      "Static electricity can damage the CPU - stay grounded",
-      "Keep CPU in anti-static packaging until ready to install",
+      "Never skip standoffs - they prevent motherboard shorts",
+      "Don't force standoffs - they should screw in smoothly",
+      "Remove protective film from case windows if present",
     ],
-    image: "/2nd.png",
+    image: "/1. Prepare the Case.gif",
     completed: false,
   },
   {
     id: 3,
-    title: "Apply Thermal Paste and Install the CPU Cooler",
-    description: "Apply thermal paste and mount the CPU cooler properly",
-    duration: "15 minutes",
-    difficulty: "Medium",
-    tools: ["Thermal paste", "CPU cooler", "Screwdriver"],
-    content: `1. Apply a pea-sized dot of thermal paste on top of the CPU.
-2. Place the CPU cooler/fan directly on top.
-3. Tighten the screws evenly in a cross pattern.
-4. Connect the fan cable to the motherboard port labeled CPU_FAN.
-
-The thermal paste helps transfer heat. Too much or too little can cause overheating.`,
+    title: "Install I/O Shield and Prepare Motherboard",
+    description: "Install the I/O shield and prepare motherboard for installation",
+    duration: "5 minutes",
+    difficulty: "Easy",
+    tools: ["None (hands only)"],
+    content: `1. Take the I/O shield from your motherboard box
+2. From inside the case, push the I/O shield into the rectangular opening at the back
+3. Make sure it snaps firmly into place on all four sides
+4. Press all edges until you hear clicks
+5. Check that no metal tabs are bent inward (they can block ports)
+6. Place the motherboard nearby for the next step`,
     tips: [
-      "A pea-sized amount is usually enough",
-      "Tighten screws in a cross pattern for even pressure",
-      "Make sure the cooler is making full contact with the CPU",
+      "The I/O shield only fits one way - don't force it",
+      "Some I/O shields have foam padding - keep it in place",
+      "Ensure all port cutouts align properly",
     ],
     warnings: [
-      "Too much thermal paste can cause overheating",
-      "Too little thermal paste can also cause overheating",
-      "Don't forget to connect the CPU_FAN header",
+      "Sharp edges on I/O shield - handle carefully",
+      "Make sure it's fully seated before proceeding",
+      "Metal tabs should point away from where ports will be",
     ],
-    image: "/3rd.png",
+    image: "/2. Install the Motherboard.gif",
     completed: false,
   },
   {
     id: 4,
-    title: "Install RAM and SSD",
-    description: "Install memory modules and storage drives",
+    title: "Install CPU on Motherboard",
+    description: "Install the CPU onto the motherboard socket",
     duration: "10 minutes",
-    difficulty: "Easy",
-    tools: ["Screwdriver (for M.2 SSD)"],
-    content: `RAM Installation:
-- Find the RAM slots on the motherboard.
-- Open the locking clips.
-- Align the notch, then press down firmly until it clicks.
-
-M.2 SSD Installation:
-- Locate the M.2 slot.
-- Insert the SSD at a slight angle.
-- Push it down and secure it with a screw.
-
-SSDs installed in M.2 slots boot faster and look cleaner.`,
+    difficulty: "Medium",
+    tools: ["None (very gentle hands)"],
+    content: `1. Place motherboard on its box (anti-static surface)
+2. Locate the CPU socket (large square with lots of pins/contacts)
+3. Lift the retention arm/lever
+4. For Intel: Lift the metal bracket
+   For AMD: Just lift the lever
+5. Align the CPU with the socket:
+   - Look for the golden triangle on CPU corner
+   - Match it with the triangle on the socket
+6. Gently place the CPU - it should drop in with NO FORCE
+7. Lower the retention arm back down`,
     tips: [
-      "Check motherboard manual for correct slot configuration",
-      "Press down firmly until clips snap into place",
-      "For dual-channel, use slots 2 and 4 first (usually color-coded)",
+      "Never touch the bottom of the CPU (the pins/contacts)",
+      "The CPU should sit perfectly flat",
+      "If it doesn't drop in easily, you have the wrong orientation",
     ],
     warnings: [
-      "Ensure RAM is fully seated - you should hear a click",
-      "Match RAM speed with motherboard specifications",
-      "Don't forget the M.2 SSD screw",
+      "DO NOT FORCE THE CPU - it should seat naturally",
+      "Never touch the socket pins",
+      "Static electricity can damage the CPU - ground yourself first",
     ],
-    image: "/4th.png",
+    image: "/3. Install the CPU.gif",
     completed: false,
   },
   {
     id: 5,
-    title: "Mount the Motherboard in the Case",
-    description: "Install the motherboard into the PC case with proper alignment",
+    title: "Apply Thermal Paste and Install CPU Cooler",
+    description: "Apply thermal paste and mount the CPU cooler",
     duration: "15 minutes",
     difficulty: "Medium",
-    tools: ["Screwdriver", "Motherboard standoffs"],
-    content: `1. Open the case and lay it on its side.
-2. Install motherboard standoffs (small metal spacers) if they aren't preinstalled.
-3. Carefully align the motherboard with the I/O shield and standoffs.
-4. Secure it using the screws provided.
-
-Do not overtighten screws—just snug and secure.`,
+    tools: ["Thermal paste (if not pre-applied)", "Screwdriver"],
+    content: `1. Check if your cooler has pre-applied thermal paste
+   - If YES: Skip to step 3
+   - If NO: Continue to step 2
+2. Apply thermal paste to CPU:
+   - Put a small pea-sized dot in the center of the CPU
+   - Don't spread it - the cooler will do that
+3. Remove any protective stickers from cooler base
+4. Align the cooler with the mounting brackets
+5. For Intel: Push down plastic push-pins in X pattern
+   For AMD: Screw down in X pattern
+6. Connect the CPU fan cable to CPU_FAN header on motherboard
+   - Look for "CPU_FAN" label near the CPU socket`,
     tips: [
-      "Only install standoffs where motherboard mounting holes are located",
-      "Hand-tighten standoffs - don't over-tighten",
-      "Test fit motherboard before final installation",
+      "Less is more with thermal paste - pea-sized is enough",
+      "Tighten screws in X pattern (diagonal) for even pressure",
+      "The cooler should be firm but you shouldn't need excessive force",
     ],
     warnings: [
-      "Extra standoffs can cause short circuits - only use what's needed",
-      "Ensure standoffs are properly threaded into case",
-      "Don't overtighten - just snug",
+      "Too much thermal paste can cause overheating",
+      "Make sure the cooler is firmly attached",
+      "Don't forget to plug in the CPU fan cable!",
     ],
-    image: "/5th.png",
+    image: "/4. Apply Thermal Paste.gif",
     completed: false,
   },
   {
     id: 6,
-    title: "Install Case Fans",
-    description: "Mount case fans with proper airflow direction",
-    duration: "10 minutes",
+    title: "Install RAM Memory",
+    description: "Install RAM sticks into motherboard slots",
+    duration: "5 minutes",
     difficulty: "Easy",
-    tools: ["Screwdriver", "Case fan screws"],
-    content: `1. Decide airflow direction: front fans pull air in, rear/top fans push air out.
-2. Mount the fans using screws.
-3. Connect them to FAN headers on the motherboard or to a fan hub.
-
-Good airflow = Cooler PC, longer lifespan.`,
+    tools: ["None"],
+    content: `1. Locate the RAM slots (usually 2 or 4 slots near the CPU)
+2. Open the locking clips on both ends of the slot
+3. Check your motherboard manual for correct slot configuration
+   - For 2 sticks: Usually use slots 2 and 4 (skip slot 1 and 3)
+   - This enables dual-channel mode for better performance
+4. Align the notch on the RAM stick with the notch in the slot
+5. Press down firmly on both ends until the clips snap back up
+6. You should hear a distinct "click" when properly seated`,
     tips: [
-      "Front and bottom fans should pull air IN",
-      "Rear and top fans should push air OUT",
-      "Check fan direction arrows before mounting",
+      "Match the notch - RAM only goes in one way",
+      "Press straight down with even pressure on both ends",
+      "The clips should automatically lock when fully seated",
     ],
     warnings: [
-      "Wrong airflow direction reduces cooling efficiency",
-      "Make sure fans are properly secured",
-      "Don't forget to connect fan cables",
+      "Don't force at an angle - press straight down",
+      "Ensure RAM is fully seated - check both ends",
+      "Verify RAM speed matches your motherboard's capability",
     ],
-    image: "/6th.png",
+    image: "/5. Install the RAM.gif",
     completed: false,
   },
   {
     id: 7,
-    title: "Install the Power Supply",
-    description: "Mount the PSU in the case with proper cable routing",
-    duration: "10 minutes",
+    title: "Install M.2 SSD Storage",
+    description: "Install M.2 NVMe SSD for fast storage",
+    duration: "5 minutes",
     difficulty: "Easy",
-    tools: ["Screwdriver", "PSU mounting screws"],
-    content: `1. Slide the PSU into the bottom/back of the case.
-2. Ensure the fan faces outward or downward (depending on case design).
-3. Secure with screws.
-4. Route the cables through the back side of the case.
-
-Keep your cable management clean, future you will thank you.`,
+    tools: ["Small screwdriver"],
+    content: `1. Locate the M.2 slot on your motherboard
+   - Usually below the CPU or between CPU and GPU area
+   - Check motherboard manual if unsure
+2. Remove the M.2 screw and standoff if present
+3. Carefully insert the M.2 SSD at a 30-degree angle
+4. The gold contacts should fully insert into the slot
+5. Press down gently on the other end
+6. Secure with the M.2 screw
+7. Don't overtighten - just snug`,
     tips: [
-      "Install PSU with fan facing down if case has bottom ventilation",
-      "Ensure the power switch is accessible",
-      "Route cables behind the motherboard tray",
+      "Some motherboards have heatsinks for M.2 - use them if available",
+      "The SSD should sit flat when screwed down",
+      "Check which M.2 slot supports NVMe (faster than SATA)",
     ],
     warnings: [
-      "Make sure PSU is switched OFF before installation",
-      "Check PSU orientation - fan should face ventilation",
-      "Don't block PSU fan with cables",
+      "Don't force the SSD - it should slide in smoothly",
+      "The screw is tiny - don't lose it!",
+      "Ensure the SSD is NVMe for best performance",
     ],
-    image: "/7th.png",
+    image: "/6. Install the SSD.gif",
     completed: false,
   },
   {
     id: 8,
-    title: "Install the Graphics Card (GPU)",
-    description: "Install the graphics card into the PCIe slot",
-    duration: "10 minutes",
-    difficulty: "Easy",
-    tools: ["Screwdriver"],
-    content: `1. Remove the metal PCIe slot covers on the back of the case.
-2. Insert the GPU into the PCIe x16 slot on the motherboard.
-3. Push until it clicks, then screw it in securely.
-4. Connect PCIe power cables from the PSU, if required.
-
-GPUs are hungry, make sure you plug in all power connectors.`,
+    title: "Mount Motherboard into Case",
+    description: "Install the prepared motherboard into the PC case",
+    duration: "15 minutes",
+    difficulty: "Medium",
+    tools: ["Screwdriver", "Motherboard screws"],
+    content: `1. Verify all standoffs are in correct positions
+2. Carefully lower the motherboard into the case
+3. Align the back ports with the I/O shield cutouts
+4. Push gently to ensure I/O shield is properly seated
+5. Align motherboard holes with standoffs
+6. Insert screws and hand-tighten first (don't fully tighten yet)
+7. Once all screws are in, tighten in a star/diagonal pattern
+8. Don't overtighten - just snug and secure`,
     tips: [
-      "GPU should click into place - don't force it",
-      "Make sure all PCIe power connectors are plugged in",
-      "Remove slot covers before installing GPU",
+      "It may take a few attempts to align everything",
+      "The motherboard should sit flat against standoffs",
+      "All mounting holes should have screws",
     ],
     warnings: [
-      "GPUs need additional power - don't forget PCIe cables",
-      "Ensure GPU is fully seated in the slot",
-      "Some GPUs are heavy - support them if needed",
+      "Don't force the motherboard - adjust I/O shield if needed",
+      "Missing standoffs can cause motherboard to flex",
+      "Overtightening can crack the motherboard",
     ],
-    image: "/8th.png",
+    image: "/7. Install the GPU.gif",
     completed: false,
   },
   {
     id: 9,
-    title: "Connect All Cables to the Motherboard",
-    description: "Connect all power and data cables properly",
+    title: "Install Power Supply (PSU)",
+    description: "Mount the PSU and route main cables",
     duration: "15 minutes",
     difficulty: "Medium",
-    tools: ["Motherboard manual"],
-    content: `Essential connections include:
-
-✔️ 24-Pin ATX Power (Motherboard main power)
-✔️ 8-Pin or 4-Pin CPU Power (Near CPU socket)
-✔️ PCIe Power for GPU
-✔️ SATA Power/Data for SSD/HDD (if not M.2)
-✔️ Front Panel Connectors: Power button, reset button, USB ports, audio
-✔️ Case Fans
-
-Refer to the motherboard manual for front panel pin layout. It's small but important.`,
+    tools: ["Screwdriver", "PSU screws"],
+    content: `1. Identify PSU mounting location (usually bottom or top rear)
+2. Determine fan orientation:
+   - If PSU at bottom with vent: Fan facing DOWN (intake from outside)
+   - If PSU at top: Fan facing UP (intake from inside case)
+3. Slide PSU into position
+4. Align screw holes
+5. Secure with 4 screws from outside the case
+6. Route the main cables through cable management holes:
+   - 24-pin ATX power (largest cable)
+   - 8-pin CPU power (4+4 cable)
+7. Leave cables loose for now - we'll connect them later`,
     tips: [
-      "Keep motherboard manual nearby for pin layouts",
-      "Front panel connectors are small - be patient",
-      "Route cables neatly behind the motherboard tray",
+      "Fan should intake cool air from outside case when possible",
+      "Route cables behind motherboard tray for clean look",
+      "Don't plug in PSU yet - wait until everything is installed",
     ],
     warnings: [
-      "Wrong front panel connections = PC won't turn on",
-      "Make sure all power connectors are fully seated",
-      "Check that no cables are pinched or damaged",
+      "Make sure PSU switch is set to OFF",
+      "Don't plug into wall outlet yet",
+      "Check that voltage switch matches your country (110V or 220V)",
     ],
-    image: "/9th.png",
+    image: "/9. Install the PSU.gif",
     completed: false,
   },
   {
     id: 10,
-    title: "Close the Case and Secure It",
-    description: "Final step - close up the case and prepare for first boot",
-    duration: "5 minutes",
-    difficulty: "Easy",
-    tools: ["Screwdriver or thumbscrews"],
-    content: `1. Tuck excess cables behind the motherboard tray.
-2. Reinstall the side panels.
-3. Secure them using screws or thumbscrews.
-
-Boom. You now have a clean, assembled PC.
-
-First Power-On Checklist:
-Before pressing that power button, do a quick check:
-
-✔️ All power cables connected?
-✔️ Fans spinning freely?
-✔️ GPU and RAM fully seated?
-✔️ No loose screws or cables?
-
-Turn it on. If it boots to BIOS, you're golden.
-
-Final Tips for Beginners:
-- Never force parts — everything should click naturally.
-- Keep your motherboard manual nearby.
-- If it doesn't turn on, check power cables first (80% of the time, that's the issue).
-- Patience beats panic.`,
+    title: "Install Graphics Card (GPU)",
+    description: "Install the GPU into PCIe slot",
+    duration: "10 minutes",
+    difficulty: "Medium",
+    tools: ["Screwdriver"],
+    content: `1. Locate the PCIe x16 slot (top/long slot, usually closest to CPU)
+2. Remove the corresponding slot covers from the back of the case
+   - Usually 2 or 3 slots depending on GPU size
+3. Press down the PCIe slot locking clip
+4. Align the GPU with the slot
+5. Press down firmly until you hear a click
+   - The locking clip should snap back up
+6. Secure the GPU bracket to the case with screws
+7. Don't connect power cables yet - next step`,
     tips: [
-      "Cable management makes future upgrades easier",
-      "Leave some slack in cables for future changes",
-      "Test boot before closing the case completely",
+      "Remove GPU from anti-static bag just before installation",
+      "The GPU should be level and fully seated",
+      "Large GPUs may sag - consider a support bracket",
     ],
     warnings: [
-      "Don't force side panels - they should slide easily",
-      "Make sure no cables are pinched when closing",
-      "Test the build before fully securing panels",
+      "Don't force the GPU - it should slide in smoothly",
+      "Ensure the locking clip fully engages",
+      "Check GPU power requirements (6-pin, 8-pin, or both)",
     ],
-    image: "/10th.png",
+    image: "/10. Connect All Cables.gif",
+    completed: false,
+  },
+  {
+    id: 11,
+    title: "Connect All Power Cables and Front Panel Connectors",
+    description: "Connect power cables and front panel connectors",
+    duration: "20 minutes",
+    difficulty: "Medium",
+    tools: ["Motherboard manual", "Patience!"],
+    content: `POWER CABLES:
+1. Connect 24-pin ATX power to motherboard (largest connector)
+2. Connect 8-pin CPU power (near top of motherboard, labeled "CPU_PWR")
+3. Connect GPU power cables (6-pin and/or 8-pin as required)
+4. Connect SATA power to any SATA drives if you have them
+
+CASE CABLES (Front Panel Connectors):
+Check motherboard manual for exact location (usually bottom-right)
+
+5. Connect USB 3.0 header (blue connector from case to "USB 3.0" on motherboard)
+6. Connect USB 2.0 header (from case to "USB" on motherboard)
+7. Connect HD Audio header (from case to "AUDIO" on motherboard)
+8. Connect front panel connectors (small cables):
+   - PWR_SW (Power Switch) - most important!
+   - RESET_SW (Reset Switch)
+   - PWR_LED+ and PWR_LED- (Power LED)
+   - HDD_LED+ and HDD_LED- (Activity LED)
+
+FANS:
+9. Connect case fans to CHA_FAN or SYS_FAN headers
+
+FINAL CHECK:
+✔️ All power cables connected
+✔️ All fans connected
+✔️ RAM fully seated
+✔️ GPU fully seated and secured
+✔️ No loose screws inside case
+
+Close the case panels, connect monitor to GPU (NOT motherboard!), plug in PSU, turn on PSU switch, and press power button!
+
+If it boots to BIOS: SUCCESS! 🎉
+If not: Check power cables first (most common issue)`,
+    tips: [
+      "Take a photo of motherboard manual's connector diagram",
+      "Power cables only fit one way - don't force",
+      "Front panel connectors are tiny - use tweezers if needed",
+      "+/- polarity matters for LEDs (but won't damage if wrong)",
+    ],
+    warnings: [
+      "Double-check CPU power cable (8-pin) is NOT a PCIe cable",
+      "Make sure all power connectors click into place",
+      "Don't bend pins on front panel connectors",
+      "PWR_SW must be connected or PC won't turn on",
+    ],
+    image: "/11. Reattach All Panels.gif",
     completed: false,
   },
 ]
@@ -329,6 +382,21 @@ export default function GuideDetailPage() {
   useEffect(() => {
     setIsMounted(true)
   }, [])
+
+  // Load saved progress from localStorage
+  useEffect(() => {
+    if (typeof window !== 'undefined' && params.id) {
+      const savedProgress = localStorage.getItem(`guide-progress-${params.id}`)
+      if (savedProgress) {
+        try {
+          const parsed = JSON.parse(savedProgress)
+          setCompletedSteps(parsed)
+        } catch (error) {
+          console.error('Error loading saved progress:', error)
+        }
+      }
+    }
+  }, [params.id])
 
   // Guide data - check if it's the PC assembly guide
   const isPcAssemblyGuide = params.id === "beginner-gaming-build" || params.id === "pc-assembly-guide"
@@ -369,7 +437,18 @@ export default function GuideDetailPage() {
   const currentStepData = guideSteps.find((step) => step.id === currentStep)
 
   const handleStepComplete = (stepId: number) => {
-    setCompletedSteps((prev) => (prev.includes(stepId) ? prev.filter((id) => id !== stepId) : [...prev, stepId]))
+    setCompletedSteps((prev) => {
+      const newCompleted = prev.includes(stepId) 
+        ? prev.filter((id) => id !== stepId) 
+        : [...prev, stepId]
+      
+      // Save to localStorage
+      if (typeof window !== 'undefined' && params.id) {
+        localStorage.setItem(`guide-progress-${params.id}`, JSON.stringify(newCompleted))
+      }
+      
+      return newCompleted
+    })
   }
 
   const nextStep = () => {
@@ -381,6 +460,16 @@ export default function GuideDetailPage() {
   const prevStep = () => {
     if (currentStep > 1) {
       setCurrentStep(currentStep - 1)
+    }
+  }
+
+  const resetProgress = () => {
+    if (confirm('Are you sure you want to reset your progress? This cannot be undone.')) {
+      setCompletedSteps([])
+      setCurrentStep(1)
+      if (typeof window !== 'undefined' && params.id) {
+        localStorage.removeItem(`guide-progress-${params.id}`)
+      }
     }
   }
 
@@ -424,9 +513,21 @@ export default function GuideDetailPage() {
                     <div className="space-y-2">
                       <div className="flex items-center justify-between text-sm">
                         <span className="text-slate-600 dark:text-slate-400">Progress</span>
-                        <span className="font-medium">
-                          {completedSteps.length}/{guide.totalSteps} steps completed
-                        </span>
+                        <div className="flex items-center gap-2">
+                          <span className="font-medium">
+                            {completedSteps.length}/{guide.totalSteps} steps completed
+                          </span>
+                          {completedSteps.length > 0 && (
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={resetProgress}
+                              className="h-6 px-2 text-xs text-slate-500 hover:text-red-600"
+                            >
+                              Reset
+                            </Button>
+                          )}
+                        </div>
                       </div>
                       <Progress value={progress} className="h-2" />
                     </div>
@@ -434,45 +535,6 @@ export default function GuideDetailPage() {
                 </div>
               </CardHeader>
             </Card>
-
-            {/* 3D Animation */}
-            {isPcAssemblyGuide && isMounted && (
-              <Card>
-                <CardHeader>
-                  <CardTitle className="text-xl mb-2 font-semibold">3D Build Guide Animation</CardTitle>
-                  <CardDescription className="text-slate-600 dark:text-slate-400">
-                    Interactive 3D visualization of PC components. Rotate, zoom, and explore the build process step-by-step.
-                  </CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <PC3DCSSAnimation currentStep={currentStep} />
-                </CardContent>
-              </Card>
-            )}
-
-            {/* Build Guide Video */}
-            {isPcAssemblyGuide && (
-              <Card>
-                <CardHeader>
-                  <CardTitle className="text-xl mb-2 font-semibold">Video Build Guide</CardTitle>
-                  <CardDescription className="text-slate-600 dark:text-slate-400">Watch the complete PC assembly process step-by-step</CardDescription>
-                </CardHeader>
-                <CardContent>
-                  {/* Build Guide GIF */}
-                  <div className="w-full aspect-video rounded-lg overflow-hidden border border-slate-200 dark:border-slate-700 bg-slate-900 flex items-center justify-center">
-                    <img
-                      src="/build-guide.gif"
-                      alt="PC Build Guide Animation"
-                      className="w-full h-full object-contain"
-                      loading="eager"
-                    />
-                  </div>
-                  <p className="text-xs text-slate-500 dark:text-slate-400 mt-2 text-center">
-                    Complete step-by-step PC assembly guide
-                  </p>
-                </CardContent>
-              </Card>
-            )}
 
             {/* Current Step */}
             {currentStepData && (
@@ -505,15 +567,156 @@ export default function GuideDetailPage() {
                     </div>
                   )}
 
-                  {/* Step Image */}
+                  {/* Step Images - GIF Animation + Static Diagram */}
                   {currentStepData.image && (
-                    <div className="w-full rounded-lg overflow-hidden border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 p-4">
-                      <img
-                        src={currentStepData.image}
-                        alt={`Step ${currentStep} illustration`}
-                        className="w-full h-auto object-contain max-w-full"
-                        loading={currentStep <= 2 ? "eager" : "lazy"}
-                      />
+                    <div className="space-y-4">
+                      {/* Animated GIF */}
+                      <div className="w-full rounded-lg overflow-hidden border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 p-4">
+                        <img
+                          src={currentStepData.image}
+                          alt={`Step ${currentStep} animation`}
+                          className="w-full h-auto object-contain max-w-full"
+                          loading={currentStep <= 2 ? "eager" : "lazy"}
+                        />
+                        <p className="text-xs text-center text-slate-500 dark:text-slate-400 mt-2">
+                          Animated guide - {currentStepData.title}
+                        </p>
+                      </div>
+                      
+                      {/* Static Patent-Style Diagram */}
+                      {currentStep === 1 && (
+                        <div className="w-full rounded-lg overflow-hidden border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 p-4">
+                          <img
+                            src="/1st.png"
+                            alt="Step 1 diagram"
+                            className="w-full h-auto object-contain max-w-full"
+                            loading="eager"
+                          />
+                          <p className="text-xs text-center text-slate-500 dark:text-slate-400 mt-2">
+                            Technical diagram
+                          </p>
+                        </div>
+                      )}
+                      {currentStep === 2 && (
+                        <div className="w-full rounded-lg overflow-hidden border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 p-4">
+                          <img
+                            src="/2nd.png"
+                            alt="Step 2 diagram"
+                            className="w-full h-auto object-contain max-w-full"
+                          />
+                          <p className="text-xs text-center text-slate-500 dark:text-slate-400 mt-2">
+                            Technical diagram
+                          </p>
+                        </div>
+                      )}
+                      {currentStep === 3 && (
+                        <div className="w-full rounded-lg overflow-hidden border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 p-4">
+                          <img
+                            src="/3rd.png"
+                            alt="Step 3 diagram"
+                            className="w-full h-auto object-contain max-w-full"
+                          />
+                          <p className="text-xs text-center text-slate-500 dark:text-slate-400 mt-2">
+                            Technical diagram
+                          </p>
+                        </div>
+                      )}
+                      {currentStep === 4 && (
+                        <div className="w-full rounded-lg overflow-hidden border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 p-4">
+                          <img
+                            src="/4th.png"
+                            alt="Step 4 diagram"
+                            className="w-full h-auto object-contain max-w-full"
+                          />
+                          <p className="text-xs text-center text-slate-500 dark:text-slate-400 mt-2">
+                            Technical diagram
+                          </p>
+                        </div>
+                      )}
+                      {currentStep === 5 && (
+                        <div className="w-full rounded-lg overflow-hidden border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 p-4">
+                          <img
+                            src="/5th.png"
+                            alt="Step 5 diagram"
+                            className="w-full h-auto object-contain max-w-full"
+                          />
+                          <p className="text-xs text-center text-slate-500 dark:text-slate-400 mt-2">
+                            Technical diagram
+                          </p>
+                        </div>
+                      )}
+                      {currentStep === 6 && (
+                        <div className="w-full rounded-lg overflow-hidden border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 p-4">
+                          <img
+                            src="/6th.png"
+                            alt="Step 6 diagram"
+                            className="w-full h-auto object-contain max-w-full"
+                          />
+                          <p className="text-xs text-center text-slate-500 dark:text-slate-400 mt-2">
+                            Technical diagram
+                          </p>
+                        </div>
+                      )}
+                      {currentStep === 7 && (
+                        <div className="w-full rounded-lg overflow-hidden border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 p-4">
+                          <img
+                            src="/7th.png"
+                            alt="Step 7 diagram"
+                            className="w-full h-auto object-contain max-w-full"
+                          />
+                          <p className="text-xs text-center text-slate-500 dark:text-slate-400 mt-2">
+                            Technical diagram
+                          </p>
+                        </div>
+                      )}
+                      {currentStep === 8 && (
+                        <div className="w-full rounded-lg overflow-hidden border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 p-4">
+                          <img
+                            src="/8th.png"
+                            alt="Step 8 diagram"
+                            className="w-full h-auto object-contain max-w-full"
+                          />
+                          <p className="text-xs text-center text-slate-500 dark:text-slate-400 mt-2">
+                            Technical diagram
+                          </p>
+                        </div>
+                      )}
+                      {currentStep === 9 && (
+                        <div className="w-full rounded-lg overflow-hidden border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 p-4">
+                          <img
+                            src="/9th.png"
+                            alt="Step 9 diagram"
+                            className="w-full h-auto object-contain max-w-full"
+                          />
+                          <p className="text-xs text-center text-slate-500 dark:text-slate-400 mt-2">
+                            Technical diagram
+                          </p>
+                        </div>
+                      )}
+                      {currentStep === 10 && (
+                        <div className="w-full rounded-lg overflow-hidden border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 p-4">
+                          <img
+                            src="/10th.png"
+                            alt="Step 10 diagram"
+                            className="w-full h-auto object-contain max-w-full"
+                          />
+                          <p className="text-xs text-center text-slate-500 dark:text-slate-400 mt-2">
+                            Technical diagram
+                          </p>
+                        </div>
+                      )}
+                      {currentStep === 11 && (
+                        <div className="w-full rounded-lg overflow-hidden border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 p-4">
+                          <img
+                            src="/1st.png"
+                            alt="Step 11 diagram"
+                            className="w-full h-auto object-contain max-w-full"
+                          />
+                          <p className="text-xs text-center text-slate-500 dark:text-slate-400 mt-2">
+                            Technical diagram (placeholder)
+                          </p>
+                        </div>
+                      )}
                     </div>
                   )}
 

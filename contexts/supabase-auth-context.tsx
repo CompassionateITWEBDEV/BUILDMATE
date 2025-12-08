@@ -117,19 +117,22 @@ export function SupabaseAuthProvider({ children }: { children: ReactNode }) {
                 const hasDetails = profileError?.details && typeof profileError.details === 'string' && profileError.details.trim().length > 0;
                 const hasHint = profileError?.hint && typeof profileError.hint === 'string' && profileError.hint.trim().length > 0;
                 
-                // Check if error object is empty (no meaningful properties)
-                const isEmpty = !hasMessage && !hasCode && !hasDetails && !hasHint && 
-                               Object.keys(profileError).length === 0;
+                // Check if error object is truly empty
+                const errorKeys = Object.keys(profileError).filter(key => profileError[key] !== undefined && profileError[key] !== null && profileError[key] !== '');
+                const isEmpty = errorKeys.length === 0 || (!hasMessage && !hasCode && !hasDetails && !hasHint);
                 
                 const isNotFound = profileError.code === 'PGRST116';
                 
-                // Only log if error has meaningful content (has message, code, details, or hint)
-                if (!isEmpty && !isNotFound && (hasMessage || hasCode || hasDetails || hasHint)) {
-                  console.error('Error fetching profile:', profileError);
-                } else {
-                  // Empty error or "not found" - clear session silently without logging
-                  await supabase.auth.signOut();
+                // Only log if error has meaningful content
+                if (!isEmpty && !isNotFound) {
+                  console.error('Error fetching profile (first check):', {
+                    message: profileError.message || 'N/A',
+                    code: profileError.code || 'N/A',
+                    details: profileError.details || 'N/A'
+                  });
                 }
+                // Clear session silently
+                await supabase.auth.signOut();
               }
             } else if (profile) {
               setUser(profile as CustomUser);
@@ -151,19 +154,22 @@ export function SupabaseAuthProvider({ children }: { children: ReactNode }) {
               const hasDetails = profileError?.details && typeof profileError.details === 'string' && profileError.details.trim().length > 0;
               const hasHint = profileError?.hint && typeof profileError.hint === 'string' && profileError.hint.trim().length > 0;
               
-              // Check if error object is empty (no meaningful properties)
-              const isEmpty = !hasMessage && !hasCode && !hasDetails && !hasHint && 
-                             Object.keys(profileError).length === 0;
+              // Check if error object is truly empty
+              const errorKeys = Object.keys(profileError).filter(key => profileError[key] !== undefined && profileError[key] !== null && profileError[key] !== '');
+              const isEmpty = errorKeys.length === 0 || (!hasMessage && !hasCode && !hasDetails && !hasHint);
               
               const isNotFound = profileError.code === 'PGRST116';
               
-              // Only log if error has meaningful content (has message, code, details, or hint)
+              // ONLY log if error has actual meaningful content
               if (!isEmpty && !isNotFound && (hasMessage || hasCode || hasDetails || hasHint)) {
-                console.error('Error fetching profile:', profileError);
-              } else {
-                // Empty error or "not found" - clear session silently without logging
-                await supabase.auth.signOut();
+                console.error('Error fetching profile (second check):', {
+                  message: profileError.message || 'N/A',
+                  code: profileError.code || 'N/A',
+                  details: profileError.details || 'N/A'
+                });
               }
+              // Clear session silently
+              await supabase.auth.signOut();
             } else if (profile) {
               setUser(profile as CustomUser);
               console.log('✅ Session restored - user logged in:', profile.user_name);
@@ -241,7 +247,21 @@ export function SupabaseAuthProvider({ children }: { children: ReactNode }) {
                 console.log('✅ Profile loaded after session refresh:', retryProfile.user_name);
               }
             } else {
-              console.error('Error fetching profile:', profileError);
+              // Check if error has meaningful content before logging
+              const hasMessage = profileError?.message && typeof profileError.message === 'string' && profileError.message.trim().length > 0;
+              const hasCode = profileError?.code && typeof profileError.code === 'string' && profileError.code.trim().length > 0;
+              const hasDetails = profileError?.details && typeof profileError.details === 'string' && profileError.details.trim().length > 0;
+              
+              const errorKeys = Object.keys(profileError).filter(key => profileError[key] !== undefined && profileError[key] !== null && profileError[key] !== '');
+              const isEmpty = errorKeys.length === 0 || (!hasMessage && !hasCode && !hasDetails);
+              
+              if (!isEmpty) {
+                console.error('Error fetching profile (auth state change):', {
+                  message: profileError.message || 'N/A',
+                  code: profileError.code || 'N/A',
+                  details: profileError.details || 'N/A'
+                });
+              }
             }
           } else if (profile) {
             setUser(profile as CustomUser);

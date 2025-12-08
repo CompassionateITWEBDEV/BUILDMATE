@@ -84,12 +84,21 @@ export const componentService = {
         .limit(2000)  // Increase limit to fetch all components
       
       if (error) {
-        console.error('Supabase query error in componentService.getAll():', {
-          message: error.message,
-          code: error.code,
-          details: error.details,
-          hint: error.hint
-        })
+        // Check if error has meaningful content
+        const hasMessage = error?.message && error.message.trim().length > 0
+        const hasCode = error?.code && error.code.trim().length > 0
+        const hasDetails = error?.details && error.details.trim().length > 0
+        const hasHint = error?.hint && error.hint.trim().length > 0
+        
+        // Only log if error has actual content
+        if (hasMessage || hasCode || hasDetails || hasHint) {
+          console.error('Supabase query error in componentService.getAll():', {
+            message: error.message,
+            code: error.code,
+            details: error.details,
+            hint: error.hint
+          })
+        }
         
         // Return empty array instead of throwing to prevent app crash
         return []
@@ -270,17 +279,29 @@ export const buildService = {
   },
 
   async getAll() {
-    const { data, error } = await supabase
-      .from('builds')
-      .select(`
-        *,
-        build_types(*),
-        users(*)
-      `)
-      .order('date_created', { ascending: false })
-    
-    if (error) throw error
-    return data
+    try {
+      console.log('🔍 Fetching builds from database...')
+      const { data, error } = await supabase
+        .from('builds')
+        .select(`
+          *,
+          build_types(*),
+          users(*)
+        `)
+        .order('date_created', { ascending: false })
+        .limit(100)  // Limit to 100 most recent builds for better performance
+      
+      if (error) {
+        console.error('Error fetching builds:', error)
+        throw error
+      }
+      
+      console.log(`✅ Successfully fetched ${data?.length || 0} builds`)
+      return data || []
+    } catch (err) {
+      console.error('Unexpected error in buildService.getAll():', err)
+      return []
+    }
   },
 
   async getByUserId(userId: number) {

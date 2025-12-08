@@ -29,7 +29,6 @@ import { useAuth } from "@/contexts/supabase-auth-context"
 import { mockBuilds } from "@/lib/mock-data"
 import { supabase } from "@/lib/supabase"
 import { time } from "console"
-import { Navigation } from "@/components/navigation"
 import { formatCurrency } from "@/lib/currency"
 
 export default function DashboardPage() {
@@ -375,7 +374,6 @@ export default function DashboardPage() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 dark:from-slate-900 dark:to-slate-800">
-      <Navigation variant="dashboard" />
       <div className="container mx-auto px-4 py-8">
         <div className="mb-8">
           <div className="mb-6">
@@ -455,77 +453,8 @@ export default function DashboardPage() {
 
           <TabsContent value="overview" className="space-y-6">
             <div className="grid lg:grid-cols-3 gap-6">
-              {/* Quick Actions */}
-              <div className="lg:col-span-2">
-                <Card>
-                  <CardHeader>
-                    <CardTitle>Quick Actions</CardTitle>
-                    <CardDescription>Jump into your most common tasks</CardDescription>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="grid md:grid-cols-2 gap-4">
-                      <Link href="/builder">
-                        <Card className="border-slate-200 dark:border-slate-700 hover:shadow-md transition-shadow cursor-pointer">
-                          <CardContent className="p-4">
-                            <div className="flex items-center gap-3">
-                              <Wrench className="h-8 w-8 text-blue-600" />
-                              <div>
-                                <h3 className="font-medium">New Build</h3>
-                                <p className="text-sm text-slate-600 dark:text-slate-400">
-                                  Start building your dream PC
-                                </p>
-                              </div>
-                            </div>
-                          </CardContent>
-                        </Card>
-                      </Link>
-
-                      <Link href="/builds">
-                        <Card className="border-slate-200 dark:border-slate-700 hover:shadow-md transition-shadow cursor-pointer">
-                          <CardContent className="p-4">
-                            <div className="flex items-center gap-3">
-                              <Users className="h-8 w-8 text-green-600" />
-                              <div>
-                                <h3 className="font-medium">Browse Community</h3>
-                                <p className="text-sm text-slate-600 dark:text-slate-400">Discover popular builds</p>
-                              </div>
-                            </div>
-                          </CardContent>
-                        </Card>
-                      </Link>
-
-                      <Link href="/guides">
-                        <Card className="border-slate-200 dark:border-slate-700 hover:shadow-md transition-shadow cursor-pointer">
-                          <CardContent className="p-4">
-                            <div className="flex items-center gap-3">
-                              <BookOpen className="h-8 w-8 text-purple-600" />
-                              <div>
-                                <h3 className="font-medium">Build Guides</h3>
-                                <p className="text-sm text-slate-600 dark:text-slate-400">Learn step-by-step</p>
-                              </div>
-                            </div>
-                          </CardContent>
-                        </Card>
-                      </Link>
-
-                      <Card className="border-slate-200 dark:border-slate-700 hover:shadow-md transition-shadow cursor-pointer">
-                        <CardContent className="p-4">
-                          <div className="flex items-center gap-3">
-                            <Star className="h-8 w-8 text-yellow-600" />
-                            <div>
-                              <h3 className="font-medium">Recommendations</h3>
-                              <p className="text-sm text-slate-600 dark:text-slate-400">Graph-Based Matching Algorithm and CSP with Backtracking and Pruning</p>
-                            </div>
-                          </div>
-                        </CardContent>
-                      </Card>
-                    </div>
-                  </CardContent>
-                </Card>
-              </div>
-
               {/* Recent Activity */}
-              <Card>
+              <Card className="lg:col-span-2">
                 <CardHeader>
                   <CardTitle>Recent Activity</CardTitle>
                 </CardHeader>

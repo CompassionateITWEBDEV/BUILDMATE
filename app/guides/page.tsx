@@ -222,23 +222,6 @@ export default function GuidesPage() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 dark:from-slate-900 dark:to-slate-800">
-      {/* Page Header */}
-      <div className="border-b bg-white/80 backdrop-blur-sm dark:bg-slate-900/80">
-        <div className="container mx-auto px-4 py-4">
-          <div className="flex items-center justify-between">
-            <h2 className="text-xl font-semibold text-slate-700 dark:text-slate-300">Build Guides</h2>
-            <div className="flex items-center gap-2">
-              <Link href="/dashboard">
-                <Button variant="outline" size="sm">
-                  <ArrowLeft className="h-4 w-4 mr-2" />
-                  Back to Home
-                </Button>
-              </Link>
-            </div>
-          </div>
-        </div>
-      </div>
-
       <div className="container mx-auto px-4 py-8">
         {/* Page Header */}
         <div className="text-center mb-12">

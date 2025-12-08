@@ -6,6 +6,7 @@ import { SupabaseAuthProvider } from "@/contexts/supabase-auth-context"
 import { LoadingProvider } from "@/contexts/loading-context"
 import { GlobalLoading } from "@/components/global-loading"
 import { PageWrapper } from "@/components/page-wrapper"
+import { LayoutNavigation } from "@/components/layout-navigation"
 import { Toaster } from "sonner"
 import { Suspense } from "react"
 import "./globals.css"
@@ -70,6 +71,7 @@ export default function RootLayout({
                   className: 'dark:bg-slate-800 dark:text-white dark:border-slate-700',
                 }}
               />
+              <LayoutNavigation />
               <PageWrapper>
                 {children}
               </PageWrapper>

@@ -20,6 +20,16 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog"
 import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog"
+import {
   Cpu,
   HardDrive,
   MemoryStick,
@@ -110,6 +120,7 @@ export default function BuilderPage() {
   const [isSaveDialogOpen, setIsSaveDialogOpen] = useState(false)
   const [savedBuildId, setSavedBuildId] = useState<number | null>(null)
   const [showSuccessDialog, setShowSuccessDialog] = useState(false)
+  const [showPurchaseConfirm, setShowPurchaseConfirm] = useState(false)
   const [performanceCategory, setPerformanceCategory] = useState<PerformanceCategory>("all")
   const [budget, setBudget] = useState<number>(0)
   const [budgetEnabled, setBudgetEnabled] = useState(false)
@@ -582,21 +593,6 @@ export default function BuilderPage() {
       }
     }
 
-    // GPU-Motherboard compatibility (PCIe slot)
-    if (category === "gpu" && selectedComponents.motherboard) {
-      const pcieSlots = Number.parseInt(selectedComponents.motherboard.specifications.pcieSlots as string) || 0
-      if (pcieSlots === 0) {
-        return false // Motherboard has no PCIe slots
-      }
-    }
-
-    if (category === "motherboard" && selectedComponents.gpu) {
-      const pcieSlots = Number.parseInt(component.specifications.pcieSlots as string) || 0
-      if (pcieSlots === 0) {
-        return false // This motherboard has no PCIe slots for selected GPU
-      }
-    }
-
     // Case-Motherboard compatibility (form factor)
     if (category === "case" && selectedComponents.motherboard) {
       const mbFormFactor = selectedComponents.motherboard.compatibility.formFactor ||
@@ -765,12 +761,9 @@ export default function BuilderPage() {
         )
       : searchFiltered
 
-    // Compatibility-based filtering - remove incompatible components
-    const compatibilityFiltered = locationFiltered.filter(
-      (component) => isComponentCompatible(component, category)
-    )
-
-    return compatibilityFiltered
+    // Don't filter out incompatible components - show them with red border instead
+    // This allows users to see all options and understand why some aren't compatible
+    return locationFiltered
   }
 
 
@@ -1135,11 +1128,19 @@ export default function BuilderPage() {
   }
 
   const checkForDuplicates = async () => {
-    if (!user) return
+    console.log("🔍 Starting duplicate check...")
+    
+    if (!user) {
+      console.log("⚠️ No user, skipping duplicate check")
+      return true
+    }
+    
     setIsCheckingDuplicates(true)
     
     try {
       const currentBuildFingerprint = DuplicateDetector.generateFingerprint(selectedComponents)
+      console.log("🔍 Current build fingerprint:", currentBuildFingerprint)
+      
       const mockExistingBuilds = [
         {
           components: { cpu: "cpu-1", motherboard: "mobo-1", memory: "ram-1", storage: "ssd-1", gpu: "gpu-1", psu: "psu-1", case: "case-1", cooling: "cooling-1" },
@@ -1150,14 +1151,21 @@ export default function BuilderPage() {
         }
       ]
       const comparisons = DuplicateDetector.checkForDuplicates(currentBuildFingerprint, mockExistingBuilds)
+      
+      console.log("🔍 Duplicate comparisons:", comparisons)
+      
       if (comparisons.length > 0) {
+        console.log("⚠️ Duplicates found, showing warning dialog")
         setDuplicateComparisons(comparisons)
         setShowDuplicateDialog(true)
         return false
       }
+      
+      console.log("✅ No duplicates found, proceeding with save")
       return true
     } catch (error) {
-      console.error("Error checking for duplicates:", error)
+      console.error("❌ Error checking for duplicates:", error)
+      // Allow save even if duplicate check fails
       return true
     } finally {
       setIsCheckingDuplicates(false)
@@ -1165,14 +1173,26 @@ export default function BuilderPage() {
   }
 
   const handleSaveBuild = async () => {
+    console.log("🚀 SAVE BUILD CLICKED!")
+    console.log("🔍 User:", user ? user.user_name : "NOT LOGGED IN")
+    console.log("🔍 Selected components:", selectedComponents)
+    
     if (!user) {
+      console.error("❌ No user logged in, redirecting to login")
       router.push("/login")
       return
     }
 
+    console.log("🔍 Checking for duplicates...")
     const canProceed = await checkForDuplicates()
-    if (!canProceed) return
+    console.log("🔍 Duplicate check result:", canProceed)
+    
+    if (!canProceed) {
+      console.log("⚠️ Duplicate check blocked save - showing duplicate dialog")
+      return
+    }
 
+    console.log("✅ Duplicate check passed, proceeding with save...")
     setIsSaveDialogOpen(false)
 
     // 1. Insert a row into builds table
@@ -1219,12 +1239,44 @@ export default function BuilderPage() {
     if (bcError) {
       console.error("Error inserting build_components:", bcError)
       setAlgorithmError("Failed to save build components")
+      alert("❌ Error: Failed to save build components. Check console for details.")
       return
     }
 
-    console.log("Build saved successfully:", { buildId, bcData })
+    console.log("✅ Build saved successfully:", { buildId, bcData })
+    console.log("🔍 Setting savedBuildId:", buildId)
+    console.log("🔍 About to show purchase confirmation dialog...")
+    
     setSavedBuildId(buildId)
-    setShowSuccessDialog(true)
+    setIsSaveDialogOpen(false)
+    
+    // Show purchase confirmation dialog
+    setTimeout(() => {
+      console.log("🎉 Triggering purchase confirmation dialog now!")
+      setShowPurchaseConfirm(true)
+      console.log("🎉 showPurchaseConfirm state set to:", true)
+      
+      // Fallback alert if dialog doesn't render
+      setTimeout(() => {
+        const dialogExists = document.querySelector('[role="alertdialog"]')
+        if (!dialogExists) {
+          console.error("❌ AlertDialog NOT rendered! Showing fallback...")
+          const wantsPurchase = confirm(
+            `✅ Build Saved Successfully!\n\n` +
+            `Build: ${buildName}\n` +
+            `Price: ${formatCurrency(totalPrice)}\n` +
+            `Build ID: #${buildId}\n\n` +
+            `Do you want to purchase this build now?`
+          )
+          if (wantsPurchase) {
+            router.push(`/purchase/${buildId}`)
+            router.refresh()
+          }
+        } else {
+          console.log("✅ AlertDialog rendered successfully!")
+        }
+      }, 1000)
+    }, 300)
   }
 
 
@@ -1443,37 +1495,9 @@ export default function BuilderPage() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 dark:from-slate-900 dark:to-slate-800">
-      {/* Builder Header */}
-      <div className="border-b bg-white/80 backdrop-blur-sm dark:bg-slate-900/80">
-        <div className="container mx-auto px-4 py-4">
-          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-            <div className="flex items-center gap-2 sm:gap-4">
-              <Button variant="ghost" size="sm" asChild>
-                <Link href="/">
-                  <ArrowLeft className="h-4 w-4 sm:mr-2" />
-                  <span className="hidden sm:inline">Back</span>
-                </Link>
-              </Button>
-              <div className="flex items-center gap-2">
-                <Cpu className="h-5 w-5 sm:h-6 sm:w-6 text-blue-600" />
-                <h1 className="text-lg sm:text-xl font-bold text-slate-900 dark:text-white">PC Builder</h1>
-              </div>
-            </div>
-            <div className="flex items-center gap-2 flex-wrap">
-              <Button variant="outline" size="sm" asChild className="text-xs sm:text-sm">
-                <Link href="/support">
-                  <span className="hidden sm:inline">Get Help</span>
-                  <span className="sm:hidden">Help</span>
-                </Link>
-              </Button>
-              <Dialog open={showPurchasePreview} onOpenChange={setShowPurchasePreview}>
-                <DialogTrigger asChild>
-                  <Button variant="outline" size="sm" className="text-xs sm:text-sm" disabled={totalPrice === 0}>
-                    <ShoppingCart className="h-4 w-4 sm:mr-2" />
-                    <span className="hidden sm:inline">Preview Purchase</span>
-                    <span className="sm:hidden">Purchase</span>
-                  </Button>
-                </DialogTrigger>
+      
+      {/* Dialogs - Preview Purchase, Save, Success, etc. */}
+      <Dialog open={showPurchasePreview} onOpenChange={setShowPurchasePreview}>
                 <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
                   <DialogHeader>
                     <DialogTitle>Purchase Details Preview</DialogTitle>
@@ -1607,12 +1631,6 @@ export default function BuilderPage() {
                 </DialogContent>
               </Dialog>
               <Dialog open={isSaveDialogOpen} onOpenChange={setIsSaveDialogOpen}>
-                <DialogTrigger asChild>
-                  <Button variant="outline" size="sm" className="text-xs sm:text-sm">
-                    <span className="hidden sm:inline">Save Build</span>
-                    <span className="sm:hidden">Save</span>
-                  </Button>
-                </DialogTrigger>
                 <DialogContent>
                   <DialogHeader>
                     <DialogTitle>Save Your Build</DialogTitle>
@@ -1666,36 +1684,102 @@ export default function BuilderPage() {
                 </DialogContent>
               </Dialog>
 
+              {/* Purchase Confirmation Alert Dialog */}
+              <AlertDialog open={showPurchaseConfirm} onOpenChange={setShowPurchaseConfirm}>
+                <AlertDialogContent className="sm:max-w-md">
+                  <AlertDialogHeader>
+                    <AlertDialogTitle className="flex items-center gap-2 text-xl">
+                      <CheckCircle2 className="h-6 w-6 text-green-600" />
+                      Build Saved Successfully!
+                    </AlertDialogTitle>
+                  </AlertDialogHeader>
+                  
+                  {/* Use div instead of AlertDialogDescription to avoid nested <p> tags */}
+                  <div className="space-y-3 mt-3 px-6">
+                    <div className="p-4 bg-gradient-to-br from-green-50 to-blue-50 dark:from-green-900/20 dark:to-blue-900/20 rounded-lg border-2 border-green-200 dark:border-green-800">
+                      <div className="font-semibold text-slate-800 dark:text-slate-200 mb-2">
+                        📦 {buildName}
+                      </div>
+                      <div className="flex justify-between items-center">
+                        <span className="text-sm text-slate-600 dark:text-slate-400">Total Price:</span>
+                        <span className="text-2xl font-bold text-green-600 dark:text-green-400">
+                          {formatCurrency(totalPrice)}
+                        </span>
+                      </div>
+                      {savedBuildId && (
+                        <div className="text-xs text-slate-500 dark:text-slate-400 mt-2">
+                          Build ID: #{savedBuildId}
+                        </div>
+                      )}
+                    </div>
+                    <div className="text-center font-semibold text-lg text-slate-700 dark:text-slate-300 py-2">
+                      🛒 Do you want to purchase this build now?
+                    </div>
+                  </div>
+                  
+                  <AlertDialogFooter className="flex-col sm:flex-row gap-2">
+                    <AlertDialogCancel 
+                      onClick={() => {
+                        console.log("✖️ User chose Not Now")
+                        setShowPurchaseConfirm(false)
+                        setShowSuccessDialog(true) // Show full dialog with more options
+                      }}
+                      className="w-full sm:w-auto"
+                    >
+                      Not Now
+                    </AlertDialogCancel>
+                    <AlertDialogAction
+                      onClick={() => {
+                        console.log("🛒 User chose Purchase, navigating to:", `/purchase/${savedBuildId}`)
+                        setShowPurchaseConfirm(false)
+                        router.push(`/purchase/${savedBuildId}`)
+                        router.refresh()
+                      }}
+                      className="w-full sm:w-auto bg-green-600 hover:bg-green-700 text-white font-semibold"
+                    >
+                      <ShoppingCart className="mr-2 h-4 w-4" />
+                      Purchase Now
+                    </AlertDialogAction>
+                  </AlertDialogFooter>
+                </AlertDialogContent>
+              </AlertDialog>
+
               {/* Success Dialog after saving */}
               <Dialog open={showSuccessDialog} onOpenChange={setShowSuccessDialog}>
-                <DialogContent>
+                <DialogContent className="sm:max-w-md">
                   <DialogHeader>
-                    <DialogTitle className="flex items-center gap-2">
-                      <CheckCircle2 className="h-5 w-5 text-green-600" />
+                    <DialogTitle className="flex items-center gap-2 text-xl">
+                      <CheckCircle2 className="h-6 w-6 text-green-600" />
                       Build Saved Successfully!
                     </DialogTitle>
-                    <DialogDescription>
+                    <DialogDescription className="text-base">
                       Your build "{buildName}" has been saved. What would you like to do next?
                     </DialogDescription>
                   </DialogHeader>
                   <div className="space-y-4">
-                    <div className="p-4 bg-slate-50 dark:bg-slate-800 rounded-lg">
+                    <div className="p-4 bg-slate-50 dark:bg-slate-800 rounded-lg border-2 border-slate-200 dark:border-slate-700">
                       <div className="flex justify-between items-center mb-2">
-                        <span className="font-medium">Total Price:</span>
-                        <span className="text-xl font-bold text-blue-600">{formatCurrency(totalPrice)}</span>
+                        <span className="font-medium text-slate-700 dark:text-slate-300">Total Price:</span>
+                        <span className="text-2xl font-bold text-blue-600 dark:text-blue-400">{formatCurrency(totalPrice)}</span>
                       </div>
+                      {savedBuildId && (
+                        <div className="text-xs text-slate-500 mt-1">
+                          Build ID: #{savedBuildId}
+                        </div>
+                      )}
                     </div>
 
                     <div className="flex flex-col gap-3">
                       {/* Primary Action: Purchase Now */}
                       <Button
                         onClick={() => {
+                          console.log("🛒 Purchase button clicked, navigating to:", `/purchase/${savedBuildId}`)
                           setShowSuccessDialog(false)
                           router.push(`/purchase/${savedBuildId}`)
                           router.refresh()
                         }}
                         size="lg"
-                        className="w-full bg-green-600 hover:bg-green-700 text-white"
+                        className="w-full bg-green-600 hover:bg-green-700 text-white font-semibold text-lg py-6"
                       >
                         <ShoppingCart className="mr-2 h-5 w-5" />
                         Purchase Build Now
@@ -1706,6 +1790,7 @@ export default function BuilderPage() {
                       <Button
                         variant="outline"
                         onClick={() => {
+                          console.log("📝 View details button clicked, navigating to:", `/mybuilds/${savedBuildId}`)
                           setShowSuccessDialog(false)
                           router.push(`/mybuilds/${savedBuildId}`)
                           router.refresh()
@@ -1716,7 +1801,10 @@ export default function BuilderPage() {
                       </Button>
                       <Button
                         variant="ghost"
-                        onClick={() => setShowSuccessDialog(false)}
+                        onClick={() => {
+                          console.log("✖️ Continue building button clicked")
+                          setShowSuccessDialog(false)
+                        }}
                         className="w-full"
                       >
                           Save Only - Continue Building
@@ -1724,54 +1812,14 @@ export default function BuilderPage() {
                       </div>
                     </div>
 
-                    <div className="text-center text-xs text-slate-500 mt-2">
-                      You can always purchase this build later from "My Builds"
+                    <div className="text-center text-xs text-slate-500 mt-2 p-2 bg-blue-50 dark:bg-blue-900/20 rounded">
+                      💡 You can always purchase this build later from "My Builds"
                     </div>
                   </div>
                 </DialogContent>
               </Dialog>
 
-              <Button 
-                variant="outline" 
-                size="sm" 
-                className="text-xs sm:text-sm"
-                onClick={async () => {
-                  if (savedBuildId) {
-                    // If build is saved, share the link to the saved build
-                    const shareUrl = typeof window !== 'undefined' ? `${window.location.origin}/builder?share=${savedBuildId}` : ''
-                    try {
-                      await navigator.clipboard.writeText(shareUrl)
-                      alert("Build link copied to clipboard! Share this link to let others import this build.")
-                    } catch (err) {
-                      console.error("Failed to copy link:", err)
-                      alert("Failed to copy link. Please copy manually: " + shareUrl)
-                    }
-                  } else {
-                    // If build is not saved, prompt to save first
-                    const shouldSave = confirm("You need to save your build first before sharing. Would you like to save it now?")
-                    if (shouldSave) {
-                      setIsSaveDialogOpen(true)
-                    }
-                  }
-                }}
-              >
-                <Share className="h-4 w-4 sm:mr-2" />
-                <span className="hidden sm:inline">Share</span>
-              </Button>
-              <Button 
-                variant="outline" 
-                size="sm" 
-                className="text-xs sm:text-sm"
-                onClick={() => setShowImportDialog(true)}
-              >
-                <span className="hidden sm:inline">Import Build</span>
-                <span className="sm:hidden">Import</span>
-              </Button>
-            </div>
-          </div>
-        </div>
-      </div>
-
+      {/* Main Content Area */}
       <div className="container mx-auto px-4 py-6">
         <div className="grid lg:grid-cols-3 gap-6">
           {/* Component Selection */}
@@ -2011,10 +2059,12 @@ export default function BuilderPage() {
                               {paginatedComponents.map((component) => (
                               <Card
                                 key={component.id}
-                                className={`border-slate-200 dark:border-slate-700 cursor-pointer transition-all hover:shadow-md ${
+                                className={`cursor-pointer transition-all hover:shadow-md ${
                                   selectedComponents[component.category]?.id === component.id
                                     ? "ring-2 ring-blue-500 border-blue-500"
-                                    : ""
+                                    : !isComponentCompatible(component, category as ComponentCategory)
+                                      ? "ring-2 ring-red-500 border-red-500 bg-red-50/50 dark:bg-red-900/10 opacity-90"
+                                      : "border-slate-200 dark:border-slate-700"
                                 }`}
                                 onClick={(e) => handleComponentClick(component, e)}
                               >
@@ -2052,6 +2102,13 @@ export default function BuilderPage() {
                                           </div>
                                           {selectedComponents[component.category]?.id === component.id && (
                                             <Badge className="mt-1">Selected</Badge>
+                                          )}
+                                          {!isComponentCompatible(component, category as ComponentCategory) && 
+                                           selectedComponents[component.category]?.id !== component.id && (
+                                            <Badge variant="destructive" className="mt-1 text-xs">
+                                              <AlertTriangle className="h-3 w-3 mr-1" />
+                                              Incompatible
+                                            </Badge>
                                           )}
                                         </div>
                                       </div>
@@ -2270,13 +2327,31 @@ export default function BuilderPage() {
                 </div>
 
                 <div className="space-y-2">
+                  {/* Preview Purchase Button */}
+                  <Dialog open={showPurchasePreview} onOpenChange={setShowPurchasePreview}>
+                    <DialogTrigger asChild>
+                      <Button 
+                        variant="outline" 
+                        className="w-full" 
+                        disabled={totalPrice === 0}
+                      >
+                        <ShoppingCart className="h-4 w-4 mr-2" />
+                        Preview Purchase
+                      </Button>
+                    </DialogTrigger>
+                  </Dialog>
+                  
+                  {/* Save Build Button */}
                   <Button 
                     className="w-full bg-blue-600 hover:bg-blue-700" 
                     onClick={() => setIsSaveDialogOpen(true)}
                     disabled={isCheckingDuplicates}
                   >
+                    <Save className="h-4 w-4 mr-2" />
                     {isCheckingDuplicates ? "Checking..." : "Save Build"}
                   </Button>
+                  
+                  {/* Share Button */}
                   <Button 
                     variant="outline" 
                     className="w-full"
