@@ -104,3 +104,4 @@ Once you have the GIF file, the code will automatically display it on the build 
 
 For issues or questions, check the documentation or try the online converter method.
 
+

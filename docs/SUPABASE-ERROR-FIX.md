@@ -123,3 +123,4 @@ If issues persist, check:
 - `lib/database.ts` - Enhanced error handling
 - `scripts/enable-rls-policies.sql` - RLS policies (NEW)
 
+
