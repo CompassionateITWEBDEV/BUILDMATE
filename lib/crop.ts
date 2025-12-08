@@ -1,4 +1,9 @@
 export async function getCroppedImg(imageSrc: string, pixelCrop: any): Promise<Blob> {
+  // SSR check - this function should only run on the client
+  if (typeof document === 'undefined') {
+    throw new Error('Image cropping is only available in the browser')
+  }
+
   const image = await new Promise<HTMLImageElement>((resolve, reject) => {
     const img = new Image();
     img.src = imageSrc;
