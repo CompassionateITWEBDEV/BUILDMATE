@@ -108,3 +108,6 @@ LIMIT 20;
 -- If you see ✅ HAS IMAGE, it worked!
 -- If you see ❌ NO IMAGE, the component name might be different
 
+
+
+

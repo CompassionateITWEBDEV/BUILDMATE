@@ -9,13 +9,11 @@ import { Badge } from "@/components/ui/badge"
 import { Progress } from "@/components/ui/progress"
 import { Checkbox } from "@/components/ui/checkbox"
 import {
-  ArrowLeft,
   Clock,
   Users,
   CheckCircle,
   AlertTriangle,
   Info,
-  BookOpen,
   Wrench,
   Lightbulb,
 } from "lucide-react"
@@ -475,21 +473,6 @@ export default function GuideDetailPage() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 dark:from-slate-900 dark:to-slate-800">
-      {/* Header */}
-      <header className="border-b bg-white/80 backdrop-blur-sm dark:bg-slate-900/80">
-        <div className="container mx-auto px-4 py-4">
-          <div className="flex items-center gap-4">
-            <Button variant="ghost" size="sm" onClick={() => router.back()}>
-              <ArrowLeft className="h-4 w-4 mr-2" />
-              Back to Guides
-            </Button>
-            <div className="flex items-center gap-2">
-              <BookOpen className="h-6 w-6 text-blue-600" />
-              <h1 className="text-xl font-bold text-slate-900 dark:text-white">Build Guide</h1>
-            </div>
-          </div>
-        </div>
-      </header>
 
       <div className="container mx-auto px-4 py-8">
         <div className="grid lg:grid-cols-4 gap-8">

@@ -356,3 +356,6 @@ If not: Check power cables first (most common issue)
 
 Congratulations! You've built your first PC!
 
+
+
+

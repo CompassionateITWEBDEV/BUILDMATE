@@ -32,3 +32,6 @@ SELECT component_name, component_price, component_image
 FROM components
 LIMIT 5;
 
+
+
+

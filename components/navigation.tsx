@@ -127,12 +127,12 @@ export function Navigation({ variant = "default" }: NavigationProps) {
           : 'bg-white/95 backdrop-blur-sm dark:bg-slate-900/95 shadow-sm'
       }`}>
         <div className="container mx-auto px-4 py-4">
-          <div className="flex items-center justify-between">
-            <Link href="/" className="flex items-center gap-2">
-              <Cpu className="h-8 w-8 text-blue-600" />
-              <h1 className="text-2xl font-bold text-slate-900 dark:text-white">{getPageTitle()}</h1>
+          <div className="flex items-center justify-between gap-4">
+            <Link href="/" className="flex items-center gap-2 flex-shrink-0">
+              <Cpu className="h-8 w-8 text-blue-600 flex-shrink-0" />
+              <h1 className="text-2xl font-bold text-slate-900 dark:text-white whitespace-nowrap">{getPageTitle()}</h1>
             </Link>
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2 flex-shrink-0">
               {user ? (
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
@@ -210,19 +210,19 @@ export function Navigation({ variant = "default" }: NavigationProps) {
           : 'bg-white/95 backdrop-blur-sm dark:bg-slate-900/95 shadow-sm'
       }`}>
         <div className="container mx-auto px-4 py-4">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-4">
-              <Link href="/" className="flex items-center gap-2">
-                <Cpu className="h-8 w-8 text-blue-600" />
-                <h1 className="text-2xl font-bold text-slate-900 dark:text-white">{getPageTitle()}</h1>
+          <div className="flex items-center justify-between gap-4">
+            <div className="flex items-center gap-4 flex-shrink-0">
+              <Link href="/" className="flex items-center gap-2 flex-shrink-0">
+                <Cpu className="h-8 w-8 text-blue-600 flex-shrink-0" />
+                <h1 className="text-2xl font-bold text-slate-900 dark:text-white whitespace-nowrap">{getPageTitle()}</h1>
               </Link>
-              <nav className="hidden md:flex items-center gap-6">
+              <nav className="hidden md:flex items-center gap-6 flex-shrink-0">
                 {mainNavItems.map((item) => (
                   <Link
                     key={item.href}
                     href={item.href}
                     onClick={() => handleLinkClick(item.href, item.label)}
-                    className={`text-sm font-medium transition-colors hover:text-slate-900 dark:hover:text-white ${
+                    className={`text-sm font-medium transition-colors hover:text-slate-900 dark:hover:text-white whitespace-nowrap ${
                       isActive(item.href)
                         ? "text-slate-900 dark:text-white"
                         : "text-slate-600 dark:text-slate-300"
@@ -233,7 +233,7 @@ export function Navigation({ variant = "default" }: NavigationProps) {
                 ))}
               </nav>
             </div>
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2 flex-shrink-0">
               {user ? (
                 <div className="flex items-center gap-3">
                   <Button variant="outline" size="sm" asChild>
@@ -313,32 +313,32 @@ export function Navigation({ variant = "default" }: NavigationProps) {
         : 'bg-white/95 backdrop-blur-sm dark:bg-slate-900/95 shadow-sm'
     }`}>
       <div className="container mx-auto px-4 py-4">
-        <div className="flex items-center justify-between">
-          <Link href="/" className="flex items-center gap-2">
-            <Cpu className="h-8 w-8 text-blue-600" />
-            <h1 className="text-2xl font-bold text-slate-900 dark:text-white">{getPageTitle()}</h1>
+        <div className="flex items-center justify-between gap-4">
+          <Link href="/" className="flex items-center gap-2 flex-shrink-0">
+            <Cpu className="h-8 w-8 text-blue-600 flex-shrink-0" />
+            <h1 className="text-2xl font-bold text-slate-900 dark:text-white whitespace-nowrap">{getPageTitle()}</h1>
           </Link>
           
           {/* Desktop Navigation */}
-          <nav className="hidden md:flex items-center gap-6">
+          <nav className="hidden md:flex items-center gap-6 flex-shrink-0">
             {mainNavItems.map((item) => (
               <Link
                 key={item.href}
                 href={item.href}
                 onClick={() => handleLinkClick(item.href, item.label)}
-                className={`flex items-center gap-2 text-sm font-medium transition-colors hover:text-slate-900 dark:hover:text-white ${
+                className={`flex items-center gap-2 text-sm font-medium transition-colors hover:text-slate-900 dark:hover:text-white whitespace-nowrap ${
                   isActive(item.href)
                     ? "text-slate-900 dark:text-white"
                     : "text-slate-600 dark:text-slate-300"
                 }`}
               >
-                <item.icon className="h-4 w-4" />
+                <item.icon className="h-4 w-4 flex-shrink-0" />
                 {item.label}
               </Link>
             ))}
           </nav>
 
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 flex-shrink-0">
             {user ? (
               <div className="flex items-center gap-3">
                 <Button variant="outline" size="sm" asChild>
