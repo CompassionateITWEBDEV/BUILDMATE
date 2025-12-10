@@ -115,6 +115,8 @@ export default function BuilderPage() {
   const COMPONENTS_PER_PAGE = 10
   const [searchTerm, setSearchTerm] = useState("")
   const [locationFilter, setLocationFilter] = useState<string>("")
+  const [showOnlyCompatible, setShowOnlyCompatible] = useState(false)
+  const [sortBy, setSortBy] = useState<"default" | "price-low" | "price-high">("default")
   const [buildName, setBuildName] = useState("My Custom Build")
   const [buildType, setBuildType] = useState<string>("4")
   const [isSaveDialogOpen, setIsSaveDialogOpen] = useState(false)
@@ -761,9 +763,23 @@ export default function BuilderPage() {
         )
       : searchFiltered
 
-    // Don't filter out incompatible components - show them with red border instead
-    // This allows users to see all options and understand why some aren't compatible
-    return locationFiltered
+    // Compatibility filtering - if enabled, only show compatible components
+    const compatibilityFiltered = showOnlyCompatible
+      ? locationFiltered.filter((component) => 
+          isComponentCompatible(component, category)
+        )
+      : locationFiltered
+
+    // Sort components by price
+    let sortedComponents = [...compatibilityFiltered]
+    if (sortBy === "price-low") {
+      sortedComponents.sort((a, b) => a.price - b.price)
+    } else if (sortBy === "price-high") {
+      sortedComponents.sort((a, b) => b.price - a.price)
+    }
+    // "default" keeps original order
+
+    return sortedComponents
   }
 
 
@@ -1336,13 +1352,22 @@ export default function BuilderPage() {
           memoryTypeValue = compatInfo.type
         }
 
+        // Extract wattage from component name if not in compatibility info (for PSUs)
+        let extractedWattage = 0
+        if (appCategory === "psu") {
+          const nameMatch = dbComponent.component_name?.match(/(\d+)\s*W/i)
+          if (nameMatch) {
+            extractedWattage = Number.parseInt(nameMatch[1]) || 0
+          }
+        }
+
         const compatibility: Component["compatibility"] = {
           socket: compatInfo.socket || "Standard",
           formFactor: compatInfo.formFactor || (appCategory === "case" ? compatInfo.type : "Standard"),
           memoryType: Array.isArray(memoryTypeValue)
             ? memoryTypeValue[0]
             : memoryTypeValue || (appCategory === "memory" ? "DDR4" : undefined),
-          powerRequirement: compatInfo.powerRequirement || compatInfo.wattage || compatInfo.tdp || (appCategory === "psu" ? 500 : 100),
+          powerRequirement: compatInfo.powerRequirement || compatInfo.wattage || compatInfo.tdp || extractedWattage || (appCategory === "psu" ? 500 : 100),
           dimensions: compatInfo.dimensions || {
             length: compatInfo.length || (appCategory === "gpu" ? 220 : 100),
             width: compatInfo.width || 100,
@@ -1487,7 +1512,7 @@ export default function BuilderPage() {
   // Reset page when search term, filters, or category changes
   useEffect(() => {
     setComponentPage(0)
-  }, [searchTerm, locationFilter, performanceCategory, activeCategory])
+  }, [searchTerm, locationFilter, performanceCategory, activeCategory, showOnlyCompatible, sortBy])
 
 
 
@@ -1876,6 +1901,37 @@ export default function BuilderPage() {
                         {performanceCategories[performanceCategory].name}
                       </Badge>
                     )}
+                  </div>
+
+                  {/* Compatibility Filter and Sort */}
+                  <div className="flex flex-col sm:flex-row gap-4">
+                    <div className="flex items-center gap-2 p-3 bg-slate-50 dark:bg-slate-800 rounded-lg flex-1">
+                      <input
+                        type="checkbox"
+                        id="show-only-compatible"
+                        checked={showOnlyCompatible}
+                        onChange={(e) => setShowOnlyCompatible(e.target.checked)}
+                        className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                      />
+                      <Label htmlFor="show-only-compatible" className="text-sm font-medium cursor-pointer">
+                        Show Only Compatible Components
+                      </Label>
+                    </div>
+                    <div className="flex items-center gap-2 p-3 bg-slate-50 dark:bg-slate-800 rounded-lg">
+                      <Label htmlFor="sort-by" className="text-sm font-medium whitespace-nowrap">
+                        Sort by:
+                      </Label>
+                      <Select value={sortBy} onValueChange={(value) => setSortBy(value as "default" | "price-low" | "price-high")}>
+                        <SelectTrigger className="w-full sm:w-48">
+                          <SelectValue placeholder="Sort order" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="default">Default Order</SelectItem>
+                          <SelectItem value="price-low">Price: Low to High</SelectItem>
+                          <SelectItem value="price-high">Price: High to Low</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
                   </div>
 
                   {/* Budget Controls */}

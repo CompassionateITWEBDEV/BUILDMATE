@@ -48,13 +48,22 @@ function convertDbComponentToAppComponent(dbComponent: any): Component {
     memoryTypeValue = compatInfo.type
   }
   
+  // Extract wattage from component name if not in compatibility info (for PSUs)
+  let extractedWattage = 0
+  if (appCategory === 'psu') {
+    const nameMatch = dbComponent.component_name?.match(/(\d+)\s*W/i)
+    if (nameMatch) {
+      extractedWattage = Number.parseInt(nameMatch[1]) || 0
+    }
+  }
+  
   const compatibility: Component['compatibility'] = {
     socket: compatInfo.socket || 'Standard',
     formFactor: compatInfo.formFactor || (appCategory === 'case' ? compatInfo.type : 'Standard'),
     memoryType: Array.isArray(memoryTypeValue) 
       ? memoryTypeValue[0] 
       : (memoryTypeValue || (appCategory === 'memory' ? 'DDR4' : undefined)),
-    powerRequirement: compatInfo.powerRequirement || compatInfo.wattage || compatInfo.tdp || (appCategory === 'psu' ? 500 : 100),
+    powerRequirement: compatInfo.powerRequirement || compatInfo.wattage || compatInfo.tdp || extractedWattage || (appCategory === 'psu' ? 500 : 100),
     dimensions: compatInfo.dimensions || {
       length: compatInfo.length || (appCategory === 'gpu' ? 220 : 100),
       width: compatInfo.width || 100,

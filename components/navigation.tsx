@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState } from "react"
 import Link from "next/link"
 import { usePathname, useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
@@ -51,41 +51,10 @@ interface NavigationProps {
 
 export function Navigation({ variant = "default" }: NavigationProps) {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
-  const [isScrolled, setIsScrolled] = useState(false)
   const { user, logout } = useAuth()
   const pathname = usePathname()
   const router = useRouter()
   const { startLoading, stopLoading } = useLoading()
-
-  // Get page title based on current pathname
-  const getPageTitle = () => {
-    if (pathname === '/builder') return 'PC Builder'
-    if (pathname === '/builds') return 'Community Builds'
-    if (pathname?.startsWith('/builds/')) return 'Build Details'
-    if (pathname === '/guides') return 'Build Guides'
-    if (pathname?.startsWith('/guides/')) return 'Build Guide'
-    if (pathname === '/support') return 'Support'
-    if (pathname === '/dashboard') return 'Dashboard'
-    if (pathname === '/profile') return 'Profile'
-    if (pathname === '/mybuilds') return 'My Builds'
-    if (pathname?.startsWith('/mybuilds/')) return 'Build Details'
-    if (pathname === '/likedbuilds') return 'Liked Builds'
-    if (pathname === '/admin') return 'Admin Dashboard'
-    if (pathname === '/login') return 'Login'
-    if (pathname === '/register') return 'Register'
-    return 'BuildMate'
-  }
-
-  // Handle scroll effect like Facebook
-  useEffect(() => {
-    const handleScroll = () => {
-      const scrollPosition = window.scrollY
-      setIsScrolled(scrollPosition > 10)
-    }
-
-    window.addEventListener('scroll', handleScroll, { passive: true })
-    return () => window.removeEventListener('scroll', handleScroll)
-  }, [])
 
   const isActive = (path: string) => pathname === path
 
@@ -121,18 +90,14 @@ export function Navigation({ variant = "default" }: NavigationProps) {
 
   if (variant === "minimal") {
     return (
-      <header className={`sticky top-0 z-50 border-b transition-all duration-200 ${
-        isScrolled 
-          ? 'bg-white/98 backdrop-blur-md dark:bg-slate-900/98 shadow-md' 
-          : 'bg-white/95 backdrop-blur-sm dark:bg-slate-900/95 shadow-sm'
-      }`}>
+      <header className="border-b bg-white/80 backdrop-blur-sm dark:bg-slate-900/80">
         <div className="container mx-auto px-4 py-4">
-          <div className="flex items-center justify-between gap-4">
-            <Link href="/" className="flex items-center gap-2 flex-shrink-0">
-              <Cpu className="h-8 w-8 text-blue-600 flex-shrink-0" />
-              <h1 className="text-2xl font-bold text-slate-900 dark:text-white whitespace-nowrap">{getPageTitle()}</h1>
+          <div className="flex items-center justify-between">
+            <Link href="/" className="flex items-center gap-2">
+              <Cpu className="h-8 w-8 text-blue-600" />
+              <h1 className="text-2xl font-bold text-slate-900 dark:text-white">BuildMate</h1>
             </Link>
-            <div className="flex items-center gap-2 flex-shrink-0">
+            <div className="flex items-center gap-2">
               {user ? (
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
@@ -204,25 +169,21 @@ export function Navigation({ variant = "default" }: NavigationProps) {
 
   if (variant === "dashboard") {
     return (
-      <header className={`sticky top-0 z-50 border-b transition-all duration-200 ${
-        isScrolled 
-          ? 'bg-white/98 backdrop-blur-md dark:bg-slate-900/98 shadow-md' 
-          : 'bg-white/95 backdrop-blur-sm dark:bg-slate-900/95 shadow-sm'
-      }`}>
+      <header className="border-b bg-white/80 backdrop-blur-sm dark:bg-slate-900/80">
         <div className="container mx-auto px-4 py-4">
-          <div className="flex items-center justify-between gap-4">
-            <div className="flex items-center gap-4 flex-shrink-0">
-              <Link href="/" className="flex items-center gap-2 flex-shrink-0">
-                <Cpu className="h-8 w-8 text-blue-600 flex-shrink-0" />
-                <h1 className="text-2xl font-bold text-slate-900 dark:text-white whitespace-nowrap">{getPageTitle()}</h1>
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-4">
+              <Link href="/" className="flex items-center gap-2">
+                <Cpu className="h-8 w-8 text-blue-600" />
+                <h1 className="text-2xl font-bold text-slate-900 dark:text-white">BuildMate</h1>
               </Link>
-              <nav className="hidden md:flex items-center gap-6 flex-shrink-0">
+              <nav className="hidden md:flex items-center gap-6">
                 {mainNavItems.map((item) => (
                   <Link
                     key={item.href}
                     href={item.href}
                     onClick={() => handleLinkClick(item.href, item.label)}
-                    className={`text-sm font-medium transition-colors hover:text-slate-900 dark:hover:text-white whitespace-nowrap ${
+                    className={`text-sm font-medium transition-colors hover:text-slate-900 dark:hover:text-white ${
                       isActive(item.href)
                         ? "text-slate-900 dark:text-white"
                         : "text-slate-600 dark:text-slate-300"
@@ -233,7 +194,7 @@ export function Navigation({ variant = "default" }: NavigationProps) {
                 ))}
               </nav>
             </div>
-            <div className="flex items-center gap-2 flex-shrink-0">
+            <div className="flex items-center gap-2">
               {user ? (
                 <div className="flex items-center gap-3">
                   <Button variant="outline" size="sm" asChild>
@@ -307,38 +268,34 @@ export function Navigation({ variant = "default" }: NavigationProps) {
 
   // Default variant
   return (
-    <header className={`sticky top-0 z-50 border-b transition-all duration-200 ${
-      isScrolled 
-        ? 'bg-white/98 backdrop-blur-md dark:bg-slate-900/98 shadow-md' 
-        : 'bg-white/95 backdrop-blur-sm dark:bg-slate-900/95 shadow-sm'
-    }`}>
+    <header className="border-b bg-white/80 backdrop-blur-sm dark:bg-slate-900/80">
       <div className="container mx-auto px-4 py-4">
-        <div className="flex items-center justify-between gap-4">
-          <Link href="/" className="flex items-center gap-2 flex-shrink-0">
-            <Cpu className="h-8 w-8 text-blue-600 flex-shrink-0" />
-            <h1 className="text-2xl font-bold text-slate-900 dark:text-white whitespace-nowrap">{getPageTitle()}</h1>
+        <div className="flex items-center justify-between">
+          <Link href="/" className="flex items-center gap-2">
+            <Cpu className="h-8 w-8 text-blue-600" />
+            <h1 className="text-2xl font-bold text-slate-900 dark:text-white">BuildMate</h1>
           </Link>
           
           {/* Desktop Navigation */}
-          <nav className="hidden md:flex items-center gap-6 flex-shrink-0">
+          <nav className="hidden md:flex items-center gap-6">
             {mainNavItems.map((item) => (
               <Link
                 key={item.href}
                 href={item.href}
                 onClick={() => handleLinkClick(item.href, item.label)}
-                className={`flex items-center gap-2 text-sm font-medium transition-colors hover:text-slate-900 dark:hover:text-white whitespace-nowrap ${
+                className={`flex items-center gap-2 text-sm font-medium transition-colors hover:text-slate-900 dark:hover:text-white ${
                   isActive(item.href)
                     ? "text-slate-900 dark:text-white"
                     : "text-slate-600 dark:text-slate-300"
                 }`}
               >
-                <item.icon className="h-4 w-4 flex-shrink-0" />
+                <item.icon className="h-4 w-4" />
                 {item.label}
               </Link>
             ))}
           </nav>
 
-          <div className="flex items-center gap-2 flex-shrink-0">
+          <div className="flex items-center gap-2">
             {user ? (
               <div className="flex items-center gap-3">
                 <Button variant="outline" size="sm" asChild>

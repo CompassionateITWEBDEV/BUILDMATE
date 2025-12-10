@@ -242,22 +242,37 @@ export class CompatibilityChecker {
     let psuWattage = 0
     
     // Try compatibility.powerRequirement first (set during component conversion)
-    if (psu.compatibility.powerRequirement) {
+    if (psu.compatibility.powerRequirement && psu.compatibility.powerRequirement > 0) {
       psuWattage = psu.compatibility.powerRequirement
     }
     
-    // Try specifications fields
+    // Try specifications fields (remove 'W' suffix if present)
     if (psuWattage === 0) {
-      // Try different specification fields
-      psuWattage = Number.parseInt(psu.specifications.Wattage as string) ||
-                  Number.parseInt(psu.specifications.wattage as string) ||
-                  Number.parseInt(psu.specifications['wattage'] as string) ||
-                  0
+      const wattageStr = (psu.specifications.Wattage as string) || 
+                        (psu.specifications.wattage as string) ||
+                        (psu.specifications['wattage'] as string) ||
+                        ''
+      if (wattageStr) {
+        // Remove 'W' suffix and any whitespace, then parse
+        const cleaned = wattageStr.replace(/[W\s]/gi, '').trim()
+        psuWattage = Number.parseInt(cleaned) || 0
+      }
     }
     
     // Try parsing from compatibility JSON
     if (psuWattage === 0) {
       psuWattage = this.getWattageFromCompatibility(psu) || 0
+    }
+    
+    // Last resort: Extract wattage from component name (e.g., "Seasonic Focus GX-850 850W")
+    if (psuWattage === 0 || psuWattage === 500) {
+      const nameMatch = psu.name.match(/(\d+)\s*W/i)
+      if (nameMatch) {
+        const extractedWattage = Number.parseInt(nameMatch[1])
+        if (extractedWattage > 0 && extractedWattage !== 500) {
+          psuWattage = extractedWattage
+        }
+      }
     }
     
     const recommendedWattage = Math.ceil(totalPowerDraw * 1.2) // 20% headroom

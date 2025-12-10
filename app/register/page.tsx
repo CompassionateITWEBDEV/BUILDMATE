@@ -181,7 +181,7 @@ export default function RegisterPage() {
                                 <Input
                                   id="email"
                                   type="email"
-                                  placeholder="Enter your email (Gmail, Yahoo, Outlook, etc.)"
+                                  placeholder="Enter your email: "
                                   value={email}
                                   onChange={(e) => setEmail(e.target.value)}
                                   required
