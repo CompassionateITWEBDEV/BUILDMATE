@@ -634,9 +634,9 @@ export default function GuideDetailPage() {
                       )}
                       {currentStep === 2 && (
                         <div className="w-full rounded-lg overflow-hidden border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 p-4">
-                          <a href="/2nd.png" target="_blank" rel="noopener noreferrer" className="block cursor-pointer hover:opacity-90 transition-opacity">
+                          <a href="/10th.png" target="_blank" rel="noopener noreferrer" className="block cursor-pointer hover:opacity-90 transition-opacity">
                             <img
-                              src="/2nd.png"
+                              src="/10th.png"
                               alt="Step 2 diagram"
                               className="w-full h-auto object-contain max-w-full"
                             />
@@ -648,9 +648,9 @@ export default function GuideDetailPage() {
                       )}
                       {currentStep === 3 && (
                         <div className="w-full rounded-lg overflow-hidden border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 p-4">
-                          <a href="/3rd.png" target="_blank" rel="noopener noreferrer" className="block cursor-pointer hover:opacity-90 transition-opacity">
+                          <a href="/5th.png" target="_blank" rel="noopener noreferrer" className="block cursor-pointer hover:opacity-90 transition-opacity">
                             <img
-                              src="/3rd.png"
+                              src="/5th.png"
                               alt="Step 3 diagram"
                               className="w-full h-auto object-contain max-w-full"
                             />
@@ -662,9 +662,9 @@ export default function GuideDetailPage() {
                       )}
                       {currentStep === 4 && (
                         <div className="w-full rounded-lg overflow-hidden border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 p-4">
-                          <a href="/4th.png" target="_blank" rel="noopener noreferrer" className="block cursor-pointer hover:opacity-90 transition-opacity">
+                          <a href="/2nd.png" target="_blank" rel="noopener noreferrer" className="block cursor-pointer hover:opacity-90 transition-opacity">
                             <img
-                              src="/4th.png"
+                              src="/2nd.png"
                               alt="Step 4 diagram"
                               className="w-full h-auto object-contain max-w-full"
                             />
@@ -676,9 +676,9 @@ export default function GuideDetailPage() {
                       )}
                       {currentStep === 5 && (
                         <div className="w-full rounded-lg overflow-hidden border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 p-4">
-                          <a href="/5th.png" target="_blank" rel="noopener noreferrer" className="block cursor-pointer hover:opacity-90 transition-opacity">
+                          <a href="/3rd.png" target="_blank" rel="noopener noreferrer" className="block cursor-pointer hover:opacity-90 transition-opacity">
                             <img
-                              src="/5th.png"
+                              src="/3rd.png"
                               alt="Step 5 diagram"
                               className="w-full h-auto object-contain max-w-full"
                             />
@@ -690,9 +690,9 @@ export default function GuideDetailPage() {
                       )}
                       {currentStep === 6 && (
                         <div className="w-full rounded-lg overflow-hidden border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 p-4">
-                          <a href="/6th.png" target="_blank" rel="noopener noreferrer" className="block cursor-pointer hover:opacity-90 transition-opacity">
+                          <a href="/4th.png" target="_blank" rel="noopener noreferrer" className="block cursor-pointer hover:opacity-90 transition-opacity">
                             <img
-                              src="/6th.png"
+                              src="/4th.png"
                               alt="Step 6 diagram"
                               className="w-full h-auto object-contain max-w-full"
                             />
@@ -704,9 +704,9 @@ export default function GuideDetailPage() {
                       )}
                       {currentStep === 7 && (
                         <div className="w-full rounded-lg overflow-hidden border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 p-4">
-                          <a href="/7th.png" target="_blank" rel="noopener noreferrer" className="block cursor-pointer hover:opacity-90 transition-opacity">
+                          <a href="/8th.png" target="_blank" rel="noopener noreferrer" className="block cursor-pointer hover:opacity-90 transition-opacity">
                             <img
-                              src="/7th.png"
+                              src="/8th.png"
                               alt="Step 7 diagram"
                               className="w-full h-auto object-contain max-w-full"
                             />
@@ -718,9 +718,9 @@ export default function GuideDetailPage() {
                       )}
                       {currentStep === 8 && (
                         <div className="w-full rounded-lg overflow-hidden border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 p-4">
-                          <a href="/8th.png" target="_blank" rel="noopener noreferrer" className="block cursor-pointer hover:opacity-90 transition-opacity">
+                          <a href="/6th.png" target="_blank" rel="noopener noreferrer" className="block cursor-pointer hover:opacity-90 transition-opacity">
                             <img
-                              src="/8th.png"
+                              src="/6th.png"
                               alt="Step 8 diagram"
                               className="w-full h-auto object-contain max-w-full"
                             />
@@ -732,9 +732,9 @@ export default function GuideDetailPage() {
                       )}
                       {currentStep === 9 && (
                         <div className="w-full rounded-lg overflow-hidden border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 p-4">
-                          <a href="/9th.png" target="_blank" rel="noopener noreferrer" className="block cursor-pointer hover:opacity-90 transition-opacity">
+                          <a href="/7th.png" target="_blank" rel="noopener noreferrer" className="block cursor-pointer hover:opacity-90 transition-opacity">
                             <img
-                              src="/9th.png"
+                              src="/7th.png"
                               alt="Step 9 diagram"
                               className="w-full h-auto object-contain max-w-full"
                             />
@@ -746,9 +746,9 @@ export default function GuideDetailPage() {
                       )}
                       {currentStep === 10 && (
                         <div className="w-full rounded-lg overflow-hidden border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 p-4">
-                          <a href="/10th.png" target="_blank" rel="noopener noreferrer" className="block cursor-pointer hover:opacity-90 transition-opacity">
+                          <a href="/9th.png" target="_blank" rel="noopener noreferrer" className="block cursor-pointer hover:opacity-90 transition-opacity">
                             <img
-                              src="/10th.png"
+                              src="/9th.png"
                               alt="Step 10 diagram"
                               className="w-full h-auto object-contain max-w-full"
                             />
@@ -760,9 +760,9 @@ export default function GuideDetailPage() {
                       )}
                       {currentStep === 11 && (
                         <div className="w-full rounded-lg overflow-hidden border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 p-4">
-                          <a href="/1st.png" target="_blank" rel="noopener noreferrer" className="block cursor-pointer hover:opacity-90 transition-opacity">
+                          <a href="/10th.png" target="_blank" rel="noopener noreferrer" className="block cursor-pointer hover:opacity-90 transition-opacity">
                             <img
-                              src="/1st.png"
+                              src="/10th.png"
                               alt="Step 11 diagram"
                               className="w-full h-auto object-contain max-w-full"
                             />
