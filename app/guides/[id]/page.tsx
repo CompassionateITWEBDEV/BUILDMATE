@@ -16,10 +16,123 @@ import {
   Info,
   Wrench,
   Lightbulb,
+  Play,
+  Youtube,
 } from "lucide-react"
 
 // Complete guide steps with user-provided content and images
 const guideSteps = [
+  {
+    id: 0,
+    title: "Introduction: How to Start Building Your PC",
+    description: "A comprehensive guide for first-time PC builders - everything you need to know before you begin",
+    duration: "15 minutes",
+    difficulty: "Beginner",
+    tools: [],
+    content: `Welcome to the Complete PC Building Guide! This comprehensive tutorial will guide you step-by-step from unboxing your components to booting your first PC.
+
+## What You'll Learn
+
+This guide covers everything you need to build a working PC:
+
+1. **Preparation & Planning** - How to organize your workspace and understand your components
+2. **Component Installation** - Detailed instructions for installing each part correctly
+3. **Cable Management** - How to connect everything properly
+4. **First Boot & Setup** - Booting your PC, entering BIOS, and installing your operating system
+
+## Who This Guide Is For
+
+- ✅ First-time PC builders
+- ✅ Beginners with limited technical knowledge
+- ✅ DIY enthusiasts wanting to learn
+- ✅ Anyone building their first custom PC
+
+## What You Need Before Starting
+
+**Essential Tools:**
+- Phillips head screwdriver (magnetic tip recommended)
+- Clean, well-lit workspace
+- Anti-static wrist strap (highly recommended)
+- Small container for screws
+
+**Components You'll Need:**
+- Motherboard
+- CPU (Processor)
+- CPU Cooler
+- RAM (Memory)
+- Storage (SSD or HDD)
+- Graphics Card (GPU) - unless using integrated graphics
+- Power Supply (PSU)
+- PC Case
+- Case Fans (usually included with case)
+
+**Optional but Helpful:**
+- Thermal paste (if not pre-applied on cooler)
+- Zip ties for cable management
+- Flashlight or headlamp
+- Motherboard manual (very important!)
+
+## Safety First
+
+⚠️ **IMPORTANT SAFETY TIPS:**
+
+1. **Static Electricity Protection:**
+   - Always ground yourself before touching components
+   - Use an anti-static wrist strap if available
+   - Work on a hard, non-carpeted surface
+   - Touch a metal object before handling components
+
+2. **Component Handling:**
+   - Never touch the gold pins/contacts on components
+   - Hold components by their edges
+   - Keep components in anti-static bags until ready to use
+
+3. **Power Safety:**
+   - Never work on a PC while it's plugged in
+   - Turn off PSU switch before connecting/disconnecting
+   - Double-check all connections before powering on
+
+## How to Use This Guide
+
+This guide is designed as a complete learning resource:
+
+- **Follow steps in order** - Each step builds on the previous one
+- **Read carefully** - Don't skip instructions
+- **Watch the videos** - Visual demonstrations help clarify complex steps
+- **Take your time** - Rushing can lead to mistakes
+- **Check your work** - Verify each step before moving on
+
+## Estimated Time
+
+- **Total Build Time:** 2-3 hours for first-time builders
+- **Experienced builders:** 1-2 hours
+- **Take breaks** - Don't rush, building a PC should be enjoyable!
+
+## Getting Help
+
+If you encounter issues:
+1. Re-read the step instructions
+2. Check the troubleshooting tips
+3. Watch the video demonstrations
+4. Consult your motherboard manual
+5. Double-check all connections
+
+Ready to begin? Let's start with Step 1: Preparing Your Workspace!`,
+    tips: [
+      "Read through all steps once before starting to understand the full process",
+      "Keep your motherboard manual nearby - it's your best reference",
+      "Take photos of your components before starting for reference",
+      "Don't be afraid to pause and research if something seems unclear",
+    ],
+    warnings: [
+      "Never force components - if something doesn't fit, check orientation",
+      "Static electricity can damage components - always ground yourself",
+      "Double-check compatibility before purchasing components",
+    ],
+    videoUrl: "https://www.youtube.com/embed/gO-V8E9MIBg", // Complete PC Building Guide - TechSource Comprehensive Tutorial
+    image: null,
+    completed: false,
+  },
   {
     id: 1,
     title: "Prepare Your Workspace and Check All Parts",
@@ -27,6 +140,7 @@ const guideSteps = [
     duration: "5 minutes",
     difficulty: "Easy",
     tools: ["Screwdriver (magnetic tip recommended)", "Clean workspace", "Anti-static mat (optional)"],
+    videoUrl: "https://www.youtube.com/embed/gO-V8E9MIBg?start=0", // PC Building Preparation
     content: `Before starting, lay everything on a clean, static-free table. Make sure you have:
 
 - Motherboard
@@ -59,6 +173,7 @@ Double-check that nothing is missing. It's way easier to spot problems early.`,
     duration: "10 minutes",
     difficulty: "Easy",
     tools: ["Screwdriver", "Motherboard standoffs"],
+    videoUrl: "https://www.youtube.com/embed/gO-V8E9MIBg?start=60", // Case Preparation
     content: `1. Remove both side panels from the case
 2. Lay the case on its side for easy access
 3. Locate the motherboard mounting area
@@ -77,7 +192,7 @@ Double-check that nothing is missing. It's way easier to spot problems early.`,
       "Don't force standoffs - they should screw in smoothly",
       "Remove protective film from case windows if present",
     ],
-    image: "/1. Prepare the Case.gif",
+    image: "/1. Case_Prep.mp4",
     completed: false,
   },
   {
@@ -87,6 +202,7 @@ Double-check that nothing is missing. It's way easier to spot problems early.`,
     duration: "5 minutes",
     difficulty: "Easy",
     tools: ["None (hands only)"],
+    videoUrl: "https://www.youtube.com/embed/gO-V8E9MIBg?start=120", // I/O Shield Installation
     content: `1. Take the I/O shield from your motherboard box
 2. From inside the case, push the I/O shield into the rectangular opening at the back
 3. Make sure it snaps firmly into place on all four sides
@@ -103,7 +219,7 @@ Double-check that nothing is missing. It's way easier to spot problems early.`,
       "Make sure it's fully seated before proceeding",
       "Metal tabs should point away from where ports will be",
     ],
-    image: "/2. Install the Motherboard.gif",
+    image: "/2. Mobo.mp4",
     completed: false,
   },
   {
@@ -113,6 +229,7 @@ Double-check that nothing is missing. It's way easier to spot problems early.`,
     duration: "10 minutes",
     difficulty: "Medium",
     tools: ["None (very gentle hands)"],
+    videoUrl: "https://www.youtube.com/embed/gO-V8E9MIBg?start=180", // CPU Installation Tutorial
     content: `1. Place motherboard on its box (anti-static surface)
 2. Locate the CPU socket (large square with lots of pins/contacts)
 3. Lift the retention arm/lever
@@ -133,7 +250,7 @@ Double-check that nothing is missing. It's way easier to spot problems early.`,
       "Never touch the socket pins",
       "Static electricity can damage the CPU - ground yourself first",
     ],
-    image: "/3. Install the CPU.gif",
+    image: "/3. CPU.mp4",
     completed: false,
   },
   {
@@ -143,6 +260,7 @@ Double-check that nothing is missing. It's way easier to spot problems early.`,
     duration: "15 minutes",
     difficulty: "Medium",
     tools: ["Thermal paste (if not pre-applied)", "Screwdriver"],
+    videoUrl: "https://www.youtube.com/embed/gO-V8E9MIBg?start=240", // Thermal Paste and Cooler Installation
     content: `1. Check if your cooler has pre-applied thermal paste
    - If YES: Skip to step 3
    - If NO: Continue to step 2
@@ -165,8 +283,8 @@ Double-check that nothing is missing. It's way easier to spot problems early.`,
       "Make sure the cooler is firmly attached",
       "Don't forget to plug in the CPU fan cable!",
     ],
-    image: "/4. Apply Thermal Paste.gif",
-    image2: "/4.1 Install CPU Cooler.gif",
+    image: "/4. Thermal-Cooler.mp4",
+    image2: null,
     completed: false,
   },
   {
@@ -176,6 +294,7 @@ Double-check that nothing is missing. It's way easier to spot problems early.`,
     duration: "10 minutes",
     difficulty: "Easy",
     tools: ["Small screwdriver"],
+    videoUrl: "https://www.youtube.com/embed/gO-V8E9MIBg?start=300", // RAM and Storage Installation
     content: `INSTALL RAM:
 1. Locate the RAM slots (usually 2 or 4 slots near the CPU)
 2. Open the locking clips on both ends of the slot
@@ -208,8 +327,8 @@ INSTALL M.2 SSD:
       "Don't force the SSD - it should slide in smoothly",
       "The M.2 screw is tiny - don't lose it!",
     ],
-    image: "/5. Install the RAM.gif",
-    image2: "/6. Install the SSD.gif",
+    image: "/5. RAM-SSD.mp4",
+    image2: null,
     completed: false,
   },
   {
@@ -219,6 +338,7 @@ INSTALL M.2 SSD:
     duration: "10 minutes",
     difficulty: "Medium",
     tools: ["Screwdriver"],
+    videoUrl: "https://www.youtube.com/embed/gO-V8E9MIBg?start=360", // GPU Installation
     content: `1. Locate the PCIe x16 slot (top/long slot, usually closest to CPU)
 2. Remove the corresponding slot covers from the back of the case
    - Usually 2 or 3 slots depending on GPU size
@@ -238,7 +358,7 @@ INSTALL M.2 SSD:
       "Ensure the locking clip fully engages",
       "Check GPU power requirements (6-pin, 8-pin, or both)",
     ],
-    image: "/7. Install the GPU.gif",
+    image: "/6. GPU.mp4",
     completed: false,
   },
   {
@@ -248,6 +368,7 @@ INSTALL M.2 SSD:
     duration: "10 minutes",
     difficulty: "Easy",
     tools: ["Screwdriver"],
+    videoUrl: "https://www.youtube.com/embed/gO-V8E9MIBg?start=420", // Case Fan Installation
     content: `1. Determine fan placement:
    - Front: Intake fans (bring cool air in)
    - Rear/Top: Exhaust fans (push hot air out)
@@ -268,7 +389,7 @@ INSTALL M.2 SSD:
       "Ensure fans are properly connected or they won't work",
       "Check fan direction before final installation",
     ],
-    image: "/8. Install the Fans.gif",
+    image: "/7. Fans.mp4",
     completed: false,
   },
   {
@@ -278,6 +399,7 @@ INSTALL M.2 SSD:
     duration: "15 minutes",
     difficulty: "Medium",
     tools: ["Screwdriver", "PSU screws"],
+    videoUrl: "https://www.youtube.com/embed/gO-V8E9MIBg?start=480", // PSU Installation
     content: `1. Identify PSU mounting location (usually bottom or top rear)
 2. Determine fan orientation:
    - If PSU at bottom with vent: Fan facing DOWN (intake from outside)
@@ -299,7 +421,7 @@ INSTALL M.2 SSD:
       "Don't plug into wall outlet yet",
       "Check that voltage switch matches your country (110V or 220V)",
     ],
-    image: "/9. Install the PSU.gif",
+    image: "/8. PSU.mp4",
     completed: false,
   },
   {
@@ -309,6 +431,7 @@ INSTALL M.2 SSD:
     duration: "20 minutes",
     difficulty: "Medium",
     tools: ["Motherboard manual", "Patience!"],
+    videoUrl: "https://www.youtube.com/embed/gO-V8E9MIBg?start=540", // Cable Connection Guide
     content: `POWER CABLES:
 1. Connect 24-pin ATX power to motherboard (largest connector)
 2. Connect 8-pin CPU power (near top of motherboard, labeled "CPU_PWR")
@@ -348,7 +471,7 @@ FINAL CHECK:
       "Don't bend pins on front panel connectors",
       "PWR_SW must be connected or PC won't turn on",
     ],
-    image: "/10. Connect All Cables.gif",
+    image: "/9. Cables.mp4",
     completed: false,
   },
   {
@@ -358,6 +481,7 @@ FINAL CHECK:
     duration: "5 minutes",
     difficulty: "Easy",
     tools: ["Screwdriver"],
+    videoUrl: "https://www.youtube.com/embed/gO-V8E9MIBg?start=600", // Final Assembly and First Boot
     content: `1. Tuck all excess cables behind the motherboard tray
 2. Do a final visual check:
    ✓ All power cables connected
@@ -384,7 +508,7 @@ If not: Check power cables first (most common issue)`,
       "Double-check all connections before closing",
       "Make sure monitor is connected to GPU, not motherboard",
     ],
-    image: "/11. Reattach All Panels.gif",
+    image: "/10. ReAttach.mp4",
     completed: false,
   },
 ]
@@ -392,7 +516,7 @@ If not: Check power cables first (most common issue)`,
 export default function GuideDetailPage() {
   const params = useParams()
   const router = useRouter()
-  const [currentStep, setCurrentStep] = useState(1)
+  const [currentStep, setCurrentStep] = useState(0) // Start with introduction (step 0)
   const [completedSteps, setCompletedSteps] = useState<number[]>([])
   const [isPlaying, setIsPlaying] = useState(false)
   const [isMounted, setIsMounted] = useState(false)
@@ -456,7 +580,8 @@ export default function GuideDetailPage() {
 
   const handleStepComplete = (stepId: number) => {
     setCompletedSteps((prev) => {
-      const newCompleted = prev.includes(stepId) 
+      const wasCompleted = prev.includes(stepId)
+      const newCompleted = wasCompleted
         ? prev.filter((id) => id !== stepId) 
         : [...prev, stepId]
       
@@ -465,18 +590,30 @@ export default function GuideDetailPage() {
         localStorage.setItem(`guide-progress-${params.id}`, JSON.stringify(newCompleted))
       }
       
+      // Auto-proceed to next step if marking as complete (not unmarking)
+      if (!wasCompleted && stepId === currentStep) {
+        const maxStep = guideSteps.length - 1
+        if (currentStep < maxStep) {
+          // Small delay for better UX
+          setTimeout(() => {
+            setCurrentStep(currentStep + 1)
+          }, 800)
+        }
+      }
+      
       return newCompleted
     })
   }
 
   const nextStep = () => {
-    if (currentStep < guide.totalSteps) {
+    const maxStep = guideSteps.length - 1
+    if (currentStep < maxStep) {
       setCurrentStep(currentStep + 1)
     }
   }
 
   const prevStep = () => {
-    if (currentStep > 1) {
+    if (currentStep > 0) {
       setCurrentStep(currentStep - 1)
     }
   }
@@ -484,7 +621,7 @@ export default function GuideDetailPage() {
   const resetProgress = () => {
     if (confirm('Are you sure you want to reset your progress? This cannot be undone.')) {
       setCompletedSteps([])
-      setCurrentStep(1)
+      setCurrentStep(0) // Reset to introduction
       if (typeof window !== 'undefined' && params.id) {
         localStorage.removeItem(`guide-progress-${params.id}`)
       }
@@ -546,7 +683,7 @@ export default function GuideDetailPage() {
                   <div className="flex items-center justify-between">
                     <div>
                       <CardTitle className="text-2xl font-bold tracking-tight">
-                        Step {currentStep}: {currentStepData.title}
+                        {currentStep === 0 ? "Introduction" : `Step ${currentStep}`}: {currentStepData.title}
                       </CardTitle>
                       <CardDescription className="mt-2 text-base font-normal">{currentStepData.description}</CardDescription>
                     </div>
@@ -570,10 +707,48 @@ export default function GuideDetailPage() {
                     </div>
                   )}
 
-                  {/* Step Images - GIF Animation + Static Diagram */}
-                  <div className="space-y-4">
-                    {/* First Animated GIF */}
-                    {currentStepData.image && (
+                  {/* Step Videos - MP4 Videos with Audio */}
+                    <div className="space-y-4">
+                    {/* First Video with Audio */}
+                    {currentStepData.image && currentStepData.image.endsWith('.mp4') && (
+                      <div className="w-full rounded-lg overflow-hidden border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 p-4">
+                        <video
+                          src={currentStepData.image}
+                          className="w-full h-auto object-contain max-w-full rounded-lg"
+                          controls
+                          playsInline
+                          preload="metadata"
+                          loading={currentStep <= 2 ? "eager" : "lazy"}
+                        >
+                          Your browser does not support the video tag.
+                        </video>
+                        <p className="text-xs text-center text-slate-500 dark:text-slate-400 mt-2 italic">
+                          Gameplay visuals from PC Building Simulator 2 used for educational demonstration
+                        </p>
+                      </div>
+                    )}
+                    
+                    {/* Second Video (if exists) */}
+                    {currentStepData.image2 && currentStepData.image2.endsWith('.mp4') && (
+                      <div className="w-full rounded-lg overflow-hidden border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 p-4">
+                        <video
+                          src={currentStepData.image2}
+                          className="w-full h-auto object-contain max-w-full rounded-lg"
+                          controls
+                          playsInline
+                          preload="metadata"
+                          loading="lazy"
+                        >
+                          Your browser does not support the video tag.
+                        </video>
+                        <p className="text-xs text-center text-slate-500 dark:text-slate-400 mt-2 italic">
+                          Gameplay visuals from PC Building Simulator 2 used for educational demonstration
+                        </p>
+                      </div>
+                    )}
+                    
+                    {/* Fallback for GIF images (if any remain) */}
+                    {currentStepData.image && !currentStepData.image.endsWith('.mp4') && (
                       <div className="w-full rounded-lg overflow-hidden border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 p-4">
                         <a 
                           href={currentStepData.image} 
@@ -581,51 +756,29 @@ export default function GuideDetailPage() {
                           rel="noopener noreferrer"
                           className="block cursor-pointer hover:opacity-90 transition-opacity"
                         >
-                          <img
-                            src={currentStepData.image}
-                            alt={`Step ${currentStep} animation`}
-                            className="w-full h-auto object-contain max-w-full"
-                            loading={currentStep <= 2 ? "eager" : "lazy"}
-                          />
+                        <img
+                          src={currentStepData.image}
+                          alt={`Step ${currentStep} animation`}
+                          className="w-full h-auto object-contain max-w-full"
+                          loading={currentStep <= 2 ? "eager" : "lazy"}
+                        />
                         </a>
                         <p className="text-xs text-center text-slate-500 dark:text-slate-400 mt-2 italic">
                           Gameplay visuals from PC Building Simulator 2 used for educational demonstration
                         </p>
                       </div>
                     )}
-                    
-                    {/* Second Animated GIF (if exists) */}
-                    {currentStepData.image2 && (
-                      <div className="w-full rounded-lg overflow-hidden border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 p-4">
-                        <a 
-                          href={currentStepData.image2} 
-                          target="_blank" 
-                          rel="noopener noreferrer"
-                          className="block cursor-pointer hover:opacity-90 transition-opacity"
-                        >
-                          <img
-                            src={currentStepData.image2}
-                            alt={`Step ${currentStep} animation part 2`}
-                            className="w-full h-auto object-contain max-w-full"
-                            loading="lazy"
-                          />
-                        </a>
-                        <p className="text-xs text-center text-slate-500 dark:text-slate-400 mt-2 italic">
-                          Gameplay visuals from PC Building Simulator 2 used for educational demonstration
-                        </p>
-                      </div>
-                    )}
-                    
-                    {/* Static Patent-Style Diagram */}
-                    {currentStep === 1 && (
+                      
+                      {/* Static Patent-Style Diagram */}
+                      {currentStep === 1 && (
                         <div className="w-full rounded-lg overflow-hidden border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 p-4">
                           <a href="/1st.png" target="_blank" rel="noopener noreferrer" className="block cursor-pointer hover:opacity-90 transition-opacity">
-                            <img
-                              src="/1st.png"
-                              alt="Step 1 diagram"
-                              className="w-full h-auto object-contain max-w-full"
-                              loading="eager"
-                            />
+                          <img
+                            src="/1st.png"
+                            alt="Step 1 diagram"
+                            className="w-full h-auto object-contain max-w-full"
+                            loading="eager"
+                          />
                           </a>
                           <p className="text-xs text-center text-slate-500 dark:text-slate-400 mt-2">
                             Technical diagram
@@ -635,11 +788,11 @@ export default function GuideDetailPage() {
                       {currentStep === 2 && (
                         <div className="w-full rounded-lg overflow-hidden border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 p-4">
                           <a href="/10th.png" target="_blank" rel="noopener noreferrer" className="block cursor-pointer hover:opacity-90 transition-opacity">
-                            <img
+                          <img
                               src="/10th.png"
-                              alt="Step 2 diagram"
-                              className="w-full h-auto object-contain max-w-full"
-                            />
+                            alt="Step 2 diagram"
+                            className="w-full h-auto object-contain max-w-full"
+                          />
                           </a>
                           <p className="text-xs text-center text-slate-500 dark:text-slate-400 mt-2">
                             Technical diagram
@@ -649,11 +802,11 @@ export default function GuideDetailPage() {
                       {currentStep === 3 && (
                         <div className="w-full rounded-lg overflow-hidden border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 p-4">
                           <a href="/5th.png" target="_blank" rel="noopener noreferrer" className="block cursor-pointer hover:opacity-90 transition-opacity">
-                            <img
+                          <img
                               src="/5th.png"
-                              alt="Step 3 diagram"
-                              className="w-full h-auto object-contain max-w-full"
-                            />
+                            alt="Step 3 diagram"
+                            className="w-full h-auto object-contain max-w-full"
+                          />
                           </a>
                           <p className="text-xs text-center text-slate-500 dark:text-slate-400 mt-2">
                             Technical diagram
@@ -663,11 +816,11 @@ export default function GuideDetailPage() {
                       {currentStep === 4 && (
                         <div className="w-full rounded-lg overflow-hidden border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 p-4">
                           <a href="/2nd.png" target="_blank" rel="noopener noreferrer" className="block cursor-pointer hover:opacity-90 transition-opacity">
-                            <img
+                          <img
                               src="/2nd.png"
-                              alt="Step 4 diagram"
-                              className="w-full h-auto object-contain max-w-full"
-                            />
+                            alt="Step 4 diagram"
+                            className="w-full h-auto object-contain max-w-full"
+                          />
                           </a>
                           <p className="text-xs text-center text-slate-500 dark:text-slate-400 mt-2">
                             Technical diagram
@@ -677,11 +830,11 @@ export default function GuideDetailPage() {
                       {currentStep === 5 && (
                         <div className="w-full rounded-lg overflow-hidden border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 p-4">
                           <a href="/3rd.png" target="_blank" rel="noopener noreferrer" className="block cursor-pointer hover:opacity-90 transition-opacity">
-                            <img
+                          <img
                               src="/3rd.png"
-                              alt="Step 5 diagram"
-                              className="w-full h-auto object-contain max-w-full"
-                            />
+                            alt="Step 5 diagram"
+                            className="w-full h-auto object-contain max-w-full"
+                          />
                           </a>
                           <p className="text-xs text-center text-slate-500 dark:text-slate-400 mt-2">
                             Technical diagram
@@ -691,11 +844,11 @@ export default function GuideDetailPage() {
                       {currentStep === 6 && (
                         <div className="w-full rounded-lg overflow-hidden border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 p-4">
                           <a href="/4th.png" target="_blank" rel="noopener noreferrer" className="block cursor-pointer hover:opacity-90 transition-opacity">
-                            <img
+                          <img
                               src="/4th.png"
-                              alt="Step 6 diagram"
-                              className="w-full h-auto object-contain max-w-full"
-                            />
+                            alt="Step 6 diagram"
+                            className="w-full h-auto object-contain max-w-full"
+                          />
                           </a>
                           <p className="text-xs text-center text-slate-500 dark:text-slate-400 mt-2">
                             Technical diagram
@@ -705,11 +858,11 @@ export default function GuideDetailPage() {
                       {currentStep === 7 && (
                         <div className="w-full rounded-lg overflow-hidden border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 p-4">
                           <a href="/8th.png" target="_blank" rel="noopener noreferrer" className="block cursor-pointer hover:opacity-90 transition-opacity">
-                            <img
+                          <img
                               src="/8th.png"
-                              alt="Step 7 diagram"
-                              className="w-full h-auto object-contain max-w-full"
-                            />
+                            alt="Step 7 diagram"
+                            className="w-full h-auto object-contain max-w-full"
+                          />
                           </a>
                           <p className="text-xs text-center text-slate-500 dark:text-slate-400 mt-2">
                             Technical diagram
@@ -719,11 +872,11 @@ export default function GuideDetailPage() {
                       {currentStep === 8 && (
                         <div className="w-full rounded-lg overflow-hidden border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 p-4">
                           <a href="/6th.png" target="_blank" rel="noopener noreferrer" className="block cursor-pointer hover:opacity-90 transition-opacity">
-                            <img
+                          <img
                               src="/6th.png"
-                              alt="Step 8 diagram"
-                              className="w-full h-auto object-contain max-w-full"
-                            />
+                            alt="Step 8 diagram"
+                            className="w-full h-auto object-contain max-w-full"
+                          />
                           </a>
                           <p className="text-xs text-center text-slate-500 dark:text-slate-400 mt-2">
                             Technical diagram
@@ -733,11 +886,11 @@ export default function GuideDetailPage() {
                       {currentStep === 9 && (
                         <div className="w-full rounded-lg overflow-hidden border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 p-4">
                           <a href="/7th.png" target="_blank" rel="noopener noreferrer" className="block cursor-pointer hover:opacity-90 transition-opacity">
-                            <img
+                          <img
                               src="/7th.png"
-                              alt="Step 9 diagram"
-                              className="w-full h-auto object-contain max-w-full"
-                            />
+                            alt="Step 9 diagram"
+                            className="w-full h-auto object-contain max-w-full"
+                          />
                           </a>
                           <p className="text-xs text-center text-slate-500 dark:text-slate-400 mt-2">
                             Technical diagram
@@ -747,11 +900,11 @@ export default function GuideDetailPage() {
                       {currentStep === 10 && (
                         <div className="w-full rounded-lg overflow-hidden border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 p-4">
                           <a href="/9th.png" target="_blank" rel="noopener noreferrer" className="block cursor-pointer hover:opacity-90 transition-opacity">
-                            <img
+                          <img
                               src="/9th.png"
-                              alt="Step 10 diagram"
-                              className="w-full h-auto object-contain max-w-full"
-                            />
+                            alt="Step 10 diagram"
+                            className="w-full h-auto object-contain max-w-full"
+                          />
                           </a>
                           <p className="text-xs text-center text-slate-500 dark:text-slate-400 mt-2">
                             Technical diagram
@@ -761,11 +914,11 @@ export default function GuideDetailPage() {
                       {currentStep === 11 && (
                         <div className="w-full rounded-lg overflow-hidden border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 p-4">
                           <a href="/10th.png" target="_blank" rel="noopener noreferrer" className="block cursor-pointer hover:opacity-90 transition-opacity">
-                            <img
+                          <img
                               src="/10th.png"
-                              alt="Step 11 diagram"
-                              className="w-full h-auto object-contain max-w-full"
-                            />
+                            alt="Step 11 diagram"
+                            className="w-full h-auto object-contain max-w-full"
+                          />
                           </a>
                           <p className="text-xs text-center text-slate-500 dark:text-slate-400 mt-2">
                             Technical diagram

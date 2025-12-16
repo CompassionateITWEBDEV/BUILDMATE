@@ -53,7 +53,9 @@ import {
   ShoppingCart,
   MapPin,
   Download,
-  Edit
+  Edit,
+  HelpCircle,
+  BookOpen
 } from "lucide-react"
 
 import { type Component, type ComponentCategory, type PerformanceCategory, performanceCategories } from "@/lib/mock-data"
@@ -68,6 +70,7 @@ import { useAuth } from "@/contexts/supabase-auth-context"
 import { componentService } from "@/lib/database"
 import { Textarea } from "@/components/ui/textarea"
 import { RetailerLocation } from "@/components/retailer-location"
+import { BuildWizard } from "@/components/build-wizard"
 
 const categoryIcons = {
   cpu: Cpu,
@@ -115,8 +118,10 @@ export default function BuilderPage() {
   const COMPONENTS_PER_PAGE = 10
   const [searchTerm, setSearchTerm] = useState("")
   const [locationFilter, setLocationFilter] = useState<string>("")
-  const [showOnlyCompatible, setShowOnlyCompatible] = useState(false)
+  const [showOnlyCompatible, setShowOnlyCompatible] = useState(true) // Default to true for automatic filtering
   const [sortBy, setSortBy] = useState<"default" | "price-low" | "price-high">("default")
+  const [showBuildWizard, setShowBuildWizard] = useState(false)
+  const [userExperienceLevel, setUserExperienceLevel] = useState<"beginner" | "intermediate" | "advanced">("beginner")
   const [buildName, setBuildName] = useState("My Custom Build")
   const [buildType, setBuildType] = useState<string>("4")
   const [isSaveDialogOpen, setIsSaveDialogOpen] = useState(false)
@@ -1514,19 +1519,344 @@ export default function BuilderPage() {
     setComponentPage(0)
   }, [searchTerm, locationFilter, performanceCategory, activeCategory, showOnlyCompatible, sortBy])
 
+  // Show wizard on first visit
+  useEffect(() => {
+    const hasSeenWizard = typeof window !== 'undefined' && localStorage.getItem('buildmate-wizard-seen') === 'true'
+    if (!hasSeenWizard) {
+      setShowBuildWizard(true)
+    }
+  }, [])
+
+  // Handle wizard completion
+  const handleWizardComplete = (data: {
+    priorityComponent: "gpu" | "cpu" | "none"
+    budget: number
+    performanceCategory: PerformanceCategory
+    experienceLevel: "beginner" | "intermediate" | "advanced"
+  }) => {
+    // Set performance category
+    setPerformanceCategory(data.performanceCategory)
+    
+    // Set budget if provided
+    if (data.budget > 0) {
+      setBudget(data.budget)
+      setBudgetEnabled(true)
+    }
+    
+    // Set experience level
+    setUserExperienceLevel(data.experienceLevel)
+    
+    // Navigate to priority component if selected
+    if (data.priorityComponent === "gpu") {
+      setActiveCategory("gpu")
+    } else if (data.priorityComponent === "cpu") {
+      setActiveCategory("cpu")
+    }
+    
+    // Mark wizard as seen
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('buildmate-wizard-seen', 'true')
+    }
+    
+    setShowBuildWizard(false)
+  }
+
+  const handleWizardSkip = () => {
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('buildmate-wizard-seen', 'true')
+    }
+    setShowBuildWizard(false)
+  }
+
+  // Download build summary as text file
+  const handleDownloadBuildSummary = () => {
+    try {
+      const buildSummary = generateBuildSummaryText()
+      const blob = new Blob([buildSummary], { type: 'text/plain;charset=utf-8' })
+      const url = URL.createObjectURL(blob)
+      const a = document.createElement('a')
+      a.href = url
+      const timestamp = new Date().toISOString().split('T')[0]
+      a.download = `buildmate-build-summary-${timestamp}.txt`
+      document.body.appendChild(a)
+      a.click()
+      // Clean up after a short delay
+      setTimeout(() => {
+        document.body.removeChild(a)
+        URL.revokeObjectURL(url)
+      }, 100)
+      
+      // Show success feedback
+      if (typeof window !== 'undefined' && 'toast' in window) {
+        // If toast is available, use it
+        console.log('Build summary downloaded successfully')
+      }
+    } catch (error) {
+      console.error('Error downloading build summary:', error)
+      alert('Failed to download build summary. Please try again.')
+    }
+  }
+
+  // Download build summary as JSON file
+  const handleDownloadBuildSummaryJSON = () => {
+    try {
+      const buildData = {
+        buildName,
+        buildType: buildType === "1" ? "Academic" : buildType === "3" ? "Gaming" : "Custom",
+        generatedAt: new Date().toISOString(),
+        components: Object.entries(selectedComponents).map(([category, component]) => ({
+          category: categoryNames[category as ComponentCategory],
+          name: component?.name || null,
+          price: component?.price || 0,
+          retailer: component?.retailer ? {
+            name: component.retailer.name,
+            address: component.retailer.address || null,
+            phone: component.retailer.phone || null,
+            email: component.retailer.email || null
+          } : null
+        })),
+        totalPrice,
+        budget: budgetEnabled && budget > 0 ? {
+          budget,
+          remaining: remainingBudget,
+          percentage: Math.round(budgetPercentage)
+        } : null,
+        compatibility: {
+          score: compatibilityResult.score,
+          issues: compatibilityResult.issues.map(issue => ({
+            type: issue.type,
+            message: issue.message,
+            suggestion: issue.suggestion || null
+          }))
+        }
+      }
+      
+      const jsonString = JSON.stringify(buildData, null, 2)
+      const blob = new Blob([jsonString], { type: 'application/json;charset=utf-8' })
+      const url = URL.createObjectURL(blob)
+      const a = document.createElement('a')
+      a.href = url
+      const timestamp = new Date().toISOString().split('T')[0]
+      a.download = `buildmate-build-summary-${timestamp}.json`
+      document.body.appendChild(a)
+      a.click()
+      setTimeout(() => {
+        document.body.removeChild(a)
+        URL.revokeObjectURL(url)
+      }, 100)
+    } catch (error) {
+      console.error('Error downloading JSON summary:', error)
+      alert('Failed to download JSON summary. Please try again.')
+    }
+  }
+
+  // Print build summary
+  const handlePrintBuildSummary = () => {
+    const printWindow = window.open('', '_blank')
+    if (!printWindow) return
+
+    const buildSummary = generateBuildSummaryHTML()
+    printWindow.document.write(buildSummary)
+    printWindow.document.close()
+    printWindow.focus()
+    printWindow.print()
+    printWindow.close()
+  }
+
+  // Generate build summary as plain text
+  const generateBuildSummaryText = () => {
+    const date = new Date().toLocaleDateString('en-US', { 
+      year: 'numeric', 
+      month: 'long', 
+      day: 'numeric' 
+    })
+    
+    let summary = `BuildMate - PC Build Summary\n`
+    summary += `Generated: ${date}\n`
+    summary += `Build Name: ${buildName}\n`
+    summary += `Build Type: ${buildType === "1" ? "Academic" : buildType === "3" ? "Gaming" : "Custom"}\n`
+    summary += `\n${'='.repeat(50)}\n\n`
+    summary += `COMPONENTS:\n`
+    summary += `${'='.repeat(50)}\n\n`
+
+    Object.entries(selectedComponents).forEach(([category, component]) => {
+      const categoryName = categoryNames[category as ComponentCategory]
+      summary += `${categoryName}:\n`
+      if (component) {
+        summary += `  - ${component.name}\n`
+        summary += `  - Price: ${formatCurrency(component.price)}\n`
+        if (component.retailer) {
+          summary += `  - Retailer: ${component.retailer.name}\n`
+          if (component.retailer.address) {
+            summary += `  - Address: ${component.retailer.address}\n`
+          }
+        }
+      } else {
+        summary += `  - Not selected\n`
+      }
+      summary += `\n`
+    })
+
+    summary += `${'='.repeat(50)}\n\n`
+    summary += `TOTAL PRICE: ${formatCurrency(totalPrice)}\n\n`
+    
+    if (budgetEnabled && budget > 0) {
+      summary += `Budget: ${formatCurrency(budget)}\n`
+      summary += `Remaining: ${formatCurrency(remainingBudget)}\n`
+      summary += `Budget Usage: ${Math.round(budgetPercentage)}%\n\n`
+    }
+
+    summary += `COMPATIBILITY:\n`
+    summary += `${'='.repeat(50)}\n`
+    summary += `Score: ${compatibilityResult.score}%\n`
+    if (compatibilityResult.issues.length > 0) {
+      summary += `\nIssues:\n`
+      compatibilityResult.issues.forEach((issue, index) => {
+        summary += `${index + 1}. [${issue.type.toUpperCase()}] ${issue.message}\n`
+        if (issue.suggestion) {
+          summary += `   Suggestion: ${issue.suggestion}\n`
+        }
+      })
+    } else {
+      summary += `\nNo compatibility issues detected.\n`
+    }
+
+    summary += `\n${'='.repeat(50)}\n`
+    summary += `\nGenerated by BuildMate - Your PC Building Companion\n`
+    summary += `Visit: ${typeof window !== 'undefined' ? window.location.origin : 'https://buildmate.com'}\n`
+
+    return summary
+  }
+
+  // Generate build summary as HTML for printing
+  const generateBuildSummaryHTML = () => {
+    const date = new Date().toLocaleDateString('en-US', { 
+      year: 'numeric', 
+      month: 'long', 
+      day: 'numeric' 
+    })
+    
+    let html = `<!DOCTYPE html>
+<html>
+<head>
+  <title>BuildMate - Build Summary</title>
+  <style>
+    body { font-family: Arial, sans-serif; padding: 20px; max-width: 800px; margin: 0 auto; }
+    h1 { color: #2563eb; border-bottom: 2px solid #2563eb; padding-bottom: 10px; }
+    h2 { color: #1e40af; margin-top: 20px; }
+    table { width: 100%; border-collapse: collapse; margin: 20px 0; }
+    th, td { padding: 10px; text-align: left; border-bottom: 1px solid #ddd; }
+    th { background-color: #f3f4f6; font-weight: bold; }
+    .total { font-size: 1.2em; font-weight: bold; color: #2563eb; }
+    .issue { margin: 10px 0; padding: 10px; background-color: #fef3c7; border-left: 4px solid #f59e0b; }
+    .error { background-color: #fee2e2; border-left-color: #ef4444; }
+    .warning { background-color: #fef3c7; border-left-color: #f59e0b; }
+    .info { background-color: #dbeafe; border-left-color: #3b82f6; }
+    .footer { margin-top: 40px; padding-top: 20px; border-top: 2px solid #ddd; text-align: center; color: #6b7280; }
+    @media print {
+      body { padding: 0; }
+      .no-print { display: none; }
+    }
+  </style>
+</head>
+<body>
+  <h1>BuildMate - PC Build Summary</h1>
+  <p><strong>Generated:</strong> ${date}</p>
+  <p><strong>Build Name:</strong> ${buildName}</p>
+  <p><strong>Build Type:</strong> ${buildType === "1" ? "Academic" : buildType === "3" ? "Gaming" : "Custom"}</p>
+  
+  <h2>Components</h2>
+  <table>
+    <thead>
+      <tr>
+        <th>Category</th>
+        <th>Component</th>
+        <th>Price</th>
+        <th>Retailer</th>
+      </tr>
+    </thead>
+    <tbody>`
+
+    Object.entries(selectedComponents).forEach(([category, component]) => {
+      const categoryName = categoryNames[category as ComponentCategory]
+      html += `<tr>
+        <td>${categoryName}</td>
+        <td>${component ? component.name : 'Not selected'}</td>
+        <td>${component ? formatCurrency(component.price) : formatCurrency(0)}</td>
+        <td>${component?.retailer?.name || 'N/A'}</td>
+      </tr>`
+    })
+
+    html += `</tbody>
+    <tfoot>
+      <tr>
+        <td colspan="2" class="total">Total Price</td>
+        <td colspan="2" class="total">${formatCurrency(totalPrice)}</td>
+      </tr>`
+
+    if (budgetEnabled && budget > 0) {
+      html += `<tr>
+        <td colspan="2">Budget</td>
+        <td colspan="2">${formatCurrency(budget)}</td>
+      </tr>
+      <tr>
+        <td colspan="2">Remaining</td>
+        <td colspan="2">${formatCurrency(remainingBudget)}</td>
+      </tr>
+      <tr>
+        <td colspan="2">Budget Usage</td>
+        <td colspan="2">${Math.round(budgetPercentage)}%</td>
+      </tr>`
+    }
+
+    html += `</tfoot>
+  </table>
+
+  <h2>Compatibility</h2>
+  <p><strong>Compatibility Score:</strong> ${compatibilityResult.score}%</p>`
+
+    if (compatibilityResult.issues.length > 0) {
+      html += `<h3>Issues:</h3>`
+      compatibilityResult.issues.forEach((issue) => {
+        html += `<div class="issue ${issue.type}">
+          <strong>[${issue.type.toUpperCase()}]</strong> ${issue.message}
+          ${issue.suggestion ? `<br><em>Suggestion: ${issue.suggestion}</em>` : ''}
+        </div>`
+      })
+    } else {
+      html += `<p>✅ No compatibility issues detected.</p>`
+    }
+
+    html += `
+  <div class="footer">
+    <p>Generated by BuildMate - Your PC Building Companion</p>
+    <p>${typeof window !== 'undefined' ? window.location.origin : 'https://buildmate.com'}</p>
+  </div>
+</body>
+</html>`
+
+    return html
+  }
+
 
 
 
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 dark:from-slate-900 dark:to-slate-800">
+      {/* Build Wizard */}
+      <BuildWizard
+        isOpen={showBuildWizard}
+        onComplete={handleWizardComplete}
+        onSkip={handleWizardSkip}
+      />
       
       {/* Dialogs - Preview Purchase, Save, Success, etc. */}
       <Dialog open={showPurchasePreview} onOpenChange={setShowPurchasePreview}>
-                <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+                <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto p-4 sm:p-6">
                   <DialogHeader>
-                    <DialogTitle>Purchase Details Preview</DialogTitle>
-                    <DialogDescription>
+                    <DialogTitle className="text-lg sm:text-xl">Purchase Details Preview</DialogTitle>
+                    <DialogDescription className="text-xs sm:text-sm">
                       Review your build components and purchase information before saving
                     </DialogDescription>
                   </DialogHeader>
@@ -1711,33 +2041,33 @@ export default function BuilderPage() {
 
               {/* Purchase Confirmation Alert Dialog */}
               <AlertDialog open={showPurchaseConfirm} onOpenChange={setShowPurchaseConfirm}>
-                <AlertDialogContent className="sm:max-w-md">
+                <AlertDialogContent className="sm:max-w-md p-4 sm:p-6">
                   <AlertDialogHeader>
-                    <AlertDialogTitle className="flex items-center gap-2 text-xl">
-                      <CheckCircle2 className="h-6 w-6 text-green-600" />
+                    <AlertDialogTitle className="flex items-center gap-2 text-lg sm:text-xl">
+                      <CheckCircle2 className="h-5 w-5 sm:h-6 sm:w-6 text-green-600" />
                       Build Saved Successfully!
                     </AlertDialogTitle>
                   </AlertDialogHeader>
                   
                   {/* Use div instead of AlertDialogDescription to avoid nested <p> tags */}
-                  <div className="space-y-3 mt-3 px-6">
-                    <div className="p-4 bg-gradient-to-br from-green-50 to-blue-50 dark:from-green-900/20 dark:to-blue-900/20 rounded-lg border-2 border-green-200 dark:border-green-800">
-                      <div className="font-semibold text-slate-800 dark:text-slate-200 mb-2">
+                  <div className="space-y-3 mt-3 px-3 sm:px-6">
+                    <div className="p-3 sm:p-4 bg-gradient-to-br from-green-50 to-blue-50 dark:from-green-900/20 dark:to-blue-900/20 rounded-lg border-2 border-green-200 dark:border-green-800">
+                      <div className="font-semibold text-sm sm:text-base text-slate-800 dark:text-slate-200 mb-2">
                         📦 {buildName}
                       </div>
                       <div className="flex justify-between items-center">
-                        <span className="text-sm text-slate-600 dark:text-slate-400">Total Price:</span>
-                        <span className="text-2xl font-bold text-green-600 dark:text-green-400">
+                        <span className="text-xs sm:text-sm text-slate-600 dark:text-slate-400">Total Price:</span>
+                        <span className="text-xl sm:text-2xl font-bold text-green-600 dark:text-green-400">
                           {formatCurrency(totalPrice)}
                         </span>
                       </div>
                       {savedBuildId && (
-                        <div className="text-xs text-slate-500 dark:text-slate-400 mt-2">
+                        <div className="text-[10px] sm:text-xs text-slate-500 dark:text-slate-400 mt-2">
                           Build ID: #{savedBuildId}
                         </div>
                       )}
                     </div>
-                    <div className="text-center font-semibold text-lg text-slate-700 dark:text-slate-300 py-2">
+                    <div className="text-center font-semibold text-sm sm:text-lg text-slate-700 dark:text-slate-300 py-2">
                       🛒 Do you want to purchase this build now?
                     </div>
                   </div>
@@ -1771,30 +2101,30 @@ export default function BuilderPage() {
 
               {/* Success Dialog after saving */}
               <Dialog open={showSuccessDialog} onOpenChange={setShowSuccessDialog}>
-                <DialogContent className="sm:max-w-md">
+                <DialogContent className="sm:max-w-md p-4 sm:p-6">
                   <DialogHeader>
-                    <DialogTitle className="flex items-center gap-2 text-xl">
-                      <CheckCircle2 className="h-6 w-6 text-green-600" />
+                    <DialogTitle className="flex items-center gap-2 text-lg sm:text-xl">
+                      <CheckCircle2 className="h-5 w-5 sm:h-6 sm:w-6 text-green-600" />
                       Build Saved Successfully!
                     </DialogTitle>
-                    <DialogDescription className="text-base">
+                    <DialogDescription className="text-xs sm:text-base">
                       Your build "{buildName}" has been saved. What would you like to do next?
                     </DialogDescription>
                   </DialogHeader>
-                  <div className="space-y-4">
-                    <div className="p-4 bg-slate-50 dark:bg-slate-800 rounded-lg border-2 border-slate-200 dark:border-slate-700">
+                  <div className="space-y-3 sm:space-y-4">
+                    <div className="p-3 sm:p-4 bg-slate-50 dark:bg-slate-800 rounded-lg border-2 border-slate-200 dark:border-slate-700">
                       <div className="flex justify-between items-center mb-2">
-                        <span className="font-medium text-slate-700 dark:text-slate-300">Total Price:</span>
-                        <span className="text-2xl font-bold text-blue-600 dark:text-blue-400">{formatCurrency(totalPrice)}</span>
+                        <span className="font-medium text-xs sm:text-sm text-slate-700 dark:text-slate-300">Total Price:</span>
+                        <span className="text-xl sm:text-2xl font-bold text-blue-600 dark:text-blue-400">{formatCurrency(totalPrice)}</span>
                       </div>
                       {savedBuildId && (
-                        <div className="text-xs text-slate-500 mt-1">
+                        <div className="text-[10px] sm:text-xs text-slate-500 mt-1">
                           Build ID: #{savedBuildId}
                         </div>
                       )}
                     </div>
 
-                    <div className="flex flex-col gap-3">
+                    <div className="flex flex-col gap-2 sm:gap-3">
                       {/* Primary Action: Purchase Now */}
                       <Button
                         onClick={() => {
@@ -1804,10 +2134,11 @@ export default function BuilderPage() {
                           router.refresh()
                         }}
                         size="lg"
-                        className="w-full bg-green-600 hover:bg-green-700 text-white font-semibold text-lg py-6"
+                        className="w-full bg-green-600 hover:bg-green-700 text-white font-semibold text-sm sm:text-lg py-4 sm:py-6"
                       >
-                        <ShoppingCart className="mr-2 h-5 w-5" />
-                        Purchase Build Now
+                        <ShoppingCart className="mr-2 h-4 w-4 sm:h-5 sm:w-5" />
+                        <span className="hidden sm:inline">Purchase Build Now</span>
+                        <span className="sm:hidden">Purchase Now</span>
                       </Button>
 
                       {/* Secondary Actions */}
@@ -1845,44 +2176,83 @@ export default function BuilderPage() {
               </Dialog>
 
       {/* Main Content Area */}
-      <div className="container mx-auto px-4 py-6">
-        <div className="grid lg:grid-cols-3 gap-6">
+      <div className="container mx-auto px-3 sm:px-4 py-4 sm:py-6">
+        <div className="grid lg:grid-cols-3 gap-4 sm:gap-6">
           {/* Component Selection */}
           <div className="lg:col-span-2">
             <Card className="border-slate-200 dark:border-slate-700">
               <CardHeader>
                 <div className="space-y-4">
-                  <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-                    <CardTitle className="text-lg sm:text-xl">Select Components</CardTitle>
-                    <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 w-full sm:w-auto">
-                      <div className="flex items-center gap-2 flex-1 sm:flex-initial">
-                      <Search className="h-4 w-4 text-slate-400" />
-                      <Input
-                        placeholder="Search components..."
-                        value={searchTerm}
-                        onChange={(e) => setSearchTerm(e.target.value)}
-                          className="w-full sm:w-64"
-                        />
+                  <div className="flex flex-col gap-3 sm:gap-4">
+                    <div className="flex items-center justify-between flex-wrap gap-2">
+                      <CardTitle className="text-base sm:text-lg md:text-xl">Select Components</CardTitle>
+                      <div className="flex gap-2">
+                        <Button
+                          variant="default"
+                          size="sm"
+                          asChild
+                          className="text-xs sm:text-sm bg-orange-600 hover:bg-orange-700 text-white"
+                          aria-label="View complete PC building tutorial"
+                        >
+                          <Link href="/guides/pc-assembly-guide">
+                            <BookOpen className="h-3 w-3 sm:h-4 sm:w-4 mr-1.5 sm:mr-2" />
+                            <span className="hidden sm:inline">Building Tutorial</span>
+                            <span className="sm:hidden">Tutorial</span>
+                          </Link>
+                        </Button>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => setShowBuildWizard(true)}
+                          className="text-xs sm:text-sm"
+                          aria-label="Open build wizard for step-by-step guidance"
+                        >
+                          <Lightbulb className="h-3 w-3 sm:h-4 sm:w-4 mr-1.5 sm:mr-2" />
+                          <span className="hidden sm:inline">Get Started Guide</span>
+                          <span className="sm:hidden">Guide</span>
+                        </Button>
                       </div>
-                      <div className="flex items-center gap-2 flex-1 sm:flex-initial">
-                        <MapPin className="h-4 w-4 text-slate-400" />
+                    </div>
+                    <div className="space-y-2">
+                      <p className="text-xs sm:text-sm text-slate-600 dark:text-slate-400">
+                        💡 <strong>Search & Filter:</strong> Use the search box to find specific components by name or brand. Use location filter to find components available in your area.
+                      </p>
+                      <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 w-full sm:w-auto">
+                        <div className="flex items-center gap-1.5 sm:gap-2 flex-1 sm:flex-initial">
+                        <Search className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-slate-400 flex-shrink-0" />
                         <Input
-                          placeholder="Filter by location..."
-                          value={locationFilter}
-                          onChange={(e) => setLocationFilter(e.target.value)}
-                          className="w-full sm:w-64"
-                      />
+                          placeholder="Search components..."
+                          value={searchTerm}
+                          onChange={(e) => setSearchTerm(e.target.value)}
+                            className="w-full sm:w-64 text-xs sm:text-sm"
+                            aria-label="Search for components by name or brand"
+                          />
+                        </div>
+                        <div className="flex items-center gap-1.5 sm:gap-2 flex-1 sm:flex-initial">
+                          <MapPin className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-slate-400 flex-shrink-0" />
+                          <Input
+                            placeholder="Filter by location..."
+                            value={locationFilter}
+                            onChange={(e) => setLocationFilter(e.target.value)}
+                            className="w-full sm:w-64 text-xs sm:text-sm"
+                            aria-label="Filter components by retailer location"
+                        />
+                        </div>
                       </div>
                     </div>
                   </div>
                   
                   {/* Performance Category Selector */}
-                  <div className="flex flex-col sm:flex-row sm:items-center gap-4">
-                    <Label htmlFor="performance-category" className="text-sm font-medium whitespace-nowrap">
-                      Performance Category:
-                    </Label>
+                  <div className="space-y-2">
+                    <p className="text-xs sm:text-sm text-slate-600 dark:text-slate-400">
+                      🎯 <strong>Performance Category:</strong> Select your intended use (Gaming, Office, Academic) to see components optimized for that purpose.
+                    </p>
+                    <div className="flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-4">
+                      <Label htmlFor="performance-category" className="text-xs sm:text-sm font-medium whitespace-nowrap">
+                        Performance Category:
+                      </Label>
                     <Select value={performanceCategory} onValueChange={(value) => setPerformanceCategory(value as PerformanceCategory)}>
-                      <SelectTrigger className="w-full sm:w-64">
+                      <SelectTrigger className="w-full sm:w-64 text-xs sm:text-sm">
                         <SelectValue placeholder="Select performance category" />
                       </SelectTrigger>
                       <SelectContent>
@@ -1896,73 +2266,93 @@ export default function BuilderPage() {
                         ))}
                       </SelectContent>
                     </Select>
-                    {performanceCategory !== "all" && (
-                      <Badge variant="secondary" className="ml-2">
-                        {performanceCategories[performanceCategory].name}
-                      </Badge>
-                    )}
+                      {performanceCategory !== "all" && (
+                        <Badge variant="secondary" className="ml-2">
+                          {performanceCategories[performanceCategory].name}
+                        </Badge>
+                      )}
+                    </div>
                   </div>
 
                   {/* Compatibility Filter and Sort */}
-                  <div className="flex flex-col sm:flex-row gap-4">
-                    <div className="flex items-center gap-2 p-3 bg-slate-50 dark:bg-slate-800 rounded-lg flex-1">
-                      <input
-                        type="checkbox"
-                        id="show-only-compatible"
-                        checked={showOnlyCompatible}
-                        onChange={(e) => setShowOnlyCompatible(e.target.checked)}
-                        className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
-                      />
-                      <Label htmlFor="show-only-compatible" className="text-sm font-medium cursor-pointer">
-                        Show Only Compatible Components
-                      </Label>
-                    </div>
-                    <div className="flex items-center gap-2 p-3 bg-slate-50 dark:bg-slate-800 rounded-lg">
-                      <Label htmlFor="sort-by" className="text-sm font-medium whitespace-nowrap">
-                        Sort by:
-                      </Label>
-                      <Select value={sortBy} onValueChange={(value) => setSortBy(value as "default" | "price-low" | "price-high")}>
-                        <SelectTrigger className="w-full sm:w-48">
-                          <SelectValue placeholder="Sort order" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="default">Default Order</SelectItem>
-                          <SelectItem value="price-low">Price: Low to High</SelectItem>
-                          <SelectItem value="price-high">Price: High to Low</SelectItem>
-                        </SelectContent>
-                      </Select>
+                  <div className="space-y-2">
+                    <p className="text-xs sm:text-sm text-slate-600 dark:text-slate-400">
+                      🔍 <strong>Filters:</strong> Enable "Show Only Compatible" to automatically hide incompatible components. Use "Sort by" to organize components by price.
+                    </p>
+                    <div className="flex flex-col sm:flex-row gap-3 sm:gap-4">
+                      <div className="flex items-center gap-2 p-2.5 sm:p-3 bg-slate-50 dark:bg-slate-800 rounded-lg flex-1">
+                        <input
+                          type="checkbox"
+                          id="show-only-compatible"
+                          checked={showOnlyCompatible}
+                          onChange={(e) => setShowOnlyCompatible(e.target.checked)}
+                          className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded flex-shrink-0"
+                          aria-label="Show only compatible components"
+                        />
+                        <Label htmlFor="show-only-compatible" className="text-xs sm:text-sm font-medium cursor-pointer">
+                          Show Only Compatible
+                        </Label>
+                        {userExperienceLevel === "beginner" && (
+                          <div className="group relative">
+                            <HelpCircle className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-slate-400 cursor-help" aria-label="Help: Compatibility filter" />
+                            <div className="absolute left-0 bottom-full mb-2 hidden group-hover:block z-10 w-64 p-2 bg-slate-900 text-white text-xs rounded shadow-lg">
+                              When enabled, only components compatible with your selected parts will be shown. This prevents compatibility errors.
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                      <div className="flex items-center gap-2 p-2.5 sm:p-3 bg-slate-50 dark:bg-slate-800 rounded-lg">
+                        <Label htmlFor="sort-by" className="text-xs sm:text-sm font-medium whitespace-nowrap">
+                          Sort by:
+                        </Label>
+                        <Select value={sortBy} onValueChange={(value) => setSortBy(value as "default" | "price-low" | "price-high")}>
+                          <SelectTrigger className="w-full sm:w-48 text-xs sm:text-sm" aria-label="Sort components">
+                            <SelectValue placeholder="Sort order" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="default">Default Order</SelectItem>
+                            <SelectItem value="price-low">Price: Low to High</SelectItem>
+                            <SelectItem value="price-high">Price: High to Low</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
                     </div>
                   </div>
 
                   {/* Budget Controls */}
-                  <div className="flex flex-col sm:flex-row sm:items-center gap-4 p-4 bg-slate-50 dark:bg-slate-800 rounded-lg">
-                    <div className="flex items-center gap-2">
-                      <input
-                        type="checkbox"
-                        id="budget-enabled"
-                        checked={budgetEnabled}
-                        onChange={(e) => setBudgetEnabled(e.target.checked)}
-                        className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
-                      />
-                      <Label htmlFor="budget-enabled" className="text-sm font-medium">
-                        Set Budget:
-                      </Label>
-                    </div>
+                  <div className="space-y-2">
+                    <p className="text-xs sm:text-sm text-slate-600 dark:text-slate-400">
+                      💰 <strong>Budget:</strong> Set your budget to track spending and get recommendations within your price range. The system will warn you if you exceed your budget.
+                    </p>
+                    <div className="flex flex-col gap-3 sm:gap-4 p-3 sm:p-4 bg-slate-50 dark:bg-slate-800 rounded-lg">
+                      <div className="flex items-center gap-2">
+                        <input
+                          type="checkbox"
+                          id="budget-enabled"
+                          checked={budgetEnabled}
+                          onChange={(e) => setBudgetEnabled(e.target.checked)}
+                          className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded flex-shrink-0"
+                          aria-label="Enable budget tracking"
+                        />
+                        <Label htmlFor="budget-enabled" className="text-xs sm:text-sm font-medium">
+                          Set Budget:
+                        </Label>
+                      </div>
                     {budgetEnabled && (
-                      <>
+                      <div className="space-y-3 sm:space-y-0 sm:flex sm:flex-row sm:items-center sm:gap-4">
                         <div className="flex items-center gap-2">
-                          <span className="text-sm text-slate-600 dark:text-slate-400">₱</span>
+                          <span className="text-xs sm:text-sm text-slate-600 dark:text-slate-400">₱</span>
                           <Input
                             type="number"
                             value={budget}
                             onChange={(e) => setBudget(Number(e.target.value))}
-                            placeholder="Min ₱10,000 for CSP"
-                            className="w-full sm:w-32"
+                            placeholder="Min ₱10,000"
+                            className="w-full sm:w-32 text-xs sm:text-sm"
                             min="10000"
                             step="1000"
                           />
                         </div>
-                        <div className="flex flex-col sm:flex-row sm:items-center gap-2 text-sm">
+                        <div className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-2 text-xs sm:text-sm">
                           <span className={`font-medium ${isOverBudget ? 'text-red-600' : 'text-slate-600 dark:text-slate-400'}`}>
                             Spent: {formatCurrency(totalPrice)}
                           </span>
@@ -1981,56 +2371,75 @@ export default function BuilderPage() {
                             />
                           </div>
                         </div>
-                      </>
+                      </div>
                     )}
+                    </div>
                   </div>
 
                   {/* Algorithm Buttons */}
-                  <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 pt-2 border-t border-slate-200 dark:border-slate-700">
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => {
-                        console.log('CSP Button clicked!', { budgetEnabled, budget, isLoadingCSP })
-                        handleGetCSPRecommendations(0)
-                      }}
-                      disabled={!budgetEnabled || budget < 10000 || isLoadingCSP}
-                      className="flex items-center justify-center gap-2 w-full sm:w-auto"
-                      title={budgetEnabled && budget < 10000 ? "CSP requires minimum budget of ₱10,000" : ""}
-                    >
-                      {isLoadingCSP ? (
-                        <>
-                          <Loader2 className="h-4 w-4 animate-spin" />
-                          <span className="hidden sm:inline">Finding solutions... (may take up to 5 min)</span>
-                          <span className="sm:hidden">Finding solutions...</span>
-                        </>
-                      ) : (
-                        <>
-                          <CheckCircle2 className="h-4 w-4" />
-                          <span className="hidden sm:inline">CSP Recommendation Checker</span>
-                          <span className="sm:hidden">CSP Checker</span>
-                        </>
-                      )}
-                    </Button>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={handleGetUpgradeRecommendations}
-                      disabled={Object.values(selectedComponents).filter(Boolean).length === 0 || isLoadingUpgrades}
-                      className="flex items-center justify-center gap-2 w-full sm:w-auto"
-                    >
-                      {isLoadingUpgrades ? (
-                        <>
-                          <Loader2 className="h-4 w-4 animate-spin" />
-                          Loading...
-                        </>
-                      ) : (
-                        <>
-                          <span className="hidden sm:inline">Get Upgrade Suggestions</span>
-                          <span className="sm:hidden">Upgrade Suggestions</span>
-                        </>
-                      )}
-                    </Button>
+                  <div className="space-y-2 pt-2 border-t border-slate-200 dark:border-slate-700">
+                    <p className="text-xs sm:text-sm text-slate-600 dark:text-slate-400">
+                      🤖 <strong>Smart Recommendations:</strong> Use CSP Recommendation Checker to get complete build suggestions based on your budget. Use Upgrade Suggestions to find better components for your current build.
+                    </p>
+                    <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
+                      <div className="flex-1">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => {
+                            console.log('CSP Button clicked!', { budgetEnabled, budget, isLoadingCSP })
+                            handleGetCSPRecommendations(0)
+                          }}
+                          disabled={!budgetEnabled || budget < 10000 || isLoadingCSP}
+                          className="flex items-center justify-center gap-2 w-full"
+                          title={budgetEnabled && budget < 10000 ? "CSP requires minimum budget of ₱10,000" : "Get complete build recommendations based on your budget"}
+                          aria-label="CSP Recommendation Checker - Get complete build suggestions"
+                        >
+                          {isLoadingCSP ? (
+                            <>
+                              <Loader2 className="h-4 w-4 animate-spin" />
+                              <span className="hidden sm:inline">Finding solutions... (may take up to 5 min)</span>
+                              <span className="sm:hidden">Finding solutions...</span>
+                            </>
+                          ) : (
+                            <>
+                              <CheckCircle2 className="h-4 w-4" />
+                              <span className="hidden sm:inline">CSP Recommendation Checker</span>
+                              <span className="sm:hidden">CSP Checker</span>
+                            </>
+                          )}
+                        </Button>
+                        <p className="text-[10px] sm:text-xs text-slate-500 dark:text-slate-400 mt-1">
+                          Requires budget of ₱10,000 or more
+                        </p>
+                      </div>
+                      <div className="flex-1">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={handleGetUpgradeRecommendations}
+                          disabled={Object.values(selectedComponents).filter(Boolean).length === 0 || isLoadingUpgrades}
+                          className="flex items-center justify-center gap-2 w-full"
+                          title="Get upgrade suggestions for your current build"
+                          aria-label="Get upgrade suggestions for selected components"
+                        >
+                          {isLoadingUpgrades ? (
+                            <>
+                              <Loader2 className="h-4 w-4 animate-spin" />
+                              Loading...
+                            </>
+                          ) : (
+                            <>
+                              <span className="hidden sm:inline">Get Upgrade Suggestions</span>
+                              <span className="sm:hidden">Upgrade Suggestions</span>
+                            </>
+                          )}
+                        </Button>
+                        <p className="text-[10px] sm:text-xs text-slate-500 dark:text-slate-400 mt-1">
+                          Select at least one component first
+                        </p>
+                      </div>
+                    </div>
                   </div>
                   {algorithmError && (
                     <div className="p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg">
@@ -2041,17 +2450,17 @@ export default function BuilderPage() {
               </CardHeader>
               <CardContent>
                 <Tabs value={activeCategory} onValueChange={(value) => setActiveCategory(value as ComponentCategory)}>
-                  <TabsList className="grid grid-cols-4 lg:grid-cols-8 mb-6 gap-1">
+                  <TabsList className="grid grid-cols-4 lg:grid-cols-8 mb-4 sm:mb-6 gap-1 sm:gap-2 overflow-x-auto">
                     {Object.entries(categoryIcons).map(([category, Icon]) => (
                       <TabsTrigger 
                         key={category} 
                         value={category} 
-                        className="p-2 text-xs"
+                        className="p-1.5 sm:p-2 text-[10px] sm:text-xs min-w-0"
                         onClick={() => {
                           setComponentPage(0) // Reset page when switching categories
                         }}
                       >
-                        <span className="text-[10px] sm:text-xs">{categoryNames[category as ComponentCategory]}</span>
+                        <span className="truncate">{categoryNames[category as ComponentCategory]}</span>
                       </TabsTrigger>
                     ))}
                   </TabsList>
@@ -2067,6 +2476,22 @@ export default function BuilderPage() {
                     
                     return (
                       <TabsContent key={category} value={category} className="space-y-4">
+                        {userExperienceLevel === "beginner" && filteredComponents.length > 0 && (
+                          <div className="p-3 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg">
+                            <div className="flex items-start gap-2">
+                              <Info className="h-4 w-4 text-blue-600 dark:text-blue-400 flex-shrink-0 mt-0.5" />
+                              <div className="text-xs sm:text-sm text-blue-800 dark:text-blue-200">
+                                <p className="font-medium mb-1">💡 Tip for {categoryNames[category as ComponentCategory]}:</p>
+                                {category === "cpu" && <p>Select a CPU first, then we'll show only compatible motherboards and coolers.</p>}
+                                {category === "gpu" && <p>For gaming builds, prioritize GPU. We'll ensure the PSU has enough power.</p>}
+                                {category === "motherboard" && <p>Make sure the motherboard socket matches your CPU socket type.</p>}
+                                {category === "memory" && <p>Check that the RAM type (DDR4/DDR5) matches your motherboard's supported memory.</p>}
+                                {category === "psu" && <p>Ensure the PSU wattage is at least 20% more than your system's total power requirement.</p>}
+                                {!["cpu", "gpu", "motherboard", "memory", "psu"].includes(category) && <p>Select a component that fits your needs and budget.</p>}
+                              </div>
+                            </div>
+                          </div>
+                        )}
                         {filteredComponents.length === 0 ? (
                           <div className="text-center py-8 text-slate-500 dark:text-slate-400">
                             <div className="flex flex-col items-center gap-2">
@@ -2075,43 +2500,48 @@ export default function BuilderPage() {
                                 No {categoryNames[category as ComponentCategory].toLowerCase()} components found
                               </p>
                               <p className="text-xs">
-                                {performanceCategory !== "all"
-                                  ? `for ${performanceCategories[performanceCategory].name} performance category`
-                                  : "matching your search criteria"}
+                                {showOnlyCompatible 
+                                  ? "Try unchecking 'Show Only Compatible' to see all available components."
+                                  : performanceCategory !== "all"
+                                    ? `for ${performanceCategories[performanceCategory].name} performance category`
+                                    : "matching your search criteria"}
                               </p>
                             </div>
                           </div>
                         ) : (
                           <>
-                            <div className="flex items-center justify-between mb-4">
-                              <p className="text-sm text-slate-600 dark:text-slate-400">
+                            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 sm:gap-0 mb-4">
+                              <p className="text-xs sm:text-sm text-slate-600 dark:text-slate-400">
                                 Showing {startIndex + 1}-{Math.min(endIndex, filteredComponents.length)} of {filteredComponents.length} components
                               </p>
                               {totalPages > 1 && (
-                                <div className="flex items-center gap-2">
+                                <div className="flex items-center gap-1 sm:gap-2 w-full sm:w-auto justify-between sm:justify-start">
                                   <Button
                                     variant="outline"
                                     size="sm"
                                     onClick={() => setComponentPage(prev => Math.max(0, prev - 1))}
                                     disabled={currentPage === 0}
+                                    className="text-xs px-2 sm:px-3"
                                   >
-                                    Previous
+                                    <span className="hidden sm:inline">Previous</span>
+                                    <span className="sm:hidden">Prev</span>
                                   </Button>
-                                  <span className="text-sm text-slate-600 dark:text-slate-400">
-                                    Page {currentPage + 1} of {totalPages}
+                                  <span className="text-xs sm:text-sm text-slate-600 dark:text-slate-400 px-2">
+                                    {currentPage + 1}/{totalPages}
                                   </span>
                                   <Button
                                     variant="outline"
                                     size="sm"
                                     onClick={() => setComponentPage(prev => Math.min(totalPages - 1, prev + 1))}
                                     disabled={currentPage >= totalPages - 1}
+                                    className="text-xs px-2 sm:px-3"
                                   >
                                     Next
                                   </Button>
                                 </div>
                               )}
                             </div>
-                            <div className="grid gap-4">
+                            <div className="grid gap-3 sm:gap-4">
                               {paginatedComponents.map((component) => (
                               <Card
                                 key={component.id}
@@ -2123,62 +2553,74 @@ export default function BuilderPage() {
                                       : "border-slate-200 dark:border-slate-700"
                                 }`}
                                 onClick={(e) => handleComponentClick(component, e)}
+                                onKeyDown={(e) => {
+                                  if (e.key === 'Enter' || e.key === ' ') {
+                                    e.preventDefault()
+                                    // For keyboard navigation, just select the component
+                                    handleComponentSelect(component)
+                                  }
+                                }}
+                                tabIndex={0}
+                                role="button"
+                                aria-label={`${component.name} - ${formatCurrency(component.price)} - ${!isComponentCompatible(component, category as ComponentCategory) ? 'Not compatible' : 'Compatible'}`}
                               >
                                 <CardContent className="p-3 sm:p-4">
-                                  <div className="flex items-start gap-3 sm:gap-4">
+                                  <div className="flex items-start gap-2 sm:gap-3 md:gap-4">
                                     <img
                                       src={component.image || "/placeholder.svg"}
                                       alt={component.name}
-                                      className="w-12 h-12 sm:w-16 sm:h-16 object-cover rounded-lg bg-slate-100 dark:bg-slate-800 flex-shrink-0"
+                                      className="w-14 h-14 sm:w-16 sm:h-16 object-cover rounded-lg bg-slate-100 dark:bg-slate-800 flex-shrink-0"
                                     />
                                     <div className="flex-1 min-w-0">
-                                      <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-2">
-                                        <div>
-                                          <div className="flex items-start gap-2 mb-1">
-                                          <h3 className="font-semibold text-slate-900 dark:text-white">{component.name}</h3>
-                                          </div>
-                                          <p className="text-sm text-slate-600 dark:text-slate-400 mb-2">{component.brand}</p>
-                                          {component.retailer && (
-                                            <p className="text-xs text-slate-500 dark:text-slate-400">
-                                              {component.retailer.name}
-                                              {component.retailer.address && ` • ${component.retailer.address.split(',')[0]}`}
-                                            </p>
-                                          )}
-                                        </div>
-                                        <div className="text-right">
-                                          <div className="flex items-center gap-2">
-                                            <p className="text-lg font-bold text-slate-900 dark:text-white">
-                                              {formatCurrency(component.price)}
-                                            </p>
-                                            {budgetEnabled && component.price > (budget - totalPrice + (selectedComponents[component.category]?.price || 0)) && (
-                                              <Badge variant="destructive" className="text-xs">
-                                                Over Budget
-                                              </Badge>
+                                      <div className="flex flex-col gap-2">
+                                        <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-1 sm:gap-2">
+                                          <div className="flex-1 min-w-0">
+                                            <h3 className="font-semibold text-sm sm:text-base text-slate-900 dark:text-white truncate">{component.name}</h3>
+                                            <p className="text-xs sm:text-sm text-slate-600 dark:text-slate-400 mt-0.5">{component.brand}</p>
+                                            {component.retailer && (
+                                              <p className="text-[10px] sm:text-xs text-slate-500 dark:text-slate-400 mt-0.5 truncate">
+                                                {component.retailer.name}
+                                                {component.retailer.address && ` • ${component.retailer.address.split(',')[0]}`}
+                                              </p>
                                             )}
                                           </div>
-                                          {selectedComponents[component.category]?.id === component.id && (
-                                            <Badge className="mt-1">Selected</Badge>
-                                          )}
-                                          {!isComponentCompatible(component, category as ComponentCategory) && 
-                                           selectedComponents[component.category]?.id !== component.id && (
-                                            <Badge variant="destructive" className="mt-1 text-xs">
-                                              <AlertTriangle className="h-3 w-3 mr-1" />
-                                              Incompatible
-                                            </Badge>
-                                          )}
-                                        </div>
-                                      </div>
-
-                                      {/* Component specifications */}
-                                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs text-slate-600 dark:text-slate-400">
-                                        {Object.entries(component.specifications || {})
-                                          .filter(([key]) => key !== 'Compatibility') // Exclude Compatibility description
-                                          .slice(0, 4)
-                                          .map(([key, value]) => (
-                                            <div key={key} className="truncate">
-                                              <span className="font-medium">{key}:</span> <span className="truncate">{String(value)}</span>
+                                          <div className="flex items-start justify-between sm:flex-col sm:items-end sm:justify-start gap-1 sm:gap-1">
+                                            <div className="flex items-center gap-1.5 sm:gap-2">
+                                              <p className="text-base sm:text-lg font-bold text-slate-900 dark:text-white">
+                                                {formatCurrency(component.price)}
+                                              </p>
+                                              {budgetEnabled && component.price > (budget - totalPrice + (selectedComponents[component.category]?.price || 0)) && (
+                                                <Badge variant="destructive" className="text-[10px] sm:text-xs px-1 sm:px-1.5">
+                                                  Over
+                                                </Badge>
+                                              )}
                                             </div>
-                                          ))}
+                                            <div className="flex flex-col items-end gap-0.5 sm:gap-1">
+                                              {selectedComponents[component.category]?.id === component.id && (
+                                                <Badge className="text-[10px] sm:text-xs">Selected</Badge>
+                                              )}
+                                              {!isComponentCompatible(component, category as ComponentCategory) && 
+                                               selectedComponents[component.category]?.id !== component.id && (
+                                                <Badge variant="destructive" className="text-[10px] sm:text-xs">
+                                                  <AlertTriangle className="h-2.5 w-2.5 sm:h-3 sm:w-3 mr-0.5 sm:mr-1" />
+                                                  Incompatible
+                                                </Badge>
+                                              )}
+                                            </div>
+                                          </div>
+                                        </div>
+
+                                        {/* Component specifications */}
+                                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-1.5 sm:gap-2 text-[10px] sm:text-xs text-slate-600 dark:text-slate-400 mt-1 sm:mt-2">
+                                          {Object.entries(component.specifications || {})
+                                            .filter(([key]) => key !== 'Compatibility') // Exclude Compatibility description
+                                            .slice(0, 4)
+                                            .map(([key, value]) => (
+                                              <div key={key} className="truncate">
+                                                <span className="font-medium">{key}:</span> <span className="truncate">{String(value)}</span>
+                                              </div>
+                                            ))}
+                                        </div>
                                       </div>
                                     </div>
                                   </div>
@@ -2198,16 +2640,16 @@ export default function BuilderPage() {
           </div>
 
           {/* Build Summary */}
-          <div className="space-y-6">
+          <div className="space-y-4 sm:space-y-6">
             <Card className="border-slate-200 dark:border-slate-700">
-              <CardHeader className="pb-3">
-                <CardTitle className="text-lg flex items-center gap-2">
+              <CardHeader className="pb-2 sm:pb-3">
+                <CardTitle className="text-base sm:text-lg flex items-center gap-2 flex-wrap">
                   {compatibilityResult.isCompatible ? (
-                    <CheckCircle className="h-5 w-5 text-green-600" />
+                    <CheckCircle className="h-4 w-4 sm:h-5 sm:w-5 text-green-600" />
                   ) : (
-                    <AlertTriangle className="h-5 w-5 text-red-600" />
+                    <AlertTriangle className="h-4 w-4 sm:h-5 sm:w-5 text-red-600" />
                   )}
-                  Compatibility
+                  <span className="text-sm sm:text-base">Compatibility</span>
                   <Badge
                     variant={
                       compatibilityResult.score >= 80
@@ -2216,28 +2658,29 @@ export default function BuilderPage() {
                           ? "secondary"
                           : "destructive"
                     }
+                    className="text-xs sm:text-sm"
                   >
                     {compatibilityResult.score}%
                   </Badge>
                 </CardTitle>
               </CardHeader>
-              <CardContent className="space-y-3">
+              <CardContent className="space-y-2 sm:space-y-3">
                 {compatibilityResult.issues.length === 0 ? (
-                  <p className="text-sm text-green-600">No compatibility issues detected</p>
+                  <p className="text-xs sm:text-sm text-green-600">No compatibility issues detected</p>
                 ) : (
                   <div className="space-y-2">
                     {compatibilityResult.issues.slice(0, 3).map((issue, index) => (
-                      <div key={index} className="flex items-start gap-2">
+                      <div key={index} className="flex items-start gap-1.5 sm:gap-2">
                         {issue.type === "error" && (
-                          <AlertTriangle className="h-4 w-4 text-red-500 mt-0.5 flex-shrink-0" />
+                          <AlertTriangle className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-red-500 mt-0.5 flex-shrink-0" />
                         )}
                         {issue.type === "warning" && (
-                          <AlertCircle className="h-4 w-4 text-yellow-500 mt-0.5 flex-shrink-0" />
+                          <AlertCircle className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-yellow-500 mt-0.5 flex-shrink-0" />
                         )}
-                        {issue.type === "info" && <Info className="h-4 w-4 text-blue-500 mt-0.5 flex-shrink-0" />}
-                        <div>
+                        {issue.type === "info" && <Info className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-blue-500 mt-0.5 flex-shrink-0" />}
+                        <div className="flex-1 min-w-0">
                           <p
-                            className={`text-xs font-medium ${
+                            className={`text-[11px] sm:text-xs font-medium ${
                               issue.type === "error"
                                 ? "text-red-600"
                                 : issue.type === "warning"
@@ -2247,12 +2690,12 @@ export default function BuilderPage() {
                           >
                             {issue.message}
                           </p>
-                          {issue.suggestion && <p className="text-xs text-slate-500 mt-1">{issue.suggestion}</p>}
+                          {issue.suggestion && <p className="text-[10px] sm:text-xs text-slate-500 mt-0.5 sm:mt-1">{issue.suggestion}</p>}
                         </div>
                       </div>
                     ))}
                     {compatibilityResult.issues.length > 3 && (
-                      <p className="text-xs text-slate-500">+{compatibilityResult.issues.length - 3} more issues</p>
+                      <p className="text-[10px] sm:text-xs text-slate-500">+{compatibilityResult.issues.length - 3} more issues</p>
                     )}
                   </div>
                 )}
@@ -2261,17 +2704,17 @@ export default function BuilderPage() {
 
             {recommendations.length > 0 && (
               <Card className="border-slate-200 dark:border-slate-700">
-                <CardHeader className="pb-3">
-                  <CardTitle className="text-lg">
+                <CardHeader className="pb-2 sm:pb-3">
+                  <CardTitle className="text-base sm:text-lg">
                     Recommendations
                   </CardTitle>
                 </CardHeader>
                 <CardContent>
                   <div className="space-y-2">
                     {recommendations.slice(0, 3).map((recommendation, index) => (
-                      <div key={index} className="flex items-start gap-2">
-                        <div className="w-1.5 h-1.5 bg-blue-500 rounded-full mt-2 flex-shrink-0" />
-                        <p className="text-sm text-slate-600 dark:text-slate-400">{recommendation}</p>
+                      <div key={index} className="flex items-start gap-1.5 sm:gap-2">
+                        <div className="w-1.5 h-1.5 bg-blue-500 rounded-full mt-1.5 sm:mt-2 flex-shrink-0" />
+                        <p className="text-xs sm:text-sm text-slate-600 dark:text-slate-400">{recommendation}</p>
                       </div>
                     ))}
                   </div>
@@ -2282,20 +2725,20 @@ export default function BuilderPage() {
             {/* Performance Category Info */}
             {performanceCategory !== "all" && (
               <Card className="border-slate-200 dark:border-slate-700">
-                <CardHeader className="pb-3">
-                  <CardTitle className="text-lg">
+                <CardHeader className="pb-2 sm:pb-3">
+                  <CardTitle className="text-base sm:text-lg">
                     Performance Category
                   </CardTitle>
                 </CardHeader>
                 <CardContent>
                   <div className="space-y-2">
                     <div className="flex items-center gap-2">
-                      <Badge variant="secondary">{performanceCategories[performanceCategory].name}</Badge>
+                      <Badge variant="secondary" className="text-xs sm:text-sm">{performanceCategories[performanceCategory].name}</Badge>
                     </div>
-                    <p className="text-sm text-slate-600 dark:text-slate-400">
+                    <p className="text-xs sm:text-sm text-slate-600 dark:text-slate-400">
                       {performanceCategories[performanceCategory].description}
                     </p>
-                    <div className="text-xs text-slate-500">
+                    <div className="text-[10px] sm:text-xs text-slate-500">
                       Components are filtered to match your selected performance requirements
                     </div>
                   </div>
@@ -2305,60 +2748,60 @@ export default function BuilderPage() {
 
             {/* Build Summary */}
             <Card className="border-slate-200 dark:border-slate-700">
-              <CardHeader>
-                <CardTitle className="text-lg">Your Build</CardTitle>
-                <CardDescription>Selected components</CardDescription>
+              <CardHeader className="pb-2 sm:pb-3">
+                <CardTitle className="text-base sm:text-lg">Your Build</CardTitle>
+                <CardDescription className="text-xs sm:text-sm">Selected components</CardDescription>
               </CardHeader>
-              <CardContent className="space-y-4">
+              <CardContent className="space-y-3 sm:space-y-4">
                 {Object.entries(selectedComponents).map(([category, component]) => {
                   const Icon = categoryIcons[category as ComponentCategory]
                   return (
-                    <div key={category} className="flex items-center justify-between">
-                      <div className="flex items-center gap-3">
-                        <div>
-                          <p className="text-sm font-medium text-slate-900 dark:text-white">
+                    <div key={category} className="flex items-start sm:items-center justify-between gap-2">
+                      <div className="flex items-start gap-2 sm:gap-3 flex-1 min-w-0">
+                        <div className="flex-1 min-w-0">
+                          <p className="text-xs sm:text-sm font-medium text-slate-900 dark:text-white">
                             {categoryNames[category as ComponentCategory]}
                           </p>
                           {component ? (
-                            <p className="text-xs text-slate-600 dark:text-slate-400">{component.name}</p>
+                            <p className="text-[10px] sm:text-xs text-slate-600 dark:text-slate-400 truncate mt-0.5">{component.name}</p>
                           ) : (
-                            <p className="text-xs text-slate-400">Not selected</p>
+                            <p className="text-[10px] sm:text-xs text-slate-400 mt-0.5">Not selected</p>
                           )}
                         </div>
                       </div>
-                      <div className="text-right">
+                      <div className="text-right flex-shrink-0">
                         {component ? (
-                          <div>
-                            <p className="text-sm font-medium">{formatCurrency(component.price)}</p>
+                          <div className="flex flex-col items-end gap-0.5 sm:gap-1">
+                            <p className="text-xs sm:text-sm font-medium">{formatCurrency(component.price)}</p>
                             <Button
                               variant="ghost"
                               size="sm"
                               onClick={() => handleComponentRemove(category as ComponentCategory)}
-                              className="text-xs text-red-600 hover:text-red-700 p-0 h-auto"
+                              className="text-[10px] sm:text-xs text-red-600 hover:text-red-700 p-0 h-auto"
                             >
                               Remove
                             </Button>
                           </div>
                         ) : (
-                          <p className="text-sm text-slate-400">{formatCurrency(0)}</p>
+                          <p className="text-xs sm:text-sm text-slate-400">{formatCurrency(0)}</p>
                         )}
                       </div>
                     </div>
                   )
                 })}
 
-                <div className="border-t pt-4">
-                  <div className="flex items-center justify-between">
-                    <p className="font-semibold text-slate-900 dark:text-white">Total Price</p>
+                <div className="border-t pt-3 sm:pt-4">
+                  <div className="flex items-center justify-between gap-2">
+                    <p className="font-semibold text-sm sm:text-base text-slate-900 dark:text-white">Total Price</p>
                     <div className="text-right">
-                      <p className={`text-xl font-bold ${isOverBudget ? 'text-red-600' : 'text-blue-600'}`}>
+                      <p className={`text-lg sm:text-xl font-bold ${isOverBudget ? 'text-red-600' : 'text-blue-600'}`}>
                         {formatCurrency(totalPrice)}
                       </p>
                       {budgetEnabled && budget > 0 && (
-                        <p className={`text-sm ${isOverBudget ? 'text-red-500' : 'text-green-600'}`}>
+                        <p className={`text-xs sm:text-sm ${isOverBudget ? 'text-red-500' : 'text-green-600'}`}>
                           {isOverBudget 
-                            ? `Over budget by ${formatCurrency(Math.abs(remainingBudget))}`
-                            : `Within budget (${Math.round(100 - budgetPercentage)}% remaining)`
+                            ? `Over by ${formatCurrency(Math.abs(remainingBudget))}`
+                            : `${Math.round(100 - budgetPercentage)}% remaining`
                           }
                         </p>
                       )}
@@ -2366,7 +2809,7 @@ export default function BuilderPage() {
                   </div>
                   {budgetEnabled && budget > 0 && (
                     <div className="mt-2">
-                      <div className="flex justify-between text-sm text-slate-600 dark:text-slate-400 mb-1">
+                      <div className="flex justify-between text-xs sm:text-sm text-slate-600 dark:text-slate-400 mb-1">
                         <span>Budget Progress</span>
                         <span>{Math.round(budgetPercentage)}%</span>
                       </div>
@@ -2388,52 +2831,114 @@ export default function BuilderPage() {
                     <DialogTrigger asChild>
                       <Button 
                         variant="outline" 
-                        className="w-full" 
+                        className="w-full text-xs sm:text-sm" 
                         disabled={totalPrice === 0}
+                        size="sm"
                       >
-                        <ShoppingCart className="h-4 w-4 mr-2" />
-                        Preview Purchase
+                        <ShoppingCart className="h-3.5 w-3.5 sm:h-4 sm:w-4 mr-1.5 sm:mr-2" />
+                        <span className="hidden sm:inline">Preview Purchase</span>
+                        <span className="sm:hidden">Preview</span>
                       </Button>
                     </DialogTrigger>
                   </Dialog>
                   
                   {/* Save Build Button */}
-                  <Button 
-                    className="w-full bg-blue-600 hover:bg-blue-700" 
-                    onClick={() => setIsSaveDialogOpen(true)}
-                    disabled={isCheckingDuplicates}
-                  >
-                    <Save className="h-4 w-4 mr-2" />
-                    {isCheckingDuplicates ? "Checking..." : "Save Build"}
-                  </Button>
+                  <div className="space-y-2">
+                    <p className="text-xs sm:text-sm text-slate-600 dark:text-slate-400">
+                      💾 <strong>Save Build:</strong> Save your current build to your account so you can access it later, purchase it, or share it with others.
+                    </p>
+                    <Button 
+                      className="w-full bg-blue-600 hover:bg-blue-700 text-xs sm:text-sm" 
+                      onClick={() => setIsSaveDialogOpen(true)}
+                      disabled={isCheckingDuplicates}
+                      size="sm"
+                      aria-label="Save your current build to your account"
+                    >
+                      <Save className="h-3.5 w-3.5 sm:h-4 sm:w-4 mr-1.5 sm:mr-2" />
+                      {isCheckingDuplicates ? "Checking..." : "Save Build"}
+                    </Button>
+                  </div>
+                  
+                  {/* Download/Print Build Summary */}
+                  <div className="space-y-2 mt-4">
+                    <p className="text-xs sm:text-sm text-slate-600 dark:text-slate-400">
+                      📄 <strong>Export Build:</strong> Download or print your build summary for offline reference or sharing.
+                    </p>
+                    <div className="flex flex-col gap-2">
+                      <div className="flex gap-2">
+                        <Button 
+                          variant="outline" 
+                          className="flex-1 text-xs sm:text-sm"
+                          onClick={handleDownloadBuildSummary}
+                          disabled={totalPrice === 0}
+                          size="sm"
+                          aria-label="Download build summary as text file"
+                        >
+                          <Download className="h-3.5 w-3.5 sm:h-4 sm:w-4 mr-1.5 sm:mr-2" />
+                          <span className="hidden sm:inline">Download TXT</span>
+                          <span className="sm:hidden">TXT</span>
+                        </Button>
+                        <Button 
+                          variant="outline" 
+                          className="flex-1 text-xs sm:text-sm"
+                          onClick={handleDownloadBuildSummaryJSON}
+                          disabled={totalPrice === 0}
+                          size="sm"
+                          aria-label="Download build summary as JSON file"
+                        >
+                          <Download className="h-3.5 w-3.5 sm:h-4 sm:w-4 mr-1.5 sm:mr-2" />
+                          <span className="hidden sm:inline">Download JSON</span>
+                          <span className="sm:hidden">JSON</span>
+                        </Button>
+                      </div>
+                      <Button 
+                        variant="outline" 
+                        className="w-full text-xs sm:text-sm"
+                        onClick={handlePrintBuildSummary}
+                        disabled={totalPrice === 0}
+                        size="sm"
+                        aria-label="Print build summary"
+                      >
+                        <span className="hidden sm:inline">🖨️ Print Summary</span>
+                        <span className="sm:hidden">🖨️ Print</span>
+                      </Button>
+                    </div>
+                  </div>
                   
                   {/* Share Button */}
-                  <Button 
-                    variant="outline" 
-                    className="w-full"
-                    onClick={async () => {
-                      if (savedBuildId) {
-                        // If build is saved, share the link to the saved build
-                        const shareUrl = typeof window !== 'undefined' ? `${window.location.origin}/builder?share=${savedBuildId}` : ''
-                        try {
-                          await navigator.clipboard.writeText(shareUrl)
-                          alert("Build link copied to clipboard! Share this link to let others import this build.")
-                        } catch (err) {
-                          console.error("Failed to copy link:", err)
-                          alert("Failed to copy link. Please copy manually: " + shareUrl)
+                  <div className="space-y-2 mt-4">
+                    <p className="text-xs sm:text-sm text-slate-600 dark:text-slate-400">
+                      🔗 <strong>Share Build:</strong> Generate a shareable link to your build that others can use to import your component selection. You need to save your build first.
+                    </p>
+                    <Button 
+                      variant="outline" 
+                      className="w-full text-xs sm:text-sm"
+                      size="sm"
+                      onClick={async () => {
+                        if (savedBuildId) {
+                          // If build is saved, share the link to the saved build
+                          const shareUrl = typeof window !== 'undefined' ? `${window.location.origin}/builder?share=${savedBuildId}` : ''
+                          try {
+                            await navigator.clipboard.writeText(shareUrl)
+                            alert("Build link copied to clipboard! Share this link to let others import this build.")
+                          } catch (err) {
+                            console.error("Failed to copy link:", err)
+                            alert("Failed to copy link. Please copy manually: " + shareUrl)
+                          }
+                        } else {
+                          // If build is not saved, prompt to save first
+                          const shouldSave = confirm("You need to save your build first before sharing. Would you like to save it now?")
+                          if (shouldSave) {
+                            setIsSaveDialogOpen(true)
+                          }
                         }
-                      } else {
-                        // If build is not saved, prompt to save first
-                        const shouldSave = confirm("You need to save your build first before sharing. Would you like to save it now?")
-                        if (shouldSave) {
-                          setIsSaveDialogOpen(true)
-                        }
-                      }
-                    }}
-                  >
-                    <Share className="h-4 w-4 mr-2" />
-                    Share Build
-                  </Button>
+                      }}
+                      aria-label="Share your build with others via a shareable link"
+                    >
+                      <Share className="h-3.5 w-3.5 sm:h-4 sm:w-4 mr-1.5 sm:mr-2" />
+                      Share Build
+                    </Button>
+                  </div>
                 </div>
               </CardContent>
             </Card>

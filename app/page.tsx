@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation"
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
 import { Card, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import { Badge } from "@/components/ui/badge"
 import { WelcomeScreen } from "@/components/welcome-screen"
 import { useAuth } from "@/contexts/supabase-auth-context"
 import { Cpu, HardDrive, Monitor, Zap, Users, BookOpen, Star } from "lucide-react"
@@ -81,10 +82,33 @@ export default function HomePage() {
             </h2>
             
             {/* Description */}
-            <p className="text-lg md:text-xl text-slate-700 dark:text-slate-300 mb-10 max-w-2xl mx-auto text-pretty drop-shadow-md">
+            <p className="text-lg md:text-xl text-slate-700 dark:text-slate-300 mb-6 max-w-2xl mx-auto text-pretty drop-shadow-md">
               Advanced compatibility checking, graph-based recommendations with CSP algorithms, and a thriving community to help you create the
               ultimate custom PC build.
             </p>
+            
+            {/* Tutorial Emphasis */}
+            <div className="mb-10 max-w-2xl mx-auto">
+              <div className="bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-900/30 dark:to-indigo-900/30 border-2 border-blue-200 dark:border-blue-700 rounded-lg p-4 sm:p-6 shadow-lg">
+                <div className="flex items-start gap-3">
+                  <BookOpen className="h-6 w-6 sm:h-8 sm:w-8 text-blue-600 dark:text-blue-400 flex-shrink-0 mt-1" />
+                  <div className="flex-1">
+                    <h3 className="text-lg sm:text-xl font-bold text-slate-900 dark:text-white mb-2">
+                      📚 Complete Step-by-Step PC Building Tutorial
+                    </h3>
+                    <p className="text-sm sm:text-base text-slate-700 dark:text-slate-300 mb-3">
+                      Our comprehensive guide walks you through every step of building your PC, from unboxing components to first boot. Perfect for beginners and DIY enthusiasts.
+                    </p>
+                    <Button size="sm" asChild className="bg-blue-600 hover:bg-blue-700 text-white">
+                      <Link href="/guides/pc-assembly-guide">
+                        <BookOpen className="mr-2 h-4 w-4" />
+                        View Complete Guide
+                      </Link>
+                    </Button>
+                  </div>
+                </div>
+              </div>
+            </div>
 
             {/* CTA Buttons */}
             <div className="flex flex-col sm:flex-row gap-4 justify-center">
@@ -141,13 +165,19 @@ export default function HomePage() {
               </CardHeader>
             </Card>
 
-            <Card className={`border-slate-200 dark:border-slate-700 transition-opacity duration-1000 ${isFaded ? 'opacity-100 animate-fade-in-up animation-delay-700' : 'opacity-0'}`}>
+            <Card className={`border-slate-200 dark:border-slate-700 transition-opacity duration-1000 ${isFaded ? 'opacity-100 animate-fade-in-up animation-delay-700' : 'opacity-0'} border-2 border-orange-200 dark:border-orange-800 bg-gradient-to-br from-orange-50 to-orange-100/50 dark:from-orange-900/20 dark:to-orange-800/10`}>
               <CardHeader>
-                <BookOpen className="h-10 w-10 text-orange-600 mb-2" />
-                <CardTitle>Step-by-Step Guides</CardTitle>
-                <CardDescription>
-                  Detailed assembly instructions with photos and videos to guide you through your first build.
+                <div className="flex items-center justify-between mb-2">
+                  <BookOpen className="h-10 w-10 text-orange-600 dark:text-orange-400" />
+                  <Badge className="bg-orange-600 text-white">Core Feature</Badge>
+                </div>
+                <CardTitle className="text-xl">Step-by-Step Tutorial</CardTitle>
+                <CardDescription className="text-base">
+                  <strong>Our core value:</strong> Comprehensive, beginner-friendly guide with videos, diagrams, and auto-progressing steps. Learn to build your PC from start to finish.
                 </CardDescription>
+                <Button size="sm" variant="outline" className="mt-3 border-orange-300 text-orange-700 hover:bg-orange-100 dark:border-orange-700 dark:text-orange-300 dark:hover:bg-orange-900/30" asChild>
+                  <Link href="/guides/pc-assembly-guide">Explore Tutorial →</Link>
+                </Button>
               </CardHeader>
             </Card>
 
